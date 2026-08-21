@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# 기획 문서 (비공개)
+docs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Backend (Spring Boot / Gradle)
+backend/build/
+backend/.gradle/
+backend/out/
+
+# Web / Mobile (Node)
+node_modules/
+dist/
+web/.vite/
+mobile/.expo/
+mobile/ios/
+mobile/android/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
