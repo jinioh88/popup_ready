@@ -17,6 +17,10 @@ import { MOCK_FIXTURES, MOCK_SPACES, MOCK_USER, toSummary } from "./data";
  *
  * 응답 타입은 전부 **생성 타입**(`Schemas[...]`)이다 — 손으로 타입을 정의하지 않는다.
  *
+ * 계약 화면 핸들러 3종(`POST /reservation-requests/{id}/contract` · `POST /contracts/{id}/sign` ·
+ * `GET /contracts/{id}`)은 F-2에서 추가한다 — 조항 전문 템플릿은 백엔드가 소유한다.
+ * 셋 다 보호 오퍼레이션이므로 추가할 때 `unauthorized()` 검사를 함께 붙일 것.
+ *
  * ⚠️ 레이아웃 검증·견적 계산은 `app/lib`의 웹 구현을 그대로 재사용한다. 목업이 웹과 항상
  *    일치한다는 뜻이므로 **계약 검증용이 아니다** — UI의 400 에러 경로를 실제로 태워보기 위한
  *    장치다. 백엔드와의 계산식 일치는 통합(Phase G)에서 확인한다.
@@ -30,6 +34,18 @@ function ok<T>(data: T, status = 200) {
 
 function fail(status: number, code: ErrorCode, message: string) {
   return HttpResponse.json({ data: null, error: { code, message } }, { status });
+}
+
+/**
+ * 보호 오퍼레이션의 인증 검사.
+ *
+ * 계약(sprint1.md §2.2)이 예약 요청 생성·계약 생성/열람/서명 4개에 bearer를 요구하므로
+ * 목업도 같은 규칙을 지킨다 — 목업만 무인증으로 통과시키면 통합 시점에야 401이 드러난다.
+ */
+function unauthorized(request: Request) {
+  const header = request.headers.get("Authorization");
+
+  return header?.startsWith("Bearer ") ? null : fail(401, "UNAUTHORIZED", "인증이 필요합니다.");
 }
 
 /** 지도 반경 검색용 근사 거리(m). 목업이므로 위경도를 평면으로 근사한다. */
@@ -123,6 +139,12 @@ export const handlers = [
   }),
 
   http.post(`${BASE}/reservation-requests`, async ({ request }) => {
+    const denied = unauthorized(request);
+
+    if (denied) {
+      return denied;
+    }
+
     const body = (await request.json()) as Schemas["CreateReservationRequest"];
     const space = MOCK_SPACES.find((candidate) => candidate.id === body.spaceId);
 
