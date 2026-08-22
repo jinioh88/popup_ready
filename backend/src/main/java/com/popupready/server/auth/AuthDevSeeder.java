@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -17,8 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
  * 않아도 되기 때문</b>이다 — 실제 인코더로 만들어 비밀번호를 팀에 그대로 공유할 수 있다.
  *
  * <p>공간·집기 시더가 이 계정들의 식별자를 owner/vendor로 쓰므로 가장 먼저 실행한다.
+ *
+ * <p><b>실행 가드</b>: {@code popupready.seed.dev-data=true}일 때만 동작한다. 로컬
+ * application.properties에만 켜져 있고 배포 환경에는 없다 — 가드가 없으면 알려진 비밀번호로
+ * 로그인되는 ADMIN 계정이 배포 환경에 조용히 생긴다.
  */
 @Component
+@ConditionalOnProperty(name = "popupready.seed.dev-data", havingValue = "true")
 @Order(1)
 public class AuthDevSeeder implements ApplicationRunner {
 
