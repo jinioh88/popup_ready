@@ -59,4 +59,8 @@ export type SpaceResultsProps = {
   onSelect: (spaceId: number) => void;
   isLoading: boolean;
   isError: boolean;
+  /** 지도 중심. 리스트 폴백은 쓰지 않지만 계약을 하나로 유지하기 위해 함께 둔다. */
+  center: SearchCenter;
+  /** 지도 이동·줌으로 중심이 바뀔 때. 리스트 폴백에서는 호출되지 않는다. */
+  onCenterChange: (center: SearchCenter) => void;
 };

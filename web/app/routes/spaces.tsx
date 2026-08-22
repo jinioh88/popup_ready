@@ -40,6 +40,8 @@ export default function SpacesRoute() {
             onSelect={setSelectedId}
             isLoading={isPending || isSettling}
             isError={isError}
+            center={{ lat: search.lat, lng: search.lng }}
+            onCenterChange={(center) => setSearch((prev) => ({ ...prev, ...center }))}
           />
         </div>
         <SpaceSummaryPanel space={selected} />
