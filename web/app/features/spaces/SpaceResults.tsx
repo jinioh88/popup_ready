@@ -1,5 +1,5 @@
-import type { SpaceSummary } from "../../lib/schemas/api";
 import { SpaceListView } from "./SpaceListView";
+import type { SpaceResultsProps } from "./searchState";
 
 /**
  * 검색 결과 표시 경계.
@@ -8,14 +8,6 @@ import { SpaceListView } from "./SpaceListView";
  * 이 컴포넌트 안에서 지도 뷰를 고르게 되고, 바깥(검색 조건·요약 카드·빌더 진입)은 그대로다.
  * 지도와 리스트가 같은 props(`spaces`·`selectedId`·`onSelect`)를 쓰도록 경계를 얇게 유지한다.
  */
-
-export type SpaceResultsProps = {
-  spaces: SpaceSummary[];
-  selectedId: number | null;
-  onSelect: (spaceId: number) => void;
-  isLoading: boolean;
-  isError: boolean;
-};
 
 /** 키가 들어오면 여기만 true가 되고 지도 뷰가 붙는다. */
 const hasMapKey = Boolean(import.meta.env.VITE_KAKAO_MAP_KEY);

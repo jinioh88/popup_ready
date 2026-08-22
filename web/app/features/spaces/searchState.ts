@@ -1,4 +1,5 @@
 import type { SpaceSearchParams } from "../../lib/api/spaces";
+import type { SpaceSummary } from "../../lib/schemas/api";
 
 /**
  * 공실 탐색 검색 조건.
@@ -45,3 +46,17 @@ export function toSearchParams(state: SpaceSearchState): SpaceSearchParams {
     minPower: state.minPower,
   };
 }
+
+/**
+ * 검색 결과 뷰의 공용 props.
+ *
+ * 지도 뷰와 리스트 폴백이 **같은 모양**을 구현해야 키 발급 시 교체가 한 줄로 끝난다.
+ * 두 뷰 중 어느 쪽에도 두지 않고 여기 둔 이유는 서로를 참조하지 않게 하기 위해서다.
+ */
+export type SpaceResultsProps = {
+  spaces: SpaceSummary[];
+  selectedId: number | null;
+  onSelect: (spaceId: number) => void;
+  isLoading: boolean;
+  isError: boolean;
+};

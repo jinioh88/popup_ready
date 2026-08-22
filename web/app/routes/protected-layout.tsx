@@ -27,7 +27,9 @@ export default function ProtectedLayout() {
           type="button"
           onClick={() => {
             clearAccessToken();
-            // 가드가 다시 평가되도록 전체 진입점으로 되돌린다.
+            // 클라이언트 라우팅이 아니라 전체 리로드다. 가드를 다시 평가시키는 것도 있지만,
+            // 메모리에 남은 빌더 배치(Zustand)까지 함께 버리기 위해서다 — 공용 PC에서
+            // 이전 사용자의 도면 초안이 다음 사용자에게 남으면 안 된다.
             window.location.assign("/login");
           }}
           className="text-caption text-text-muted"

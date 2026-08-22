@@ -1,4 +1,4 @@
-import type { SpaceResultsProps } from "./SpaceResults";
+import type { SpaceResultsProps } from "./searchState";
 
 /** 지도 폴백 목록. 항목 선택은 지도의 마커 클릭과 같은 동작이다(우측 요약 카드 노출). */
 export function SpaceListView({
