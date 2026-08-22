@@ -50,7 +50,12 @@ export function useDoorLock(reservationId: string) {
       if (disposed) return;
       setStatus("connected");
       setError(null);
-      client.subscribe(topic, { qos: 1 });
+      // 구독 실패를 삼키면 상태는 "연결됨"인데 응답이 영원히 오지 않는다 —
+      // 현장에서는 "눌렀는데 아무 일도 안 일어남"과 구분되지 않는다.
+      client.subscribe(topic, { qos: 1 }, (subscribeError) => {
+        if (disposed || !subscribeError) return;
+        setError(`토픽 구독 실패: ${subscribeError.message}`);
+      });
     });
     client.on("message", (_topic, payload) => {
       if (disposed) return;

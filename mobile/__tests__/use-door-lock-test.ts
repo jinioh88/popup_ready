@@ -47,7 +47,26 @@ describe("useDoorLock", () => {
     await act(async () => client.emit("connect"));
 
     expect(result.current.status).toBe("connected");
-    expect(client.subscribe).toHaveBeenCalledWith("popupready/reservations/r-42/door", { qos: 1 });
+    expect(client.subscribe).toHaveBeenCalledWith(
+      "popupready/reservations/r-42/door",
+      { qos: 1 },
+      expect.any(Function),
+    );
+  });
+
+  // 구독이 실패하면 상태는 "연결됨"인데 응답이 영영 오지 않는다.
+  // 현장에서는 "눌렀는데 아무 일도 안 일어남"과 구분되지 않으므로 드러내야 한다.
+  it("구독 실패를 삼키지 않고 화면에 드러낸다", async () => {
+    const client = createFakeClient();
+    mockConnect(client);
+
+    const { result } = await renderHook(() => useDoorLock("r-42"));
+    await act(async () => client.emit("connect"));
+
+    const onSubscribed = client.subscribe.mock.calls[0][2];
+    await act(async () => onSubscribed(new Error("not authorized")));
+
+    expect(result.current.error).toContain("not authorized");
   });
 
   it("연결이 끊기면 connected로 남지 않고 error로 드러난다", async () => {

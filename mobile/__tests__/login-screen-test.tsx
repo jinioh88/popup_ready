@@ -80,11 +80,23 @@ describe("로그인 화면", () => {
     expect(mockReplace).not.toHaveBeenCalled();
   });
 
-  it("입력이 비어 있으면 요청을 보내지 않는다", async () => {
+  it("입력이 비어 있으면 검증에서 막고 요청을 보내지 않는다", async () => {
     await renderWithQuery(<LoginScreen />);
 
     await fireEvent.press(screen.getByText("로그인"));
 
+    await waitFor(() => expect(screen.getByText("이메일을 입력하라.")).toBeTruthy());
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it("이메일 형식이 아니면 서버로 보내지 않는다", async () => {
+    await renderWithQuery(<LoginScreen />);
+
+    await fireEvent.changeText(screen.getByPlaceholderText("이메일"), "brand");
+    await fireEvent.changeText(screen.getByPlaceholderText("비밀번호"), "password123");
+    await fireEvent.press(screen.getByText("로그인"));
+
+    await waitFor(() => expect(screen.getByText("이메일 형식이 아니다.")).toBeTruthy());
     expect(mockLogin).not.toHaveBeenCalled();
   });
 });
