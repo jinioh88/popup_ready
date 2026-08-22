@@ -5,3 +5,7 @@ package-lock.json
 
 # 문서는 표·줄바꿈 재배치 노이즈를 피하기 위해 포맷 대상에서 제외한다
 *.md
+
+# 생성물 — 포맷을 입히면 재생성마다 파일 전체가 diff로 잡혀 계약 변경이 묻힌다
+app/lib/api/schema.d.ts
+public/mockServiceWorker.js

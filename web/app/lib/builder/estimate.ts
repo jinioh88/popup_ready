@@ -6,12 +6,16 @@ import type { FixtureSpec } from "./types";
  * 원장은 백엔드다(`POST /reservation-requests`가 재계산한다). 이 함수는 빌더에서
  * 실시간으로 보여줄 값을 만들고, 서버 응답과 어긋나면 계약 위반 신호로 삼는다.
  *
- *   총액 = 일수 × (공간 대여료 + Σ집기 렌털료) + 보증금        (sprint1.md §4 기반작업 6)
+ *   days               = 시작일·종료일을 모두 포함한 일수 (start === end 이면 1일)
+ *   spaceRentTotal     = days × space.dailyRent
+ *   fixtureRentalTotal = days × Σ(배치된 집기의 dailyRentalFee)
+ *   deposit            = round(spaceRentTotal × space.depositRate)   // 원 단위, HALF_UP
+ *   totalAmount        = spaceRentTotal + fixtureRentalTotal + deposit
  *
- * ⚠️ 다음 두 가지는 스프린트 문서에 명시가 없어 **웹이 가정한 해석**이다. 백엔드 구현과
- *    어긋나면 화면 금액과 서버 금액이 달라지므로, 통합(Phase G) 전에 맞춰야 한다.
- *    1. 일수는 시작일·종료일을 **모두 포함**한다(1일 팝업 = start === end = 1일).
- *    2. 보증금은 **대여료 소계 × depositRate**를 원 단위로 반올림한다.
+ * **보증금 기준은 `spaceRentTotal`이다 — 집기 렌털료는 포함하지 않는다**(sprint1.md §2.2 확정).
+ * 계약 조항 요건이 "공간 대여료 대비 소액"으로 기준을 적고 있고, `depositRate`가 Space의 속성이며,
+ * 일시사용 임대차 요건 보존상 보증금은 작을수록 안전하기 때문이다. 집기 손상은 보증금이 아니라
+ * US-401 퇴실 검수·정산 경로가 담당한다.
  */
 
 export type EstimateInput = {
@@ -59,14 +63,31 @@ export function estimateReservation(input: EstimateInput): Estimate {
 
   const spaceRentTotal = days * input.dailyRent;
   const fixtureRentalTotal = days * dailyFixtureFee;
-  const rentSubtotal = spaceRentTotal + fixtureRentalTotal;
-  const deposit = Math.round(rentSubtotal * input.depositRate);
+  const deposit = applyRateHalfUp(spaceRentTotal, input.depositRate);
 
   return {
     days,
     spaceRentTotal,
     fixtureRentalTotal,
     deposit,
-    totalAmount: rentSubtotal + deposit,
+    totalAmount: spaceRentTotal + fixtureRentalTotal + deposit,
   };
+}
+
+/**
+ * `amount × rate`를 원 단위 HALF_UP으로 맺는다.
+ *
+ * 백엔드는 `BigDecimal`로 십진 연산한다. 여기서 `Math.round(amount * rate)`를 쓰면 `rate`가
+ * 이진 부동소수로 표현되지 않는 값(0.1 등)일 때 반올림 경계에서 1원이 어긋날 수 있으므로,
+ * 비율을 정수로 올려 **정수 연산만으로** 계산해 그 가능성을 없앤다.
+ */
+function applyRateHalfUp(amount: number, rate: number): number {
+  const decimals = (String(rate).split(".")[1] ?? "").length;
+  const scale = 10 ** decimals;
+  const scaledProduct = amount * Math.round(rate * scale);
+
+  const quotient = Math.floor(scaledProduct / scale);
+  const remainder = scaledProduct - quotient * scale;
+
+  return remainder * 2 >= scale ? quotient + 1 : quotient;
 }
