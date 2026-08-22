@@ -67,8 +67,21 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Gradle의 toolchain 자동 탐지는 setup-java의 설치 경로(/opt/hostedtoolcache)를 스캔하지 않고,
+      # settings.gradle에 foojay-resolver가 없어 auto-download도 안 된다. JAVA_HOME은 위 목록의
+      # 마지막인 21이므로, 컴파일용 25는 setup-java가 노출하는 환경변수로 직접 알려줘야 한다.
+      # (로컬에서는 표준 설치 경로에 있어 탐지되므로 이 설정 없이도 동작한다.)
+      - name: Gradle toolchain 탐지 경로 등록
+        run: |
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_25_X64,JAVA_HOME_21_X64" >> gradle.properties
+          cat gradle.properties
+
       # 컴파일 + spotlessCheck + 전체 테스트
       - run: ./gradlew check
+
+      # toolchain이 실제로 25로 잡혔는지 남긴다 — 잘못 잡히면 컴파일은 되지만 런타임 동작이 갈린다
+      - name: toolchain 확인
+        run: ./gradlew -q javaToolchains | grep -A3 "Java 25" || true
 
       # 계약 스펙은 커밋된 contracts/openapi.json이 진실이다. 코드가 스펙을 바꿨는데
       # 재생성 커밋을 빠뜨리면 웹·모바일이 낡은 타입을 쓰게 되므로 여기서 잡는다.
