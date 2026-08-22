@@ -3,8 +3,10 @@ import { useParams } from "react-router";
 
 import { BuilderCanvas } from "../features/builder/BuilderCanvas";
 import { FixturePanel } from "../features/builder/FixturePanel";
+import { ReservationForm } from "../features/builder/ReservationForm";
 import { SelectionToolbar } from "../features/builder/SelectionToolbar";
 import { toFixtureCatalog, useFixtures, useSpaceDetail } from "../features/builder/queries";
+import { useCreateReservation } from "../features/builder/useCreateReservation";
 import { useRotationShortcut } from "../features/builder/useRotationShortcut";
 import { useBuilderStore } from "../stores/builder";
 
@@ -26,6 +28,7 @@ export default function BuilderRoute() {
 
   const catalog = useMemo(() => toFixtureCatalog(fixturesQuery.data), [fixturesQuery.data]);
   const space = spaceQuery.data;
+  const reservation = useCreateReservation(numericSpaceId);
 
   const grid = useMemo(
     () =>
@@ -89,6 +92,15 @@ export default function BuilderRoute() {
         <FixturePanel fixtures={fixturesQuery.data ?? []} isLoading={fixturesQuery.isPending} />
         <div className="overflow-auto">
           <BuilderCanvas grid={grid} fixtures={catalog} onRejected={onRejected} />
+        </div>
+        <div className="w-80 shrink-0">
+          <ReservationForm
+            space={space}
+            fixtures={catalog}
+            onSubmit={reservation.submit}
+            isPending={reservation.isPending}
+            errorMessage={reservation.errorMessage}
+          />
         </div>
       </div>
     </main>
