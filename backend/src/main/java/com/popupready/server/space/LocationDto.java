@@ -1,5 +1,7 @@
 package com.popupready.server.space;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -8,5 +10,5 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "위경도 좌표(WGS84)")
 public record LocationDto(
-        @Schema(description = "위도", example = "37.5445") double lat,
-        @Schema(description = "경도", example = "127.0557") double lng) {}
+        @Schema(description = "위도", example = "37.5445", requiredMode = REQUIRED) double lat,
+        @Schema(description = "경도", example = "127.0557", requiredMode = REQUIRED) double lng) {}

@@ -67,7 +67,8 @@ class ContractControllerTest {
     @Test
     @DisplayName("계약 열람 → 무결성 해시가 담긴다")
     void detail_returnsContentHash() throws Exception {
-        mockMvc.perform(get("/api/v1/contracts/1")).andExpect(jsonPath("$.data.contentHash").isNotEmpty());
+        mockMvc.perform(get("/api/v1/contracts/1"))
+                .andExpect(jsonPath("$.data.contentHash").isNotEmpty());
     }
 
     @Test

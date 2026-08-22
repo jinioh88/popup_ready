@@ -32,9 +32,12 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$.paths['/api/v1/spaces'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/spaces/{id}'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/fixtures'].get").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/contract'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post").exists())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/reservation-requests'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/contract'].post")
+                        .exists())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get").exists());
     }
 
@@ -52,17 +55,19 @@ class OpenApiContractTest {
     @DisplayName("모든 오퍼레이션 → 실패 응답 봉투(400)가 문서화된다")
     void apiDocs_documentsValidationFailureResponse() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(jsonPath(
-                                "$.paths['/api/v1/spaces'].get.responses.400.content['application/json'].schema.$ref")
-                        .value("#/components/schemas/ApiErrorResponse"))
-                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.400").exists());
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/spaces'].get.responses.400.content['application/json'].schema.$ref")
+                                .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.400")
+                        .exists());
     }
 
     @Test
     @DisplayName("에러 응답 스키마 → 클라이언트 분기용 에러 코드 목록을 담는다")
     void apiDocs_errorSchemaCarriesErrorCodeEnum() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum").isArray())
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .isArray())
                 .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum[0]")
                         .value("VALIDATION_FAILED"));
     }
@@ -94,6 +99,31 @@ class OpenApiContractTest {
                         .value("null"))
                 .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.error.type")
                         .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("응답 페이로드 → 모든 필드가 required로 표기된다")
+    void apiDocs_responsePayloadFieldsAreRequired() throws Exception {
+        // required가 없으면 생성 타입의 필드가 전부 optional(accessToken?)이 되어
+        // 서버가 항상 채워 보내는 값에도 클라이언트가 옵셔널 체이닝을 써야 한다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.AuthResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "user")))
+                .andExpect(jsonPath("$.components.schemas.EstimateResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "days", "spaceRentTotal", "fixtureRentalTotal", "deposit", "totalAmount")));
+    }
+
+    @Test
+    @DisplayName("미서명 계약의 서명 시각 → 키는 항상 있고 값만 null이 될 수 있다")
+    void apiDocs_signatureTimestampsAreRequiredButNullable() throws Exception {
+        // Jackson이 null 필드도 그대로 내보내므로 키는 항상 존재한다.
+        // required(키 존재)와 nullable(값이 null 가능)은 직교한다 — 둘 다 표기해야 정확하다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ContractResponse.required")
+                        .value(org.hamcrest.Matchers.hasItems("brandSignedAt", "landlordSignedAt")))
+                .andExpect(jsonPath("$.components.schemas.ContractResponse.properties.brandSignedAt.type")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("string", "null")));
     }
 
     @Test

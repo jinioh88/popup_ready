@@ -24,8 +24,7 @@ public class FixtureController {
     @Operation(summary = "집기 라이브러리 조회", description = "category를 주면 해당 분류만, 없으면 전체를 돌려준다.")
     @GetMapping
     public ApiResponse<List<FixtureResponse>> list(
-            @Parameter(description = "집기 분류 필터. 생략 시 전체") @RequestParam(required = false)
-                    FixtureCategory category) {
+            @Parameter(description = "집기 분류 필터. 생략 시 전체") @RequestParam(required = false) FixtureCategory category) {
         return ApiResponse.ok(List.of(
                 new FixtureResponse(1L, "스탠드 행거 1200", FixtureCategory.HANGER, 1_200, 500, 0, 12_000L, 40),
                 new FixtureResponse(2L, "POS 카운터 900", FixtureCategory.POS, 900, 600, 150, 25_000L, 12),

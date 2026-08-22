@@ -34,8 +34,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("PopupReady API")
                         .version("v1")
-                        .description("단기 팝업스토어 턴키 예약·무인 운영 플랫폼 API. "
-                                + "모든 응답은 {data, error} 봉투로 감싸진다."))
+                        .description("단기 팝업스토어 턴키 예약·무인 운영 플랫폼 API. " + "모든 응답은 {data, error} 봉투로 감싸진다."))
                 .servers(List.of(new Server().url("http://localhost:8080").description("로컬 개발")))
                 .components(new Components()
                         .addSecuritySchemes(
@@ -128,7 +127,6 @@ public class OpenApiConfig {
                 .description(description)
                 .content(new Content()
                         .addMediaType(
-                                "application/json",
-                                new MediaType().schema(new Schema<>().$ref(ERROR_ENVELOPE_REF))));
+                                "application/json", new MediaType().schema(new Schema<>().$ref(ERROR_ENVELOPE_REF))));
     }
 }

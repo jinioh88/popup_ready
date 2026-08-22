@@ -2,6 +2,8 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    // 포맷은 결정적 검사에 맡긴다 — AI 리뷰가 볼 것은 계약·경계·세이프가드다(backend/CLAUDE.md 검증 층 구분)
+    id 'com.diffplug.spotless' version '7.2.1'
 }
 
 group = 'com.popupready'
@@ -52,6 +54,22 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+spotless {
+    java {
+        // palantir-java-format: 구글 스타일 계열이면서 줄바꿈이 덜 공격적이다(사용자 확정, 2026-08-22).
+        // 버전 고정 — Spotless 업그레이드가 포맷 결과를 바꿔 관계없는 diff를 만들지 않게 한다.
+        //
+        // ⚠️ 이 포매터는 javac 내부 API(com.sun.tools.javac)에 의존해 Java 25 JVM에서
+        // NoSuchMethodError로 깨진다(google-java-format도 동일). 그래서 Gradle 데몬 JVM을
+        // gradle/gradle-daemon-jvm.properties로 21에 고정했다. 컴파일은 toolchain 25 그대로다.
+        palantirJavaFormat('2.57.0')
+        importOrder()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
 }
 
 tasks.named('test') {
