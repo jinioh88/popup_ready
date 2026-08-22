@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 
-import { canPlace } from "../../lib/builder/collision";
+import { resolveDrop } from "../../lib/builder/drop";
 import { toPlacement } from "../../lib/builder/occupancy";
 import { cellToPixel, snapToCell } from "../../lib/builder/snap";
 import type { Placement } from "../../lib/builder/types";
@@ -53,23 +53,20 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
     [items, fixtures, grid.cellSizeMm],
   );
 
-  /** 패널에서 끌어온 집기의 드롭 지점을 셀로 환산해 유효성까지 계산한다. */
-  function previewAt(
-    event: React.DragEvent<HTMLDivElement>,
-    fixtureId: number,
-  ): DropPreview | null {
-    const spec = fixtures[fixtureId];
-
-    if (!spec) {
-      return null;
-    }
-
+  /** 패널에서 끌어온 집기의 드롭 지점을 해석한다. 판정 로직은 app/lib에 있다. */
+  function resolveAt(event: React.DragEvent<HTMLDivElement>, fixtureId: number) {
     const bounds = event.currentTarget.getBoundingClientRect();
-    const cell = snapToCell(event.clientX - bounds.left, event.clientY - bounds.top, CELL_PX);
-    const placement = toPlacement(cell, spec, grid.cellSizeMm, 0);
     const known = placements.filter((item): item is Placement => item !== null);
 
-    return { placement, valid: canPlace(placement, known, grid).ok };
+    return resolveDrop({
+      fixtureId,
+      fixtures,
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top,
+      cellPx: CELL_PX,
+      grid,
+      existing: known,
+    });
   }
 
   function readFixtureId(event: React.DragEvent<HTMLDivElement>): number | null {
@@ -93,7 +90,8 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
         event.preventDefault();
 
         // dragover는 초당 수십 번 발생한다. 대상 셀이 그대로면 리렌더하지 않는다.
-        const next = previewAt(event, fixtureId);
+        const resolved = resolveAt(event, fixtureId);
+        const next = resolved.ok ? { placement: resolved.placement, valid: resolved.valid } : null;
         setPreview((current) => (isSamePreview(current, next) ? current : next));
       }}
       onDragLeave={() => setPreview(null)}
@@ -106,9 +104,11 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
           return;
         }
 
-        const dropped = previewAt(event, fixtureId);
+        const dropped = resolveAt(event, fixtureId);
 
-        if (!dropped) {
+        if (!dropped.ok) {
+          // 조용히 넘기면 사용자는 아무 일도 일어나지 않은 것으로 본다.
+          onRejected(placementRejectionMessage(dropped.reason));
           return;
         }
 
