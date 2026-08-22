@@ -2,8 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 
 import { listFixtures } from "../../lib/api/fixtures";
 import { getSpaceDetail } from "../../lib/api/spaces";
-import type { FixtureLookup } from "../../lib/builder/types";
 import type { Fixture } from "../../lib/schemas/api";
+
+/**
+ * fixtureId → 집기 조회표.
+ *
+ * 배치 판정에 필요한 규격(`FixtureLookup`)의 상위 집합이라 스토어 액션에 그대로 넘길 수 있고,
+ * 렌더에 필요한 이름·카테고리까지 들고 있다.
+ */
+export type FixtureCatalog = Readonly<Record<number, Fixture>>;
 
 /** 빌더 화면이 쓰는 서버 상태. 캔버스 상태(Zustand)와 달리 여기 캐시는 TanStack Query가 소유한다. */
 
@@ -33,8 +40,7 @@ export function useFixtures() {
   });
 }
 
-/** 배치 판정 액션에 넘길 fixtureId → 규격 조회표. */
-export function toFixtureLookup(fixtures: readonly Fixture[] | undefined): FixtureLookup {
+export function toFixtureCatalog(fixtures: readonly Fixture[] | undefined): FixtureCatalog {
   const lookup: Record<number, Fixture> = {};
 
   for (const fixture of fixtures ?? []) {

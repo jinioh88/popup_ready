@@ -6,7 +6,8 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["dist", "build", ".react-router"]),
+  // public/mockServiceWorker.js는 msw가 생성한 파일이라 우리가 손대지 않는다.
+  globalIgnores(["dist", "build", ".react-router", "public/mockServiceWorker.js"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [
