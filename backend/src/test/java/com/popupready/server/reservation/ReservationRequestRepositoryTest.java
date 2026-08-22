@@ -1,7 +1,6 @@
 package com.popupready.server.reservation;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 
+/** 영속 왕복만 확인한다. 상태 전이는 DB가 필요 없어 {@link ReservationRequestTest}가 맡는다. */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class ReservationRequestRepositoryTest {
@@ -50,40 +50,5 @@ class ReservationRequestRepositoryTest {
             assertThat(item.fixtureId()).isEqualTo(3L);
             assertThat(item.rotation()).isEqualTo(90);
         });
-    }
-
-    @Test
-    @DisplayName("새 예약 요청 → 상태는 DRAFT로 시작한다")
-    void create_startsAsDraft() {
-        assertThat(sampleRequest().getStatus()).isEqualTo(ReservationStatus.DRAFT);
-    }
-
-    @Test
-    @DisplayName("DRAFT에서 계약 생성 → CONTRACT_PENDING으로 전이한다")
-    void markContractPending_movesFromDraft() {
-        ReservationRequest request = sampleRequest();
-
-        request.markContractPending();
-
-        assertThat(request.getStatus()).isEqualTo(ReservationStatus.CONTRACT_PENDING);
-    }
-
-    @Test
-    @DisplayName("DRAFT에서 곧바로 서명 완료 시도 → 잘못된 전이로 거부한다")
-    void markContractSigned_fromDraft_isRejected() {
-        ReservationRequest request = sampleRequest();
-
-        assertThatThrownBy(request::markContractSigned).isInstanceOf(IllegalStateException.class);
-    }
-
-    @Test
-    @DisplayName("CONTRACT_PENDING에서 서명 완료 → CONTRACT_SIGNED로 전이한다")
-    void markContractSigned_fromContractPending_succeeds() {
-        ReservationRequest request = sampleRequest();
-        request.markContractPending();
-
-        request.markContractSigned();
-
-        assertThat(request.getStatus()).isEqualTo(ReservationStatus.CONTRACT_SIGNED);
     }
 }
