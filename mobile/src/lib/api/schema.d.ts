@@ -195,7 +195,7 @@ export interface components {
              * @example VALIDATION_FAILED
              * @enum {string}
              */
-            code?: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_SIGNED";
+            code?: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_SIGNED";
             /**
              * @description 사람이 읽는 설명. 분기 조건으로 쓰지 말 것
              * @example email은 필수입니다
@@ -205,50 +205,50 @@ export interface components {
         /** @description 실패 응답 봉투. data는 항상 null이고 error에 코드·메시지가 담긴다. */
         ApiErrorResponse: {
             /** @description 실패 시 항상 null */
-            data?: unknown;
-            error?: components["schemas"]["ApiError"];
+            data: unknown;
+            error: components["schemas"]["ApiError"];
         };
         /** @description 공통 응답 봉투 */
         ApiResponseAuthResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["AuthResponse"];
+            data: components["schemas"]["AuthResponse"] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
         ApiResponseContractResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["ContractResponse"];
+            data: components["schemas"]["ContractResponse"] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
         ApiResponseListFixtureResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["FixtureResponse"][];
+            data: components["schemas"]["FixtureResponse"][] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
         ApiResponseListSpaceSummaryResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["SpaceSummaryResponse"][];
+            data: components["schemas"]["SpaceSummaryResponse"][] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
         ApiResponseReservationRequestResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["ReservationRequestResponse"];
+            data: components["schemas"]["ReservationRequestResponse"] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
         ApiResponseSpaceDetailResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
-            data?: components["schemas"]["SpaceDetailResponse"];
+            data: components["schemas"]["SpaceDetailResponse"] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
-            error?: components["schemas"]["ApiError"];
+            error: components["schemas"]["ApiError"] | null;
         };
         /** @description 인증 결과 */
         AuthResponse: {
