@@ -24,7 +24,5 @@ public record LayoutDto(
                 @NotNull(message = "cellSizeMm는 필수입니다")
                 @Positive(message = "cellSizeMm는 1 이상이어야 합니다")
                 Integer cellSizeMm,
-        @Schema(description = "배치된 집기 목록. 빈 배열도 허용한다")
-                @NotNull(message = "items는 필수입니다")
-                @Valid
+        @Schema(description = "배치된 집기 목록. 빈 배열도 허용한다") @NotNull(message = "items는 필수입니다") @Valid
                 List<LayoutItemDto> items) {}

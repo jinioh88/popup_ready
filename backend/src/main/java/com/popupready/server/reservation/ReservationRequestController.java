@@ -29,8 +29,7 @@ public class ReservationRequestController {
 
     @Operation(
             summary = "예약 요청 생성",
-            description = "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. "
-                    + "그리드 범위를 벗어나거나 집기가 겹치면 400이다.")
+            description = "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. " + "그리드 범위를 벗어나거나 집기가 겹치면 400이다.")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ReservationRequestResponse> create(@Valid @RequestBody CreateReservationRequest request) {

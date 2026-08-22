@@ -35,15 +35,13 @@ public class ContractController {
 
     private static final String TEMPLATE_VERSION = "v1";
 
-    private static final String STUB_CONTENT_HASH =
-            "3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8";
+    private static final String STUB_CONTENT_HASH = "3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8";
 
     private static final Long STUB_CONTRACT_ID = 1L;
 
     @Operation(
             summary = "계약서 생성",
-            description = "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. "
-                    + "예약 요청 상태는 CONTRACT_PENDING으로 전이된다.")
+            description = "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. " + "예약 요청 상태는 CONTRACT_PENDING으로 전이된다.")
     @PostMapping("/api/v1/reservation-requests/{id}/contract")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ContractResponse> create(
@@ -62,11 +60,10 @@ public class ContractController {
 
     @Operation(
             summary = "전자 서명",
-            description = "로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. "
-                    + "양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다.")
+            description =
+                    "로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. " + "양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다.")
     @PostMapping("/api/v1/contracts/{id}/sign")
-    public ApiResponse<ContractResponse> sign(
-            @Parameter(description = "계약 ID", example = "1") @PathVariable Long id) {
+    public ApiResponse<ContractResponse> sign(@Parameter(description = "계약 ID", example = "1") @PathVariable Long id) {
         return ApiResponse.ok(signedSample(id));
     }
 
@@ -100,8 +97,7 @@ public class ContractController {
                 new ClauseDto("제1조 (목적)", "본 계약은 팝업스토어의 단기 운영을 목적으로 하는 일시사용에 관한 것으로, 통상의 상가 임대차와 그 성질을 달리한다."),
                 new ClauseDto("제2조 (사용 기간)", "사용 기간은 2026-09-01부터 2026-09-14까지 14일간으로 하며, 기간 만료로 본 계약은 당연히 종료된다."),
                 new ClauseDto(
-                        "제3조 (계약갱신요구권 불행사)",
-                        "사용자는 본 계약이 상가건물 임대차보호법상 일시사용을 위한 것임을 확인하고, 동법에 따른 계약갱신요구권을 행사하지 아니한다."),
+                        "제3조 (계약갱신요구권 불행사)", "사용자는 본 계약이 상가건물 임대차보호법상 일시사용을 위한 것임을 확인하고, 동법에 따른 계약갱신요구권을 행사하지 아니한다."),
                 new ClauseDto("제4조 (보증금 및 정산)", "보증금은 공간 사용료 대비 소액으로 정하며, 사용료는 정액 일시불로 정산한다."),
                 new ClauseDto("제5조 (원상 유지)", "사용자는 시공·못질 등 구조를 변경하는 행위를 하지 아니하며, 반입 물품은 모듈러 집기로 한정한다."));
     }

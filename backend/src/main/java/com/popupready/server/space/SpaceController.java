@@ -11,8 +11,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.util.List;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,9 +34,7 @@ public class SpaceController {
     /** 웹이 반경을 계산하지 못하는 초기 진입에서 쓰는 기본값(m). */
     private static final int DEFAULT_RADIUS_METERS = 1000;
 
-    @Operation(
-            summary = "반경 공실 검색",
-            description = "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.")
+    @Operation(summary = "반경 공실 검색", description = "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.")
     @GetMapping
     public ApiResponse<List<SpaceSummaryResponse>> search(
             @Parameter(description = "중심 위도", required = true, example = "37.5445")
@@ -54,17 +52,11 @@ public class SpaceController {
                     @Positive
                     @Max(50_000)
                     int radius,
-            @Parameter(description = "최소 실면적(㎡)", example = "50")
-                    @RequestParam(required = false)
-                    @PositiveOrZero
+            @Parameter(description = "최소 실면적(㎡)", example = "50") @RequestParam(required = false) @PositiveOrZero
                     Double minArea,
-            @Parameter(description = "일일 대여료 상한(원)", example = "600000")
-                    @RequestParam(required = false)
-                    @PositiveOrZero
+            @Parameter(description = "일일 대여료 상한(원)", example = "600000") @RequestParam(required = false) @PositiveOrZero
                     Long maxRent,
-            @Parameter(description = "최소 허용 전력(W)", example = "3000")
-                    @RequestParam(required = false)
-                    @PositiveOrZero
+            @Parameter(description = "최소 허용 전력(W)", example = "3000") @RequestParam(required = false) @PositiveOrZero
                     Integer minPower) {
         return ApiResponse.ok(List.of(
                 new SpaceSummaryResponse(
