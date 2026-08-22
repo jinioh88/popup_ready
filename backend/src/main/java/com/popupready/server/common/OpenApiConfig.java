@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.media.MediaType;
 import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import java.util.LinkedHashSet;
@@ -62,9 +63,15 @@ public class OpenApiConfig {
         return openApi -> {
             openApi.getComponents().addSchemas(ERROR_ENVELOPE_SCHEMA, errorEnvelopeSchema());
             openApi.getPaths()
-                    .forEach((path, pathItem) -> pathItem.readOperations().forEach(operation -> {
+                    .forEach((path, pathItem) -> pathItem.readOperationsMap().forEach((method, operation) -> {
                         ApiResponses responses = operation.getResponses();
                         responses.addApiResponse("400", errorResponse("요청 값 검증 실패"));
+                        // 인증이 필요한 오퍼레이션만 401과 bearer 요구를 붙인다. 공개 경로에 붙이면
+                        // 문서가 거짓말을 한다. 판별 기준은 Security 설정과 같은 PublicEndpoints다.
+                        if (!PublicEndpoints.isPublic(path, method.name())) {
+                            responses.addApiResponse("401", errorResponse("인증이 필요함"));
+                            operation.addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
+                        }
                         // 404·415는 실제로 그 오퍼레이션의 응답인 곳에만 붙인다. 목록 조회에 404를,
                         // 본문 없는 GET에 415를 달면 문서가 거짓말을 한다.
                         if (path.contains("{")) {

@@ -4,21 +4,31 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.popupready.server.auth.JwtProvider;
 import com.popupready.server.common.GlobalExceptionHandler;
-import com.popupready.server.common.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(SpaceController.class)
-@Import({SecurityConfig.class, GlobalExceptionHandler.class})
+// 보안 필터는 끈다. 이 슬라이스가 볼 것은 입력 검증·응답 봉투이고,
+// 어느 경로가 열리고 닫히는지는 SecurityAccessTest가 못 박는다.
+@AutoConfigureMockMvc(addFilters = false)
+@Import(GlobalExceptionHandler.class)
 class SpaceControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // @WebMvcTest는 Filter 타입 빈을 슬라이스에 포함해 JwtAuthenticationFilter가 딸려 온다.
+    // 필터는 addFilters=false로 이미 무력화됐고, 여기서는 그 의존만 채워 컨텍스트를 띄운다.
+    @MockitoBean
+    private JwtProvider jwtProvider;
 
     @Test
     @DisplayName("lat·lng를 준 반경 검색 → 200과 마커용 요약 배열")
