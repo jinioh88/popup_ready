@@ -12,6 +12,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 그때도 여기 확정된 파라미터 이름·응답 필드는 바꾸지 않는다.
  */
 @RestController
-@RequestMapping("/api/v1/spaces")
+@RequestMapping(value = "/api/v1/spaces", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "space", description = "공실 상가 탐색")
 @Validated
 public class SpaceController {

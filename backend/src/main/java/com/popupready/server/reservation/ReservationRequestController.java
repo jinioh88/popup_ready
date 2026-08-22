@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 그때 400으로 떨어지는 경우가 늘어날 뿐, 성공 응답의 형태는 여기서 확정된 그대로다.
  */
 @RestController
-@RequestMapping("/api/v1/reservation-requests")
+@RequestMapping(value = "/api/v1/reservation-requests", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "reservation", description = "예약 요청")
 public class ReservationRequestController {
 

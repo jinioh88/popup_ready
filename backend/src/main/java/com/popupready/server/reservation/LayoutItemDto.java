@@ -23,7 +23,9 @@ public record LayoutItemDto(
                 @NotNull(message = "row는 필수입니다")
                 @PositiveOrZero(message = "row는 0 이상이어야 합니다")
                 Integer row,
-        @Schema(description = "회전각. 0 | 90 | 180 | 270", example = "90", allowableValues = {"0", "90", "180", "270"})
+        // allowableValues로 0|90|180|270을 열거하면 springdoc이 integer 타입에 문자열 enum을 실어
+        // 웹의 생성 타입이 "90" 같은 문자열 유니온이 된다. 범위만 문서화하고 90 배수 판정은 T4-1이 맡는다.
+        @Schema(description = "회전각. 0 | 90 | 180 | 270 중 하나여야 한다", example = "90")
                 @NotNull(message = "rotation은 필수입니다")
                 @PositiveOrZero(message = "rotation은 0 이상이어야 합니다")
                 @Max(value = 270, message = "rotation은 270 이하여야 합니다")

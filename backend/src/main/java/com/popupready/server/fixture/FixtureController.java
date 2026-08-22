@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>실구현(T3-2)에서 카테고리 필터와 시드 데이터로 속을 채운다.
  */
 @RestController
-@RequestMapping("/api/v1/fixtures")
+@RequestMapping(value = "/api/v1/fixtures", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "fixture", description = "모듈러 집기 라이브러리")
 public class FixtureController {
 

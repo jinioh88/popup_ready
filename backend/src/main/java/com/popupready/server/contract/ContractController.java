@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @Tag(name = "contract", description = "일시사용 표준 계약(US-202)")
+@RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class ContractController {
 
     /** 임의 변경 금지. T5-1에서 템플릿 리소스로 옮기되 값은 그대로 유지한다. */
