@@ -112,16 +112,39 @@ class OpenApiContractTest {
     }
 
     @Test
-    @DisplayName("공개 오퍼레이션 → 401을 문서화하지 않는다")
-    void apiDocs_omitsUnauthorizedForPublicOperations() throws Exception {
-        // 인증 없이 부를 수 있는 경로에 401을 붙이면 문서가 거짓말을 한다.
+    @DisplayName("공개 오퍼레이션 → bearer 인증을 요구하지 않는다")
+    void apiDocs_publicOperationsDoNotRequireBearerAuth() throws Exception {
+        // 검증할 것은 401 유무가 아니라 '인증 요구'다. login은 자격 증명 실패로 401을 내지만
+        // 그것은 인증 필터가 막은 401과 종류가 다르며, 토큰 없이 부를 수 있는 경로다.
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.responses.401")
-                        .doesNotExist())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/auth/login'].post.security").doesNotExist())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/auth/signup'].post.security").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/spaces'].get.security").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/fixtures'].get.security").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("자격 증명 개념이 없는 탐색 경로 → 401을 문서화하지 않는다")
+    void apiDocs_discoveryOperationsHaveNoUnauthorized() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(
                         jsonPath("$.paths['/api/v1/spaces'].get.responses.401").doesNotExist())
                 .andExpect(jsonPath("$.paths['/api/v1/fixtures'].get.responses.401")
                         .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("가입·로그인 → 실제로 나는 실패 응답이 문서화된다")
+    void apiDocs_documentsAuthDomainFailures() throws Exception {
+        // 공개 경로라 인증 401은 붙지 않지만, 자격 증명 실패 401과 이메일 중복 409는
+        // 이 오퍼레이션이 실제로 내보내는 응답이다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/auth/signup'].post.responses.409")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.responses.401")
+                        .exists());
     }
 
     @Test

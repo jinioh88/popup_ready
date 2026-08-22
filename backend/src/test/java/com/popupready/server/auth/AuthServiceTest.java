@@ -3,6 +3,7 @@ package com.popupready.server.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -102,5 +103,16 @@ class AuthServiceTest {
                 .isInstanceOf(ApiException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+    }
+
+    @Test
+    @DisplayName("없는 이메일로 로그인 → 해시 검증을 건너뛰지 않는다(응답 시간으로 가입 여부가 드러나지 않게)")
+    void login_withUnknownEmail_stillPaysHashingCost() {
+        given(userRepository.findByEmail("nobody@popupready.com")).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("nobody@popupready.com", "password123")))
+                .isInstanceOf(ApiException.class);
+
+        verify(passwordEncoder).matches(eq("password123"), any());
     }
 }
