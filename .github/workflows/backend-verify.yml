@@ -1,0 +1,94 @@
+name: backend-verify
+
+# backend 파트 검증 게이트. `./gradlew check` 하나가 컴파일·포맷(spotlessCheck)·전체 테스트를
+# 모두 포함한다 — 결정적 검사가 잡을 수 있는 것은 AI 리뷰에 맡기지 않는다(backend/CLAUDE.md).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "contracts/openapi.json"
+      - ".github/workflows/backend-verify.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "contracts/openapi.json"
+      - ".github/workflows/backend-verify.yml"
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # OpenApiContractTest가 @SpringBootTest라 컨텍스트 기동에 DB·Redis가 필요하다.
+    # 이미지는 infra/docker-compose.yml과 같은 것을 쓴다 — PostGIS 확장은 이 이미지가
+    # initdb 단계에서 자동 생성하므로 별도 조치가 없다.
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: popupready
+          POSTGRES_USER: popupready
+          POSTGRES_PASSWORD: popupready
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U popupready -d popupready"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 두 개가 필요하다. 컴파일 toolchain은 25지만, Spotless의 palantir-java-format이
+      # javac 내부 API에 의존해 Java 25 JVM에서 깨지므로 Gradle 데몬은 21로 고정돼 있다
+      # (backend/gradle/gradle-daemon-jvm.properties). 마지막 항목이 JAVA_HOME이 된다.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: corretto
+          java-version: |
+            25
+            21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # 컴파일 + spotlessCheck + 전체 테스트
+      - run: ./gradlew check
+
+      # 계약 스펙은 커밋된 contracts/openapi.json이 진실이다. 코드가 스펙을 바꿨는데
+      # 재생성 커밋을 빠뜨리면 웹·모바일이 낡은 타입을 쓰게 되므로 여기서 잡는다.
+      - name: contracts/openapi.json 최신 여부 확인
+        run: |
+          set -o pipefail
+          ./gradlew bootRun > /tmp/bootrun.log 2>&1 &
+          BOOT_PID=$!
+          # 검사 결과와 무관하게 서버를 반드시 내린다 — 남겨두면 job이 끝나지 않는다
+          trap 'kill $BOOT_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8080/v3/api-docs -o /tmp/openapi.json && break
+            sleep 2
+          done
+          if [ ! -s /tmp/openapi.json ]; then
+            echo "::error::앱이 기동되지 않아 스펙을 받지 못했다"
+            tail -50 /tmp/bootrun.log
+            exit 1
+          fi
+          if ! diff -u ../contracts/openapi.json /tmp/openapi.json; then
+            echo "::error::contracts/openapi.json이 코드와 어긋난다. 재생성해 커밋할 것 (스펙 변경 3종 세트: 재생성 커밋 + 스프린트 문서 §2.2 표 갱신 + PM 보고)"
+            exit 1
+          fi
