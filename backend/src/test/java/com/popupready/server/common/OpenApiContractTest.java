@@ -32,9 +32,12 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$.paths['/api/v1/spaces'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/spaces/{id}'].get").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/fixtures'].get").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/contract'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post").exists())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/reservation-requests'].post").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/contract'].post")
+                        .exists())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post").exists())
                 .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get").exists());
     }
 
@@ -52,17 +55,19 @@ class OpenApiContractTest {
     @DisplayName("모든 오퍼레이션 → 실패 응답 봉투(400)가 문서화된다")
     void apiDocs_documentsValidationFailureResponse() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(jsonPath(
-                                "$.paths['/api/v1/spaces'].get.responses.400.content['application/json'].schema.$ref")
-                        .value("#/components/schemas/ApiErrorResponse"))
-                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.400").exists());
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/spaces'].get.responses.400.content['application/json'].schema.$ref")
+                                .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.400")
+                        .exists());
     }
 
     @Test
     @DisplayName("에러 응답 스키마 → 클라이언트 분기용 에러 코드 목록을 담는다")
     void apiDocs_errorSchemaCarriesErrorCodeEnum() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
-                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum").isArray())
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .isArray())
                 .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum[0]")
                         .value("VALIDATION_FAILED"));
     }

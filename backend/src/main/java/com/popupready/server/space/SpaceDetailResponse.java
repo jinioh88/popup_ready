@@ -18,16 +18,10 @@ public record SpaceDetailResponse(
         @Schema(description = "주소", example = "서울 성동구 연무장길 45", requiredMode = REQUIRED) String address,
         @Schema(description = "위치 좌표", requiredMode = REQUIRED) LocationDto location,
         @Schema(description = "일일 대여료(원)", example = "450000", requiredMode = REQUIRED) long dailyRent,
-        @Schema(
-                        description = "보증금 비율. 일시사용 요건상 하향 설계된다",
-                        example = "0.10",
-                        requiredMode = REQUIRED)
+        @Schema(description = "보증금 비율. 일시사용 요건상 하향 설계된다", example = "0.10", requiredMode = REQUIRED)
                 BigDecimal depositRate,
         @Schema(description = "실면적(㎡)", example = "82.5", requiredMode = REQUIRED) double floorAreaM2,
-        @Schema(
-                        description = "허용 전력(W). 배치한 집기 소비전력 합이 이 값을 넘으면 결제가 차단된다",
-                        example = "5000",
-                        requiredMode = REQUIRED)
+        @Schema(description = "허용 전력(W). 배치한 집기 소비전력 합이 이 값을 넘으면 결제가 차단된다", example = "5000", requiredMode = REQUIRED)
                 int maxPowerWatt,
         @Schema(description = "도면 그리드 가로 칸 수", example = "20", requiredMode = REQUIRED) int gridCols,
         @Schema(description = "도면 그리드 세로 칸 수", example = "12", requiredMode = REQUIRED) int gridRows,
