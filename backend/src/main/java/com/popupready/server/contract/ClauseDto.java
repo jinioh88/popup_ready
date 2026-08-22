@@ -1,5 +1,7 @@
 package com.popupready.server.contract;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -8,5 +10,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "계약 조항")
 public record ClauseDto(
-        @Schema(description = "조항 제목", example = "제1조 (목적)") String title,
-        @Schema(description = "조항 전문", example = "본 계약은 팝업스토어 단기 운영을 목적으로 한다.") String body) {}
+        @Schema(description = "조항 제목", example = "제1조 (목적)", requiredMode = REQUIRED) String title,
+        @Schema(
+                        description = "조항 전문",
+                        example = "본 계약은 팝업스토어 단기 운영을 목적으로 한다.",
+                        requiredMode = REQUIRED)
+                String body) {}
