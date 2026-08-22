@@ -353,7 +353,7 @@ export interface components {
             /**
              * Format: int64
              * @description 보증금(원). 일시사용 요건상 하향 설계된다
-             * @example 672000
+             * @example 630000
              */
             deposit: number;
             /**
@@ -371,7 +371,7 @@ export interface components {
             /**
              * Format: int64
              * @description 총 견적(원)
-             * @example 7392000
+             * @example 7350000
              */
             totalAmount: number;
         };
@@ -738,6 +738,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 서버 오류 */
             500: {
                 headers: {
@@ -773,6 +782,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -824,6 +842,24 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 서버 오류 */
             500: {
                 headers: {
@@ -861,6 +897,24 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -951,6 +1005,24 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 서버 오류 */
             500: {
                 headers: {
@@ -988,6 +1060,24 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1101,6 +1191,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
