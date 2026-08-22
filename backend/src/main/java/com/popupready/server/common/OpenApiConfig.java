@@ -10,7 +10,9 @@ import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -67,14 +69,58 @@ public class OpenApiConfig {
                         responses.addApiResponse("400", errorResponse("요청 값 검증 실패"));
                         responses.addApiResponse("500", errorResponse("서버 오류"));
                     });
+            rewriteNullableRefs(openApi);
         };
+    }
+
+    /**
+     * swagger-core는 {@code $ref} 속성에 nullable을 적용할 때 형제 키로 {@code "type": "null"}을 붙인다.
+     * OpenAPI 3.1(JSON Schema)에서 형제 키워드는 AND로 해석되므로 "null이면서 동시에 AuthResponse"라는,
+     * 어떤 값도 통과하지 못하는 스키마가 된다. 웹·모바일이 이 파일로 타입을 만드는 이상 그대로 둘 수 없어
+     * {@code anyOf: [{$ref}, {type: null}]}로 바로잡는다.
+     *
+     * <p>{@code $ref}가 아닌 속성(배열 등)은 swagger-core가 {@code type: ["array", "null"]}로 이미
+     * 올바르게 내보내므로 건드리지 않는다.
+     */
+    @SuppressWarnings("rawtypes")
+    private void rewriteNullableRefs(OpenAPI openApi) {
+        for (Schema<?> schema : openApi.getComponents().getSchemas().values()) {
+            Map<String, Schema> properties = schema.getProperties();
+            if (properties != null) {
+                properties.replaceAll((name, property) -> toNullableUnion(property));
+            }
+        }
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private Schema toNullableUnion(Schema property) {
+        boolean nullableRef = property.get$ref() != null
+                && property.getTypes() != null
+                && property.getTypes().contains("null");
+        if (!nullableRef) {
+            return property;
+        }
+        return new Schema<>()
+                .description(property.getDescription())
+                .anyOf(List.of(new Schema<>().$ref(property.get$ref()), nullSchema()));
     }
 
     private Schema<?> errorEnvelopeSchema() {
         return new ObjectSchema()
                 .description("실패 응답 봉투. data는 항상 null이고 error에 코드·메시지가 담긴다.")
-                .addProperty("data", new Schema<>().description("실패 시 항상 null"))
-                .addProperty("error", new Schema<>().$ref("#/components/schemas/ApiError"));
+                .addProperty("data", new Schema<>().description("실패 시 항상 null").nullable(true))
+                .addProperty("error", new Schema<>().$ref("#/components/schemas/ApiError"))
+                .required(List.of("data", "error"));
+    }
+
+    /**
+     * {@code {"type": "null"}} 스키마. 3.1 모드에서는 {@code type} 단수 setter가 무시되므로
+     * {@code types}에 직접 넣어야 한다 — 빠뜨리면 빈 스키마 {@code {}}가 나가 "무엇이든 허용"이 된다.
+     */
+    private Schema<?> nullSchema() {
+        Schema<?> schema = new Schema<>();
+        schema.setTypes(new LinkedHashSet<>(List.of("null")));
+        return schema;
     }
 
     private io.swagger.v3.oas.models.responses.ApiResponse errorResponse(String description) {

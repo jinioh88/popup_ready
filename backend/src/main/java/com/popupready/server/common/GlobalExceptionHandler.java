@@ -2,8 +2,10 @@ package com.popupready.server.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -58,13 +60,39 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 예상하지 못한 예외. 내부 메시지를 그대로 내보내면 구현 정보가 새므로 고정 문구만 응답하고,
-     * 원인은 서버 로그로만 남긴다.
+     * 그 밖의 예외.
+     *
+     * <p>Spring MVC가 던지는 예외 상당수는 {@link ErrorResponse}를 구현하며 이미 올바른 상태 코드를
+     * 알고 있다(405, 404, 415 등). 이것들까지 500으로 덮으면 인가 실패가 서버 오류로 위장되고
+     * 클라이언트가 재시도 여부를 판단할 수 없으므로, <b>상태 코드는 프레임워크의 판단을 따르고
+     * 봉투 형태만 우리 규약으로 맞춘다.</b>
+     *
+     * <p>진짜 예상하지 못한 예외만 500으로 내리며, 내부 메시지를 그대로 내보내면 구현 정보가 새므로
+     * 고정 문구만 응답하고 원인은 서버 로그로만 남긴다.
      */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
+    public ResponseEntity<ApiResponse<Void>> handleOther(Exception e) {
+        if (e instanceof ErrorResponse errorResponse) {
+            ErrorCode errorCode = fromStatus(errorResponse.getStatusCode());
+            if (errorCode == ErrorCode.INTERNAL_ERROR) {
+                log.error("서버 오류로 분류된 프레임워크 예외", e);
+            }
+            return toResponse(errorCode, errorCode.name());
+        }
         log.error("처리되지 않은 예외", e);
         return toResponse(ErrorCode.INTERNAL_ERROR, "서버 오류가 발생했습니다");
+    }
+
+    /** 프레임워크가 정한 상태 코드를 공유 에러 코드로 옮긴다. 매핑에 없는 4xx는 요청 문제로 본다. */
+    private static ErrorCode fromStatus(HttpStatusCode status) {
+        return switch (status.value()) {
+            case 401 -> ErrorCode.UNAUTHORIZED;
+            case 403 -> ErrorCode.FORBIDDEN;
+            case 404 -> ErrorCode.NOT_FOUND;
+            case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
+            case 415 -> ErrorCode.UNSUPPORTED_MEDIA_TYPE;
+            default -> status.is4xxClientError() ? ErrorCode.VALIDATION_FAILED : ErrorCode.INTERNAL_ERROR;
+        };
     }
 
     private static String describe(FieldError fieldError) {
