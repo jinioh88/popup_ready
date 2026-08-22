@@ -45,12 +45,14 @@ class SecurityAccessTest {
     }
 
     @Test
-    @DisplayName("가입·로그인 → 인증 없이 열려 있다")
+    @DisplayName("로그인 → 인증 없이 열려 있다(자격 증명 실패로 갈 뿐 필터에 막히지 않는다)")
     void authEndpoints_arePublic() throws Exception {
+        // 필터에 막혔다면 UNAUTHORIZED가, 통과해 자격 증명을 검증했다면 INVALID_CREDENTIALS가 나온다.
+        // 둘 다 401이라 상태 코드만으로는 구분되지 않으므로 에러 코드로 확인한다.
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"a@b.com\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk());
+                        .content("{\"email\":\"nobody@popupready.com\",\"password\":\"password123\"}"))
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
     }
 
     @Test
