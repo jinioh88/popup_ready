@@ -100,6 +100,31 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("보호된 오퍼레이션 → 401이 문서화되고 bearer 인증을 요구한다")
+    void apiDocs_documentsUnauthorizedForProtectedOperations() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].post.responses.401")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.401")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.security")
+                        .isArray());
+    }
+
+    @Test
+    @DisplayName("공개 오퍼레이션 → 401을 문서화하지 않는다")
+    void apiDocs_omitsUnauthorizedForPublicOperations() throws Exception {
+        // 인증 없이 부를 수 있는 경로에 401을 붙이면 문서가 거짓말을 한다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.responses.401")
+                        .doesNotExist())
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/spaces'].get.responses.401").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/fixtures'].get.responses.401")
+                        .doesNotExist());
+    }
+
+    @Test
     @DisplayName("에러 응답 스키마 → 클라이언트 분기용 에러 코드 목록을 담는다")
     void apiDocs_errorSchemaCarriesErrorCodeEnum() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))

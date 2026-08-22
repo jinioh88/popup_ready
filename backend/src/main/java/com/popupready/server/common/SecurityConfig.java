@@ -1,34 +1,62 @@
 package com.popupready.server.common;
 
+import com.popupready.server.auth.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * ⚠️ Phase 0 한정 임시 설정 — 모든 요청을 허용한다.
+ * 인증·인가 경계. <b>기본값은 "인증 필요"이고, 공개 경로만 예외로 열거한다</b> — 반대로 짜면
+ * 새 엔드포인트가 실수로 공개된다.
  *
- * <p>이 시점의 컨트롤러는 고정 샘플을 돌려주는 계약 스텁뿐이라 보호할 데이터가 없고,
- * 웹·모바일이 /v3/api-docs와 스텁 응답에 바로 접근할 수 있어야 한다.
+ * <p>공개로 두는 것은 셋뿐이다: ① 가입·로그인(인증을 얻는 경로라 인증을 요구할 수 없다)
+ * ② 공간·집기 탐색(로그인 전에 둘러보는 것이 US-101의 전제다) ③ API 문서.
+ * 예약·계약은 당사자만 다루므로 전부 인증을 요구한다.
  *
- * <p><b>Phase 2(T2-2)에서 이 permitAll을 반드시 걷어내고</b> JWT 필터 + 역할 기반 접근 제어로
- * 교체한다. 그때 공개로 남는 것은 auth/*, GET /spaces, GET /spaces/{id}, GET /fixtures,
- * 그리고 문서 경로뿐이며 예약·계약 엔드포인트는 인증을 요구한다.
+ * <p>어느 경로가 열려 있는지는 {@code SecurityAccessTest}가 못 박고 있다. 여기를 고치면
+ * 그 테스트도 함께 고쳐야 하며, 그것이 의도된 마찰이다.
  */
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            ApiAuthenticationEntryPoint authenticationEntryPoint,
+            ApiAccessDeniedHandler accessDeniedHandler)
+            throws Exception {
         return http
                 // 토큰 기반 무상태 API라 CSRF 토큰 흐름이 성립하지 않는다.
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
-                // TODO(T2-2): JWT 필터 도입 시 제거 — 공개 경로만 permitAll로 남긴다.
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                // 공개 경로 목록은 PublicEndpoints가 단일 진실이다 — OpenAPI 문서도 같은 목록을 본다.
+                .authorizeHttpRequests(auth -> auth.requestMatchers(PublicEndpoints.AUTH_ANT)
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, PublicEndpoints.DISCOVERY_GET_ANT)
+                        .permitAll()
+                        .requestMatchers(PublicEndpoints.DOCS_ANT)
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated())
+                // 401·403은 필터 단계라 GlobalExceptionHandler가 잡지 못한다. 봉투 형태를 여기서 맞춘다.
+                .exceptionHandling(handling -> handling.authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    /** 비밀번호는 BCrypt 해시로만 저장한다. 평문 비교 경로를 만들지 않는다. */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 }
