@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.popupready.server.auth.JwtProvider;
 import com.popupready.server.space.SpaceController;
+import com.popupready.server.space.SpaceService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class GlobalExceptionHandlerWebTest {
     // 필터는 addFilters=false로 이미 무력화됐고, 여기서는 그 의존만 채워 컨텍스트를 띄운다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private SpaceService spaceService;
 
     @Test
     @DisplayName("지원하지 않는 HTTP 메서드 → 500이 아니라 405")

@@ -1,11 +1,17 @@
 package com.popupready.server.space;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.popupready.server.auth.JwtProvider;
 import com.popupready.server.common.GlobalExceptionHandler;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +35,38 @@ class SpaceControllerTest {
     // 필터는 addFilters=false로 이미 무력화됐고, 여기서는 그 의존만 채워 컨텍스트를 띄운다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private SpaceService spaceService;
+
+    @BeforeEach
+    void stubSpaceService() {
+        // 이 슬라이스가 보는 것은 파라미터 검증과 응답 봉투다.
+        // 검색·매핑 규칙은 SpaceServiceTest가, 공간 쿼리는 SpaceSearchRepositoryTest가 맡는다.
+        given(spaceService.search(anyDouble(), anyDouble(), anyInt(), any(), any(), any()))
+                .willReturn(List.of(new SpaceSummaryResponse(
+                        1L,
+                        "성수 연무장길 팝업 1층",
+                        "서울 성동구 연무장길 45",
+                        new LocationDto(37.5445, 127.0557),
+                        450_000L,
+                        82.5,
+                        5_000)));
+        given(spaceService.detail(any()))
+                .willReturn(new SpaceDetailResponse(
+                        1L,
+                        "성수 연무장길 팝업 1층",
+                        "서울 성동구 연무장길 45",
+                        new LocationDto(37.5445, 127.0557),
+                        450_000L,
+                        new java.math.BigDecimal("0.10"),
+                        82.5,
+                        5_000,
+                        20,
+                        12,
+                        500,
+                        SpaceStatus.ACTIVE));
+    }
 
     @Test
     @DisplayName("lat·lng를 준 반경 검색 → 200과 마커용 요약 배열")

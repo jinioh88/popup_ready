@@ -19,11 +19,18 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
      * <p>native query인 이유는 PostGIS 함수와 geography 캐스팅을 명시적으로 드러내기 위해서다.
      * 이 프로젝트는 타 DB 호환을 고려하지 않는다.
      */
+    default List<Space> searchWithin(
+            double lat, double lng, int radiusMeters, Double minArea, Long maxRent, Integer minPower) {
+        // enum 이름을 SQL 문자열로 박아두면, 상수를 바꿔도 컴파일은 통과하고 쿼리만 조용히
+        // 아무것도 반환하지 않게 된다. 여기서 넘겨 컴파일러가 연결을 지키게 한다.
+        return searchActiveWithin(lat, lng, radiusMeters, minArea, maxRent, minPower, SpaceStatus.ACTIVE.name());
+    }
+
     @Query(
             value =
                     """
                     SELECT * FROM space s
-                     WHERE s.status = 'ACTIVE'
+                     WHERE s.status = :activeStatus
                        AND ST_DWithin(
                                s.location::geography,
                                ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
@@ -34,11 +41,12 @@ public interface SpaceRepository extends JpaRepository<Space, Long> {
                      ORDER BY s.id
                     """,
             nativeQuery = true)
-    List<Space> searchWithin(
+    List<Space> searchActiveWithin(
             @Param("lat") double lat,
             @Param("lng") double lng,
             @Param("radiusMeters") int radiusMeters,
             @Param("minArea") Double minArea,
             @Param("maxRent") Long maxRent,
-            @Param("minPower") Integer minPower);
+            @Param("minPower") Integer minPower,
+            @Param("activeStatus") String activeStatus);
 }

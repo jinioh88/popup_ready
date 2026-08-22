@@ -1,11 +1,15 @@
 package com.popupready.server.fixture;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.popupready.server.auth.JwtProvider;
 import com.popupready.server.common.GlobalExceptionHandler;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +33,17 @@ class FixtureControllerTest {
     // 필터는 addFilters=false로 이미 무력화됐고, 여기서는 그 의존만 채워 컨텍스트를 띄운다.
     @MockitoBean
     private JwtProvider jwtProvider;
+
+    @MockitoBean
+    private FixtureService fixtureService;
+
+    @BeforeEach
+    void stubFixtureService() {
+        // 분류 필터 규칙은 FixtureServiceTest가 맡는다. 여기서는 입력 검증과 봉투만 본다.
+        given(fixtureService.list(any()))
+                .willReturn(List.of(
+                        new FixtureResponse(1L, "스탠드 행거 1200", FixtureCategory.HANGER, 1_200, 500, 0, 12_000L, 40)));
+    }
 
     @Test
     @DisplayName("category 없이 조회 → 200과 전체 집기 배열")
