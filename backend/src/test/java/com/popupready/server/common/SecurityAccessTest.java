@@ -1,5 +1,6 @@
 package com.popupready.server.common;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -87,13 +88,18 @@ class SecurityAccessTest {
     }
 
     @Test
-    @DisplayName("유효한 토큰으로 예약 요청 → 통과한다")
+    @DisplayName("브랜드 토큰으로 예약 요청 → 인가에 막히지 않는다")
     void reservationRequest_withValidToken_isAllowed() throws Exception {
+        // 이 테스트가 볼 것은 인가 통과 여부다. 본문이 지목한 공간이 실제로 있는지·도면이 맞는지는
+        // 예약 도메인의 판정이고 ReservationRequestFlowTest가 본다. 여기서 201을 기대하면
+        // 이 보안 테스트가 시드 데이터에 묶여 조용히 깨진다.
         mockMvc.perform(post("/api/v1/reservation-requests")
                         .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.BRAND))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(VALID_BODY))
-                .andExpect(status().isCreated());
+                .andExpect(result -> assertThat(result.getResponse().getStatus())
+                        .as("인증·인가 단계에서 막히지 않아야 한다")
+                        .isNotIn(401, 403));
     }
 
     @Test

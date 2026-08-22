@@ -45,4 +45,23 @@ class FixtureServiceTest {
                 .extracting(FixtureResponse::category)
                 .containsOnly(FixtureCategory.HANGER);
     }
+
+    @Test
+    @DisplayName("ID 목록으로 조회 → 그 집기들만 가져온다")
+    void findAllByIds_fetchesOnlyRequested() {
+        given(fixtureRepository.findAllById(List.of(3L))).willReturn(List.of(hanger()));
+
+        // 엔티티 ID는 영속 시점에 채워지므로 여기서는 매핑이 이뤄졌는지만 본다.
+        assertThat(fixtureService.findAllByIds(List.of(3L)))
+                .extracting(FixtureResponse::name)
+                .containsExactly("스탠드 행거 1200");
+    }
+
+    @Test
+    @DisplayName("없는 ID가 섞임 → 찾은 것만 돌려준다(빠진 것의 판정은 호출자 몫)")
+    void findAllByIds_missingId_returnsFoundOnly() {
+        given(fixtureRepository.findAllById(List.of(3L, 999L))).willReturn(List.of(hanger()));
+
+        assertThat(fixtureService.findAllByIds(List.of(3L, 999L))).hasSize(1);
+    }
 }

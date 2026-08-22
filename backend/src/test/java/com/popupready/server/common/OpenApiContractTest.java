@@ -75,9 +75,21 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("본문이 다른 리소스를 지목하는 생성 오퍼레이션 → 404가 문서화된다")
+    void apiDocs_documentsNotFoundWhenBodyReferencesResources() throws Exception {
+        // 경로에 변수가 없어도 본문의 spaceId·fixtureId가 없으면 404가 나간다.
+        // 공통 커스터마이저는 경로 변수만 보므로 이 오퍼레이션은 컨트롤러에서 직접 붙인다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath(
+                                "$.paths['/api/v1/reservation-requests'].post.responses.404.content['application/json'].schema.$ref")
+                        .value("#/components/schemas/ApiErrorResponse"));
+    }
+
+    @Test
     @DisplayName("목록·생성 오퍼레이션 → 404를 문서화하지 않는다")
     void apiDocs_omitsNotFoundWhereItCannotHappen() throws Exception {
-        // 조회할 리소스를 지목하지 않는 오퍼레이션에 404를 붙이면 거짓 문서가 된다.
+        // 조회할 리소스를 아예 지목하지 않는 오퍼레이션에 404를 붙이면 거짓 문서가 된다.
+        // (예약 요청 생성은 본문으로 지목하므로 위 테스트에서 404를 요구한다.)
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(
                         jsonPath("$.paths['/api/v1/spaces'].get.responses.404").doesNotExist())
