@@ -1,6 +1,6 @@
 import type { components } from "./schema";
 import { isErrorCode, type ErrorCode } from "./error-codes";
-import { getAccessToken } from "./token";
+import { clearAccessToken, getAccessToken } from "./token";
 
 /**
  * 공용 API 클라이언트.
@@ -96,6 +96,12 @@ export async function apiRequest<Payload>(
   });
 
   const envelope = await readEnvelope(response);
+
+  if (response.status === 401) {
+    // Access 토큰만 쓰고 Refresh는 Sprint 2 범위다 — 401이면 이 토큰으로 할 수 있는 게 없다.
+    // 그대로 두면 이후 모든 요청이 401로 되풀이되고 인증 가드도 통과한 것처럼 보인다.
+    clearAccessToken();
+  }
 
   if (envelope?.error) {
     throw new ApiRequestError(

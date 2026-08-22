@@ -1,8 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
-import { useNavigate } from "react-router";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate } from "react-router";
 
 import { ApiRequestError } from "../../lib/api/client";
 import { login, signup, type AuthResult } from "../../lib/api/auth";
+import { safeRedirectPath } from "../../lib/api/redirect";
 import { setAccessToken } from "../../lib/api/token";
 import type { LoginInput, SignupInput } from "../../lib/schemas/auth";
 
@@ -23,10 +24,19 @@ function messageOf(error: unknown): string {
 
 function useAuthSuccess() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryClient = useQueryClient();
 
   return (result: AuthResult) => {
     setAccessToken(result.accessToken);
-    void navigate("/spaces", { replace: true });
+
+    // 같은 탭에서 계정이 바뀔 수 있다. 이전 사용자의 응답이 캐시에 남아 있으면 새 사용자에게
+    // 그대로 보이므로 비운다.
+    queryClient.clear();
+
+    // 인증 가드가 실어 보낸 원래 목적지로 되돌린다(검증을 거친 내부 경로만).
+    const state = location.state as { from?: unknown } | null;
+    void navigate(safeRedirectPath(state?.from), { replace: true });
   };
 }
 

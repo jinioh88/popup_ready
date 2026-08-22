@@ -42,12 +42,12 @@ export default function BuilderRoute() {
     [space],
   );
 
-  // 같은 그리드로 다시 불러도 배치는 유지된다(스토어가 멱등).
+  // 같은 상가·같은 그리드로 다시 불러도 배치는 유지되고, 상가가 바뀌면 비워진다.
   useEffect(() => {
     if (grid) {
-      initGrid(grid);
+      initGrid(numericSpaceId, grid);
     }
-  }, [grid, initGrid]);
+  }, [numericSpaceId, grid, initGrid]);
 
   useRotationShortcut(catalog, onRejected);
 

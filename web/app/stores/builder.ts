@@ -18,12 +18,20 @@ import type { FixtureLookup, Placement } from "../lib/builder/types";
 const DEFAULT_GRID: GridSpec = { gridCols: 0, gridRows: 0, cellSizeMm: 0 };
 
 export type BuilderState = {
+  /** 이 배치가 어느 상가의 도면인지. 다른 상가로 넘어가면 배치를 이어받지 않는다. */
+  spaceId: number | null;
   grid: GridSpec;
   items: LayoutItem[];
   selectedIndex: number | null;
 
-  /** `GET /spaces/{id}`의 grid 정보로 캔버스를 초기화한다. 기존 배치는 비운다. */
-  initGrid: (grid: GridSpec) => void;
+  /**
+   * `GET /spaces/{id}`의 grid 정보로 캔버스를 초기화한다.
+   *
+   * 같은 상가·같은 그리드로 다시 불러도 배치를 유지하고(쿼리 재요청·리렌더로 작업이 날아가면
+   * 안 된다), **상가가 바뀌면 그리드 규격이 우연히 같더라도 비운다** — 이전 상가에 놓은 집기가
+   * 남은 채 제출되면 다른 상가의 도면으로 예약이 만들어진다.
+   */
+  initGrid: (spaceId: number, grid: GridSpec) => void;
   selectItem: (index: number | null) => void;
   placeItem: (item: LayoutItem, fixtures: FixtureLookup) => PlacementCheck;
   moveItem: (index: number, col: number, row: number, fixtures: FixtureLookup) => PlacementCheck;
@@ -77,15 +85,16 @@ function isSameGrid(a: GridSpec, b: GridSpec): boolean {
 }
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
+  spaceId: null,
   grid: DEFAULT_GRID,
   items: [],
   selectedIndex: null,
 
-  // 같은 그리드로 다시 호출해도 배치를 날리지 않는다 — 쿼리 재요청·리렌더로 사용자의
-  // 작업이 통째로 사라지는 사고를 막기 위한 멱등 처리다.
-  initGrid: (grid) =>
+  initGrid: (spaceId, grid) =>
     set((state) =>
-      isSameGrid(state.grid, grid) ? state : { grid, items: [], selectedIndex: null },
+      state.spaceId === spaceId && isSameGrid(state.grid, grid)
+        ? state
+        : { spaceId, grid, items: [], selectedIndex: null },
     ),
 
   selectItem: (index) => set({ selectedIndex: index }),
@@ -171,7 +180,7 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       selectedIndex: state.selectedIndex === index ? null : state.selectedIndex,
     })),
 
-  reset: () => set({ grid: DEFAULT_GRID, items: [], selectedIndex: null }),
+  reset: () => set({ spaceId: null, grid: DEFAULT_GRID, items: [], selectedIndex: null }),
 
   toLayout: () => {
     const { grid, items } = get();

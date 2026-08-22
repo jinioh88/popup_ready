@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { FixtureLookup } from "../lib/builder/types";
 import { nextRotation, useBuilderStore } from "./builder";
 
+const SPACE_ID = 1;
 const GRID = { gridCols: 10, gridRows: 6, cellSizeMm: 500 };
 
 /** 1000×500mm → 2×1 셀 */
@@ -19,7 +20,7 @@ const place = (fixtureId: number, col: number, row: number, rotation: 0 | 90 | 1
 
 beforeEach(() => {
   store().reset();
-  store().initGrid(GRID);
+  store().initGrid(SPACE_ID, GRID);
 });
 
 describe("nextRotation", () => {
@@ -37,18 +38,26 @@ describe("nextRotation", () => {
 describe("initGrid", () => {
   it("그리드를 갈아끼우면 기존 배치를 비운다", () => {
     place(HANGER.id, 0, 0);
-    store().initGrid({ gridCols: 4, gridRows: 4, cellSizeMm: 500 });
+    store().initGrid(SPACE_ID, { gridCols: 4, gridRows: 4, cellSizeMm: 500 });
 
     expect(store().items).toEqual([]);
     expect(store().selectedIndex).toBeNull();
   });
 
-  it("같은 그리드로 다시 호출해도 배치가 유지된다 — 리렌더로 작업이 날아가면 안 된다", () => {
+  it("같은 상가·같은 그리드로 다시 호출해도 배치가 유지된다 — 리렌더로 작업이 날아가면 안 된다", () => {
     place(HANGER.id, 0, 0);
-    store().initGrid({ ...GRID });
+    store().initGrid(SPACE_ID, { ...GRID });
 
     expect(store().items).toHaveLength(1);
     expect(store().selectedIndex).toBe(0);
+  });
+
+  it("상가가 바뀌면 그리드 규격이 같아도 배치를 비운다 — 남은 집기가 다른 상가로 제출되면 안 된다", () => {
+    place(HANGER.id, 0, 0);
+    store().initGrid(SPACE_ID + 1, { ...GRID });
+
+    expect(store().items).toEqual([]);
+    expect(store().selectedIndex).toBeNull();
   });
 });
 
