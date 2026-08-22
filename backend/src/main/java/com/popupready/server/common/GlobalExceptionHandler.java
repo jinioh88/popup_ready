@@ -1,5 +1,7 @@
 package com.popupready.server.common;
 
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatusCode;
@@ -45,6 +47,30 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<ApiResponse<Void>> handleParameterValidation(HandlerMethodValidationException e) {
         return toResponse(ErrorCode.VALIDATION_FAILED, "요청 파라미터가 올바르지 않습니다");
+    }
+
+    /**
+     * 클래스에 {@code @Validated}가 붙은 컨트롤러의 파라미터 제약 위반.
+     *
+     * <p>이 경로는 AOP 프록시(MethodValidationInterceptor)를 타기 때문에 위의
+     * {@link HandlerMethodValidationException}이 아니라 {@link ConstraintViolationException}이 나온다.
+     * 이걸 처리하지 않으면 잘못된 입력이 catch-all로 떨어져 <b>500 INTERNAL_ERROR</b>가 나가고,
+     * 클라이언트는 자기 요청이 틀린 줄 모르고 서버 장애로 오해한다(실제로 그렇게 발견됐다).
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleConstraintViolation(ConstraintViolationException e) {
+        String message = e.getConstraintViolations().stream()
+                .map(violation -> lastNode(violation.getPropertyPath()) + ": " + violation.getMessage())
+                .reduce((a, b) -> a + ", " + b)
+                .orElse("요청 파라미터가 올바르지 않습니다");
+        return toResponse(ErrorCode.VALIDATION_FAILED, message);
+    }
+
+    /** 프로퍼티 경로는 "search.radius"처럼 메서드명을 달고 나온다. 클라이언트에는 파라미터 이름만 준다. */
+    private static String lastNode(Path propertyPath) {
+        String path = propertyPath.toString();
+        int lastDot = path.lastIndexOf('.');
+        return (lastDot < 0) ? path : path.substring(lastDot + 1);
     }
 
     /** 필수 쿼리 파라미터 누락(예: GET /spaces의 lat·lng). */
