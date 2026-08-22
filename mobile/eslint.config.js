@@ -8,6 +8,6 @@ module.exports = defineConfig([
   eslintPluginPrettierRecommended,
   {
     // ESLint 9 flat config는 .eslintignore를 읽지 않는다. 무시 목록은 여기에 둔다.
-    ignores: [".expo/", "dist/", "ios/", "android/", "expo-env.d.ts"],
+    ignores: [".expo/", "dist/", "ios/", "android/", "expo-env.d.ts", "src/lib/api/schema.d.ts"],
   },
 ]);
