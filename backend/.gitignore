@@ -36,6 +36,5 @@ out/
 ### VS Code ###
 .vscode/
 
-### Claude Code / 작업 문서 ###
+### Claude Code ###
 .claude/
-docs/
