@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,8 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 모듈러 집기 시드(스프린트 문서 §4의 5번). 규격(mm)·소비전력(W)·렌털료는 현실적인 값으로 잡았다 —
  * 빌더의 점유 셀 계산과 Sprint 2의 전력 합산이 이 값으로 돌아간다.
+ *
+ * <p><b>실행 가드</b>: {@code popupready.seed.dev-data=true}일 때만 동작한다. 로컬
+ * application.properties에만 켜져 있고 배포 환경에는 없다 — 가드가 없으면 알려진 비밀번호로
+ * 로그인되는 ADMIN 계정이 배포 환경에 조용히 생긴다.
  */
 @Component
+@ConditionalOnProperty(name = "popupready.seed.dev-data", havingValue = "true")
 @Order(2)
 public class FixtureDevSeeder implements ApplicationRunner {
 

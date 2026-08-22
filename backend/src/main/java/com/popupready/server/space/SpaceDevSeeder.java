@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>좌표를 코드에서 만들기 때문에 WKT 문자열을 손으로 적지 않아도 되고, SRID가 어긋날 여지가 없다.
  * 건물주 계정은 {@link UserService}를 통해 찾는다 — {@code auth}의 리포지토리를 직접 보지 않는다.
+ *
+ * <p><b>실행 가드</b>: {@code popupready.seed.dev-data=true}일 때만 동작한다. 로컬
+ * application.properties에만 켜져 있고 배포 환경에는 없다 — 가드가 없으면 알려진 비밀번호로
+ * 로그인되는 ADMIN 계정이 배포 환경에 조용히 생긴다.
  */
 @Component
+@ConditionalOnProperty(name = "popupready.seed.dev-data", havingValue = "true")
 @Order(2)
 public class SpaceDevSeeder implements ApplicationRunner {
 
