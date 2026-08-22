@@ -5,22 +5,24 @@ import { ROLE_LABELS, SIGNUP_ROLES, signupSchema, type SignupInput } from "../..
 import { TextField } from "./TextField";
 
 type SignupFormProps = {
-  /** 제출 처리. 실제 API 뮤테이션 배선은 B-5에서 연결한다. */
-  onSubmit?: (values: SignupInput) => Promise<void> | void;
+  onSubmit: (values: SignupInput) => Promise<unknown> | void;
+  isPending?: boolean;
+  /** 서버가 봉투에 실어 준 실패 메시지. */
+  errorMessage?: string;
 };
 
-export function SignupForm({ onSubmit }: SignupFormProps) {
+export function SignupForm({ onSubmit, isPending, errorMessage }: SignupFormProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
     defaultValues: { email: "", password: "", name: "", role: "BRAND" },
   });
 
   return (
-    <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => onSubmit?.(values))}>
+    <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => onSubmit(values))}>
       <TextField
         id="signup-name"
         label="이름"
@@ -64,12 +66,17 @@ export function SignupForm({ onSubmit }: SignupFormProps) {
         </select>
       </div>
 
+      {errorMessage ? (
+        <p role="alert" className="text-caption text-error">
+          {errorMessage}
+        </p>
+      ) : null}
       <button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isPending}
         className="mt-2 h-10 rounded-lg bg-primary text-body-strong text-white hover:bg-primary-dark disabled:opacity-60"
       >
-        가입하기
+        {isPending ? "가입 중…" : "가입하기"}
       </button>
     </form>
   );
