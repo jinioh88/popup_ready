@@ -842,6 +842,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 리소스를 찾을 수 없음 */
             404: {
                 headers: {
@@ -888,6 +897,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -987,6 +1005,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 지원하지 않는 Content-Type */
             415: {
                 headers: {
@@ -1033,6 +1060,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
