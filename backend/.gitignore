@@ -37,4 +37,8 @@ out/
 .vscode/
 
 ### Claude Code ###
-.claude/
+# 리뷰 스킬은 팀 자산이라 추적한다(PM 승인 2026-08-22).
+# settings·로컬 상태 파일은 계속 무시한다 — 권한 설정류가 커밋되면 안 된다.
+.claude/*
+!.claude/skills/
+.claude/skills/**/settings*.json

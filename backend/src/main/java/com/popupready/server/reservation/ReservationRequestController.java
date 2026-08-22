@@ -33,8 +33,9 @@ public class ReservationRequestController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ReservationRequestResponse> create(@Valid @RequestBody CreateReservationRequest request) {
-        // TODO(T4-1~T4-3): 레이아웃 재검증(웹과 동일 계산식) + 견적 계산으로 교체
-        EstimateResponse estimate = new EstimateResponse(14, 6_300_000L, 420_000L, 672_000L, 7_392_000L);
+        // TODO(T4-1~T4-3): 레이아웃 재검증(웹과 동일 계산식) + 견적 계산으로 교체.
+        // 샘플 값도 §2.2 견적 계산 규약을 따른다 — 보증금은 공간 대여료(6,300,000)의 10%다.
+        EstimateResponse estimate = new EstimateResponse(14, 6_300_000L, 420_000L, 630_000L, 7_350_000L);
         return ApiResponse.ok(new ReservationRequestResponse(
                 STUB_RESERVATION_ID,
                 request.spaceId(),

@@ -61,13 +61,20 @@ public class OpenApiConfig {
     public OpenApiCustomizer errorResponseCustomizer() {
         return openApi -> {
             openApi.getComponents().addSchemas(ERROR_ENVELOPE_SCHEMA, errorEnvelopeSchema());
-            openApi.getPaths().values().stream()
-                    .flatMap(pathItem -> pathItem.readOperations().stream())
-                    .forEach(operation -> {
+            openApi.getPaths()
+                    .forEach((path, pathItem) -> pathItem.readOperations().forEach(operation -> {
                         ApiResponses responses = operation.getResponses();
                         responses.addApiResponse("400", errorResponse("요청 값 검증 실패"));
+                        // 404·415는 실제로 그 오퍼레이션의 응답인 곳에만 붙인다. 목록 조회에 404를,
+                        // 본문 없는 GET에 415를 달면 문서가 거짓말을 한다.
+                        if (path.contains("{")) {
+                            responses.addApiResponse("404", errorResponse("리소스를 찾을 수 없음"));
+                        }
+                        if (operation.getRequestBody() != null) {
+                            responses.addApiResponse("415", errorResponse("지원하지 않는 Content-Type"));
+                        }
                         responses.addApiResponse("500", errorResponse("서버 오류"));
-                    });
+                    }));
             rewriteNullableRefs(openApi);
         };
     }
