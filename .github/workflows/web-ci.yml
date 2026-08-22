@@ -1,0 +1,39 @@
+name: web-ci
+
+# web 파트 검증 게이트. 실패 조건은 타입 오류·lint 오류·테스트 실패로 한정한다.
+# (포맷은 `npm run format`으로 자동 교정하며 빌드를 깨뜨리지 않는다)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-ci.yml"
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      # typecheck(react-router typegen + tsc) → lint → vitest
+      - run: npm run verify
+
+      # build는 타입 검사를 하지 않으므로 verify 뒤에 별도로 확인한다
+      - run: npm run build

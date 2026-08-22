@@ -1,75 +1,91 @@
-# React + TypeScript + Vite
+# PopupReady Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+브랜드 운영자용 웹 클라이언트. **지도 기반 공실 탐색(US-101) → 2D 그리드 스냅 빌더(US-102) → 실시간 전력·면적 부하 연산(US-103) → 예약·계약·대시보드**를 담당한다.
 
-Currently, two official plugins are available:
+- 스택: React 19 · TypeScript · **React Router 8 프레임워크 모드(SPA, `ssr: false`)** · Vite 8 · Tailwind 4
+- 주요 라이브러리: TanStack Query(서버 상태) · Zustand(빌더 캔버스 상태) · React Hook Form + Zod(폼) · React-Konva(2D 빌더) · react-kakao-maps-sdk(지도) · 토스페이먼츠 SDK(결제) · Recharts(대시보드)
+- 개발 지침은 [`CLAUDE.md`](./CLAUDE.md), 라우팅·빌드 구조 결정 근거는 [`../docs/기술스택.md`](../docs/기술스택.md) §2, 스프린트 작업 지시는 [`../docs/tasks/`](../docs/tasks/) 참조.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 사전 준비
 
-## React Compiler
+- Node.js 24 이상 (개발 환경 기준 v24.6.0, npm 11)
+- 백엔드 API(`http://localhost:8080`)와 로컬 인프라 — **없어도 웹 개발은 가능하다.** API가 나오기 전 구간은 목업 데이터로 선개발한다.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```bash
+# 백엔드까지 함께 띄울 때만 필요
+cd ../infra && docker compose up -d   # PostgreSQL+PostGIS / Redis / MQTT
+cd ../backend && ./gradlew bootRun    # :8080
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 실행
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+npm install
+npm run dev        # 개발 서버 (http://localhost:5173)
+```
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 명령
+
+| 명령 | 설명 |
+|---|---|
+| `npm run dev` | 개발 서버(HMR). 실행 중 라우트 타입이 자동 생성된다 |
+| **`npm run verify`** | **typecheck → lint → vitest run. 커밋 전 이 한 줄을 돌린다** |
+| `npm run build` | 프로덕션 빌드. **타입 검사는 하지 않는다** |
+| `npm run typecheck` | `react-router typegen && tsc -b` |
+| `npm run lint` | ESLint |
+| `npm test` | 테스트 (watch) |
+| `npx vitest run <파일>` | 단일 파일 실행 |
+| `npx vitest run -t "<이름>"` | 단일 케이스 실행 |
+| `npm run format` | Prettier로 코드 포맷 자동 교정 |
+
+## 품질 게이트
+
+- 사람·CI가 **같은 명령(`npm run verify`)**을 쓴다. 실패 로그를 그대로 원인 분석에 넘기기 위해서다.
+- CI: [`.github/workflows/web-ci.yml`](../.github/workflows/web-ci.yml) — `web/**` 변경 시 `npm run verify` + `npm run build` 실행.
+- **빌드 실패 조건은 타입 오류·lint 오류·테스트 실패로 한정한다.** 코드 스타일은 Prettier가 자동 교정하며 빌드를 깨지 않는다.
+- `verify`에 붙은 `--passWithNoTests`는 테스트가 0개인 현재 상태 때문이며, 첫 단위 테스트가 들어오면 제거한다.
+
+> `app/routes.ts`나 라우트 모듈을 추가·수정한 뒤 `dev` 서버를 띄우지 않은 상태라면, `./+types/*` 타입이 없어 IDE·`tsc`가 실패한다. `npm run typecheck`를 한 번 돌리면 생성된다.
+
+## 환경 변수
+
+Vite 규약에 따라 `VITE_` 접두가 붙은 값만 클라이언트에 주입된다. `web/.env`에 작성하고, **`.env.example`에는 키 이름만 커밋한다(값 금지)**.
+
+| 키 | 용도 |
+|---|---|
+| `VITE_KAKAO_MAP_KEY` | Kakao Maps JavaScript 키 (각자 발급) |
+
+## 디렉터리 구조
 
 ```
+web/
+├── app/                  # 애플리케이션 코드 (src/ 아님)
+│   ├── root.tsx          # 진입점 — 전역 레이아웃·Provider·ErrorBoundary·HydrateFallback
+│   ├── routes.ts         # 라우트 선언 (@react-router/dev/routes)
+│   ├── routes/           # 라우트 모듈
+│   └── app.css           # @import "tailwindcss";
+├── public/               # 정적 자산
+├── react-router.config.ts # ssr: false (SPA 모드)
+├── vite.config.ts        # [tailwindcss(), reactRouter()]
+├── .react-router/        # 자동 생성 타입 (git 무시)
+└── build/client/         # 빌드 산출물 = 배포 대상
+```
+
+루트 `index.html`은 없다. 진입점은 `app/root.tsx`이며, SPA 모드에서 빌드 시 `/`가 렌더되어 `build/client/index.html`로 저장된다.
+
+## 빌드·배포
+
+```bash
+npm run build
+```
+
+정적 배포 대상은 **`build/client`** (`dist`가 아니다). `build/server/`는 빌드 중간 산출물이라 배포 대상이 아니다. SPA이므로 호스팅 측에 **모든 경로 → `index.html` 폴백**을 설정한다(S3/CloudFront 또는 nginx `try_files`).
+
+## 알아둘 제약
+
+- **`ssr: false`를 임의로 바꾸지 않는다** — 정적 배포 전제가 깨진다. 전환은 PM 승인 사항이며 재검토 트리거는 `../docs/기술스택.md` §2에 정리돼 있다.
+- **서버 `loader`/`action`을 쓰지 않는다.** 데이터 페칭은 TanStack Query로 통일한다(이중 캐시 방지 + 모바일과 API 클라이언트 공유).
+- `@vitejs/plugin-react`를 추가하지 않는다 — `reactRouter()` 플러그인에 babel 변환·Fast Refresh가 포함돼 중복이다.
+- Tailwind 4에는 `tailwind.config.js`가 없다. 테마 확장은 CSS의 `@theme`로 한다.
+- 백엔드 API 규약: prefix `/api/v1`, 응답 봉투 `{ "data": ..., "error": null }`, 인증은 JWT Bearer.
+- 빌더의 **점유 셀 계산식은 백엔드 서버측 재검증과 동일해야 한다**(`ceil(width_mm / cellSizeMm) × ceil(depth_mm / cellSizeMm)`, 90/270도 회전 시 폭·깊이 스왑). 한쪽만 고치면 정상 배치가 400으로 거절된다.

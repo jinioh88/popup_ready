@@ -26,3 +26,7 @@ dist-ssr
 # React Router
 .react-router/
 build
+
+# Claude Code (개발 지침 — 비공개)
+/CLAUDE.md
+.claude/
