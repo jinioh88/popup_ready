@@ -29,9 +29,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.flywaydb:flyway-database-postgresql'
     // 분산 락 (이중 예약 방지)
-    implementation 'org.redisson:redisson-spring-boot-starter:3.50.0'
+    implementation 'org.redisson:redisson-spring-boot-starter:4.7.0'
     // PostGIS 공간 타입 매핑 (위치 기반 검색)
     implementation 'org.hibernate.orm:hibernate-spatial'
+    // OpenAPI 문서 자동 생성 → contracts/openapi.json (웹/모바일 타입 생성의 원천)
+    // 버전 주의: 2.8.x는 Spring Boot 3.x 라인이라 Boot 4에서 동작하지 않는다. 3.1.0이 Boot 4.1.0 기준.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0'
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
