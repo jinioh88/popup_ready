@@ -11,7 +11,8 @@
     "test": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run typecheck && npm run lint && vitest run --passWithNoTests"
+    "verify": "npm run typecheck && npm run lint && vitest run",
+    "api:types": "openapi-typescript ../contracts/openapi.json -o app/lib/api/schema.d.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -19,6 +20,7 @@
     "@tosspayments/tosspayments-sdk": "^2.8.0",
     "isbot": "^5",
     "konva": "^10.3.1",
+    "pretendard": "^1.3.9",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",
@@ -41,11 +43,23 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.65.0",
     "vite": "^8.2.0",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
+  },
+  "msw": {
+    "workerDirectory": [
+      "public"
+    ]
   }
 }
