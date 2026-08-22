@@ -195,12 +195,12 @@ export interface components {
              * @example VALIDATION_FAILED
              * @enum {string}
              */
-            code?: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_SIGNED";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_SIGNED";
             /**
              * @description 사람이 읽는 설명. 분기 조건으로 쓰지 말 것
              * @example email은 필수입니다
              */
-            message?: string;
+            message: string;
         };
         /** @description 실패 응답 봉투. data는 항상 null이고 error에 코드·메시지가 담긴다. */
         ApiErrorResponse: {
@@ -253,9 +253,9 @@ export interface components {
         /** @description 인증 결과 */
         AuthResponse: {
             /** @description JWT Access 토큰. 이후 요청에 Bearer로 싣는다 */
-            accessToken?: string;
+            accessToken: string;
             /** @description 인증된 사용자 정보 */
-            user?: components["schemas"]["UserSummary"];
+            user: components["schemas"]["UserSummary"];
         };
         /** @description 계약 조항 */
         ClauseDto: {
@@ -263,12 +263,12 @@ export interface components {
              * @description 조항 전문
              * @example 본 계약은 팝업스토어 단기 운영을 목적으로 한다.
              */
-            body?: string;
+            body: string;
             /**
              * @description 조항 제목
              * @example 제1조 (목적)
              */
-            title?: string;
+            title: string;
         };
         /** @description 계약 */
         ContractResponse: {
@@ -277,47 +277,47 @@ export interface components {
              * @description 브랜드 서명 시각(UTC). 미서명이면 null
              * @example 2026-08-22T05:12:31Z
              */
-            brandSignedAt?: string;
+            brandSignedAt: string | null;
             /** @description 생성 시점의 조항 전문 스냅샷 */
-            clauses?: components["schemas"]["ClauseDto"][];
+            clauses: components["schemas"]["ClauseDto"][];
             /**
              * @description 조항 전문+타임스탬프의 SHA-256 무결성 해시
              * @example 3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8
              */
-            contentHash?: string;
+            contentHash: string;
             /**
              * Format: int64
              * @description 계약 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /**
              * Format: date-time
              * @description 건물주 서명 시각(UTC). 미서명이면 null
              * @example 2026-08-22T06:40:02Z
              */
-            landlordSignedAt?: string;
+            landlordSignedAt: string | null;
             /**
              * Format: int64
              * @description 대상 예약 요청 ID
              * @example 1
              */
-            reservationRequestId?: number;
+            reservationRequestId: number;
             /**
              * @description 계약 상태
              * @enum {string}
              */
-            status?: "PENDING" | "SIGNED";
+            status: "PENDING" | "SIGNED";
             /**
              * @description 템플릿 버전
              * @example v1
              */
-            templateVersion?: string;
+            templateVersion: string;
             /**
              * @description 계약 명칭. 일시사용 임대차 요건 보존을 위해 고정된 값이다
              * @example 단기 공간사용 제휴계약
              */
-            title?: string;
+            title: string;
         };
         /** @description 예약 요청 생성 */
         CreateReservationRequest: {
@@ -349,31 +349,31 @@ export interface components {
              * @description 대여 일수
              * @example 14
              */
-            days?: number;
+            days: number;
             /**
              * Format: int64
              * @description 보증금(원). 일시사용 요건상 하향 설계된다
              * @example 672000
              */
-            deposit?: number;
+            deposit: number;
             /**
              * Format: int64
              * @description 집기 렌털료 합계(원)
              * @example 420000
              */
-            fixtureRentalTotal?: number;
+            fixtureRentalTotal: number;
             /**
              * Format: int64
              * @description 공간 대여료 합계(원)
              * @example 6300000
              */
-            spaceRentTotal?: number;
+            spaceRentTotal: number;
             /**
              * Format: int64
              * @description 총 견적(원)
              * @example 7392000
              */
-            totalAmount?: number;
+            totalAmount: number;
         };
         /** @description 모듈러 집기 */
         FixtureResponse: {
@@ -381,48 +381,48 @@ export interface components {
              * @description 분류
              * @enum {string}
              */
-            category?: "HANGER" | "POS" | "SHOWCASE" | "LIGHTING" | "SHELF" | "ETC";
+            category: "HANGER" | "POS" | "SHOWCASE" | "LIGHTING" | "SHELF" | "ETC";
             /**
              * Format: int64
              * @description 일일 렌털료(원)
              * @example 12000
              */
-            dailyRentalFee?: number;
+            dailyRentalFee: number;
             /**
              * Format: int32
              * @description 세로 규격(mm)
              * @example 500
              */
-            depthMm?: number;
+            depthMm: number;
             /**
              * Format: int64
              * @description 집기 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /**
              * @description 집기 이름
              * @example 스탠드 행거 1200
              */
-            name?: string;
+            name: string;
             /**
              * Format: int32
              * @description 소비 전력(W). 비전기 집기는 0
              * @example 0
              */
-            powerWatt?: number;
+            powerWatt: number;
             /**
              * Format: int32
              * @description 총 재고 수량
              * @example 40
              */
-            stockQty?: number;
+            stockQty: number;
             /**
              * Format: int32
              * @description 가로 규격(mm)
              * @example 1200
              */
-            widthMm?: number;
+            widthMm: number;
         };
         /** @description 2D 도면 레이아웃 */
         LayoutDto: {
@@ -481,13 +481,13 @@ export interface components {
              * @description 위도
              * @example 37.5445
              */
-            lat?: number;
+            lat: number;
             /**
              * Format: double
              * @description 경도
              * @example 127.0557
              */
-            lng?: number;
+            lng: number;
         };
         /** @description 로그인 요청 */
         LoginRequest: {
@@ -509,40 +509,40 @@ export interface components {
              * @description 요청한 브랜드 사용자 ID
              * @example 1
              */
-            brandUserId?: number;
+            brandUserId: number;
             /**
              * Format: date
              * @description 사용 종료일
              * @example 2026-09-14
              */
-            endDate?: string;
+            endDate: string;
             /** @description 견적 내역 */
-            estimate?: components["schemas"]["EstimateResponse"];
+            estimate: components["schemas"]["EstimateResponse"];
             /**
              * Format: int64
              * @description 예약 요청 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /** @description 서버가 재검증한 도면. 요청한 내용이 그대로 되돌아온다 */
-            layout?: components["schemas"]["LayoutDto"];
+            layout: components["schemas"]["LayoutDto"];
             /**
              * Format: int64
              * @description 대상 공간 ID
              * @example 1
              */
-            spaceId?: number;
+            spaceId: number;
             /**
              * Format: date
              * @description 사용 시작일
              * @example 2026-09-01
              */
-            startDate?: string;
+            startDate: string;
             /**
              * @description 예약 요청 상태
              * @enum {string}
              */
-            status?: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+            status: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
         };
         /** @description 가입 요청 */
         SignupRequest: {
@@ -574,66 +574,66 @@ export interface components {
              * @description 주소
              * @example 서울 성동구 연무장길 45
              */
-            address?: string;
+            address: string;
             /**
              * Format: int32
              * @description 그리드 한 칸의 실제 크기(mm)
              * @example 500
              */
-            cellSizeMm?: number;
+            cellSizeMm: number;
             /**
              * Format: int64
              * @description 일일 대여료(원)
              * @example 450000
              */
-            dailyRent?: number;
+            dailyRent: number;
             /**
              * @description 보증금 비율. 일시사용 요건상 하향 설계된다
              * @example 0.1
              */
-            depositRate?: number;
+            depositRate: number;
             /**
              * Format: double
              * @description 실면적(㎡)
              * @example 82.5
              */
-            floorAreaM2?: number;
+            floorAreaM2: number;
             /**
              * Format: int32
              * @description 도면 그리드 가로 칸 수
              * @example 20
              */
-            gridCols?: number;
+            gridCols: number;
             /**
              * Format: int32
              * @description 도면 그리드 세로 칸 수
              * @example 12
              */
-            gridRows?: number;
+            gridRows: number;
             /**
              * Format: int64
              * @description 공간 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /** @description 위치 좌표 */
-            location?: components["schemas"]["LocationDto"];
+            location: components["schemas"]["LocationDto"];
             /**
              * Format: int32
              * @description 허용 전력(W). 배치한 집기 소비전력 합이 이 값을 넘으면 결제가 차단된다
              * @example 5000
              */
-            maxPowerWatt?: number;
+            maxPowerWatt: number;
             /**
              * @description 공간 이름
              * @example 성수 연무장길 팝업 1층
              */
-            name?: string;
+            name: string;
             /**
              * @description 공간 상태
              * @enum {string}
              */
-            status?: "ACTIVE" | "INACTIVE";
+            status: "ACTIVE" | "INACTIVE";
         };
         /** @description 공간 요약(지도 마커·요약 카드용) */
         SpaceSummaryResponse: {
@@ -641,38 +641,38 @@ export interface components {
              * @description 주소
              * @example 서울 성동구 연무장길 45
              */
-            address?: string;
+            address: string;
             /**
              * Format: int64
              * @description 일일 대여료(원)
              * @example 450000
              */
-            dailyRent?: number;
+            dailyRent: number;
             /**
              * Format: double
              * @description 실면적(㎡)
              * @example 82.5
              */
-            floorAreaM2?: number;
+            floorAreaM2: number;
             /**
              * Format: int64
              * @description 공간 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /** @description 위치 좌표 */
-            location?: components["schemas"]["LocationDto"];
+            location: components["schemas"]["LocationDto"];
             /**
              * Format: int32
              * @description 허용 전력(W)
              * @example 5000
              */
-            maxPowerWatt?: number;
+            maxPowerWatt: number;
             /**
              * @description 공간 이름
              * @example 성수 연무장길 팝업 1층
              */
-            name?: string;
+            name: string;
         };
         /** @description 로그인한 사용자 요약 */
         UserSummary: {
@@ -680,23 +680,23 @@ export interface components {
              * @description 이메일(로그인 ID)
              * @example brand@popupready.com
              */
-            email?: string;
+            email: string;
             /**
              * Format: int64
              * @description 사용자 ID
              * @example 1
              */
-            id?: number;
+            id: number;
             /**
              * @description 표시 이름
              * @example 김브랜드
              */
-            name?: string;
+            name: string;
             /**
              * @description 역할
              * @enum {string}
              */
-            role?: "BRAND" | "LANDLORD" | "VENDOR" | "ADMIN";
+            role: "BRAND" | "LANDLORD" | "VENDOR" | "ADMIN";
         };
     };
     responses: never;
