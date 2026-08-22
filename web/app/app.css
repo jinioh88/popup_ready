@@ -1,7 +1,9 @@
 @import "tailwindcss";
+/* 스타일가이드 §2 (v0.1.1) — Pretendard는 CDN이 아니라 npm 번들로 로드한다. */
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 
 /*
- * 디자인 토큰 — docs/스타일가이드.md v0.1
+ * 디자인 토큰 — docs/스타일가이드.md v0.1.1
  * 토큰 값 변경·신규 색 추가는 PM 협의 사항이다. 여기 없는 색·크기를 임의로 쓰지 않는다.
  */
 @theme {

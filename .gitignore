@@ -1,8 +1,8 @@
 # macOS
 .DS_Store
 
-# 기획 문서 (비공개)
-docs/
+# 기획 문서 (비공개) — 루트 docs/만. 파트별 {backend|web|mobile}/docs/는 추적한다
+/docs/
 /CLAUDE.md
 
 # IDE

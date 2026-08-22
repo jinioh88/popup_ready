@@ -13,17 +13,6 @@ import type { Route } from "./+types/root";
 import { createQueryClient } from "./lib/query/client";
 import "./app.css";
 
-export function links(): Route.LinkDescriptors {
-  return [
-    { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
-    {
-      // 스타일가이드 §2 — Pretendard(가변, 동적 서브셋) CDN 로드.
-      rel: "stylesheet",
-      href: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css",
-    },
-  ];
-}
-
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <html lang="ko">
