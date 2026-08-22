@@ -16,7 +16,12 @@ public final class PublicEndpoints {
 
     private PublicEndpoints() {}
 
-    /** 인증을 얻는 경로라 인증을 요구할 수 없다. */
+    /**
+     * 인증을 얻는 경로라 인증을 요구할 수 없다.
+     *
+     * <p>⚠️ {@code auth} 하위가 통째로 열려 있다. 비밀번호 변경처럼 <b>보호가 필요한 엔드포인트를
+     * 이 아래에 두려면</b> 여기와 {@link #isPublic}을 함께 좁혀야 한다.
+     */
     public static final String AUTH_ANT = "/api/v1/auth/**";
 
     private static final String AUTH_PREFIX = "/api/v1/auth/";

@@ -95,6 +95,27 @@ class SecurityAccessTest {
     }
 
     @Test
+    @DisplayName("브랜드가 아닌 역할로 예약 요청 → 403과 FORBIDDEN 에러 봉투")
+    void reservationRequest_withNonBrandRole_isForbidden() throws Exception {
+        // 예약을 만드는 것은 브랜드 운영자다. 인증만 통과하면 누구나 되는 상태로 두면
+        // 건물주·공급사 계정으로도 예약이 생성된다.
+        mockMvc.perform(post("/api/v1/reservation-requests")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(UserRole.VENDOR))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.error.code").value("FORBIDDEN"));
+    }
+
+    @Test
+    @DisplayName("건물주 역할로 계약 열람 → 허용된다(계약은 양 당사자가 본다)")
+    void contractRead_withLandlordRole_isAllowed() throws Exception {
+        mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.LANDLORD)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("위조된 토큰 → 401과 UNAUTHORIZED 에러 봉투")
     void forgedToken_returnsUnauthorizedEnvelope() throws Exception {
         mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, "Bearer forged.token.value"))

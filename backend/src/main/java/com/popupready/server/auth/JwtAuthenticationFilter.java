@@ -6,6 +6,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +26,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtProvider jwtProvider;
@@ -38,12 +43,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
-    private java.util.Optional<String> resolveToken(HttpServletRequest request) {
+    private Optional<String> resolveToken(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header == null || !header.startsWith(BEARER_PREFIX)) {
-            return java.util.Optional.empty();
+            return Optional.empty();
         }
-        return java.util.Optional.of(header.substring(BEARER_PREFIX.length()));
+        return Optional.of(header.substring(BEARER_PREFIX.length()));
     }
 
     private void authenticate(String token, HttpServletRequest request) {
@@ -56,6 +61,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         } catch (InvalidTokenException e) {
             // 신뢰할 수 없는 토큰은 없는 것으로 취급한다. 사유를 응답에 흘리지 않기 위해
             // 여기서 예외를 밖으로 던지지 않으며, 컨텍스트는 비운 채로 둔다.
+            // 사유는 응답이 아니라 서버 로그로만 남긴다 — 그래야 운영 중 401을 추적할 수 있다.
+            log.debug("토큰 검증 실패로 익명 처리한다", e);
             SecurityContextHolder.clearContext();
         }
     }
