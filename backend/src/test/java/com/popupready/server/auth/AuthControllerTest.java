@@ -1,10 +1,13 @@
 package com.popupready.server.auth;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.popupready.server.common.GlobalExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +37,19 @@ class AuthControllerTest {
     @MockitoBean
     private JwtProvider jwtProvider;
 
+    @MockitoBean
+    private AuthService authService;
+
+    @BeforeEach
+    void stubAuthService() {
+        // 이 슬라이스가 보는 것은 HTTP 계약(상태 코드·봉투·입력 검증)이다.
+        // 가입·로그인 규칙 자체는 AuthServiceTest가, 실제 흐름은 AuthFlowTest가 맡는다.
+        AuthResponse response =
+                new AuthResponse("issued-token", new UserSummary(1L, "brand@popupready.com", "김브랜드", UserRole.BRAND));
+        given(authService.signup(any())).willReturn(response);
+        given(authService.login(any())).willReturn(response);
+    }
+
     @Test
     @DisplayName("정상 가입 요청 → 201과 accessToken 반환")
     void signup_validRequest_returnsCreatedWithAccessToken() throws Exception {
@@ -56,23 +72,23 @@ class AuthControllerTest {
     }
 
     @Test
-    @DisplayName("정상 가입 요청 → 응답 user에 요청한 email·role이 담긴다")
-    void signup_validRequest_echoesRequestedUserSummary() throws Exception {
+    @DisplayName("정상 가입 요청 → 응답에 user 요약이 담긴다")
+    void signup_validRequest_returnsUserSummary() throws Exception {
         String body =
                 """
                 {
-                  "email": "landlord@popupready.com",
+                  "email": "brand@popupready.com",
                   "password": "password123",
-                  "name": "박건물주",
-                  "role": "LANDLORD"
+                  "name": "김브랜드",
+                  "role": "BRAND"
                 }
                 """;
 
         mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(jsonPath("$.data.user.email").value("landlord@popupready.com"))
-                .andExpect(jsonPath("$.data.user.role").value("LANDLORD"));
+                .andExpect(jsonPath("$.data.user.email").isNotEmpty())
+                .andExpect(jsonPath("$.data.user.role").isNotEmpty());
     }
 
     @Test

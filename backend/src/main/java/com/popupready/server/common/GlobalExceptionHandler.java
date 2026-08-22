@@ -25,6 +25,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /** 도메인 규칙 위반. 상태 코드는 ErrorCode가 들고 있다. */
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException e) {
+        return toResponse(e.getErrorCode(), e.getMessage());
+    }
+
     /** @Valid 본문 검증 실패. 어느 필드가 왜 틀렸는지 message에 모아준다. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleBodyValidation(MethodArgumentNotValidException e) {
