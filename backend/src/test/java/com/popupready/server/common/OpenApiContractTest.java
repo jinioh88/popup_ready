@@ -68,6 +68,35 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("응답 봉투 → data·error가 항상 존재하는 키로 표기된다")
+    void apiDocs_envelopeFieldsAreAlwaysPresent() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("data", "error")));
+    }
+
+    @Test
+    @DisplayName("응답 봉투 → $ref 페이로드가 nullable 유니온(anyOf)으로 표기된다")
+    void apiDocs_envelopeRefFieldsUseNullableUnion() throws Exception {
+        // swagger-core는 $ref 속성에 nullable을 적용할 때 형제 키로 type:null을 붙인다.
+        // 3.1에서 그 둘은 AND로 해석되어 어떤 값도 통과하지 못하는 모순된 스키마가 된다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.data.anyOf")
+                        .isArray())
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.data.type")
+                        .doesNotExist())
+                // 유니온의 null 쪽이 빈 스키마 {}로 나가면 "무엇이든 허용"이 되어 타입이 무의미해진다
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.data.anyOf[0].$ref")
+                        .value("#/components/schemas/AuthResponse"))
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.data.anyOf[1].type")
+                        .value("null"))
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.error.anyOf[1].type")
+                        .value("null"))
+                .andExpect(jsonPath("$.components.schemas.ApiResponseAuthResponse.properties.error.type")
+                        .doesNotExist());
+    }
+
+    @Test
     @DisplayName("레이아웃 회전각 → integer 타입에 문자열 enum이 섞이지 않는다")
     void apiDocs_rotationIsIntegerWithoutStringEnum() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))

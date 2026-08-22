@@ -8,8 +8,18 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "공통 응답 봉투")
 public record ApiResponse<T>(
-        @Schema(description = "성공 시 페이로드. 실패 시 null") T data,
-        @Schema(description = "실패 시 에러 상세. 성공 시 null") ApiError error) {
+        // nullable·required를 명시해야 웹·모바일 생성 타입이 "정확히 한쪽만 채워진다"는 봉투 규약을
+        // 표현한다. 빠뜨리면 data가 non-nullable로 생성되어 에러 분기 없이 접근해도 컴파일이 통과한다.
+        @Schema(
+                        description = "성공 시 페이로드. 실패 시 null",
+                        nullable = true,
+                        requiredMode = Schema.RequiredMode.REQUIRED)
+                T data,
+        @Schema(
+                        description = "실패 시 에러 상세. 성공 시 null",
+                        nullable = true,
+                        requiredMode = Schema.RequiredMode.REQUIRED)
+                ApiError error) {
 
     public static <T> ApiResponse<T> ok(T data) {
         return new ApiResponse<>(data, null);
