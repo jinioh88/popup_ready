@@ -115,6 +115,40 @@ class SpaceControllerTest {
     }
 
     @Test
+    @DisplayName("반경이 상한을 넘으면 → 400과 VALIDATION_FAILED 에러 봉투")
+    void search_radiusAboveLimit_returnsBadRequest() throws Exception {
+        // @Validated의 파라미터 제약 위반은 ConstraintViolationException으로 나온다.
+        // 이걸 처리하지 않으면 잘못된 입력이 500 INTERNAL_ERROR로 나가 클라이언트가
+        // 서버 장애로 오해한다(웹 G-1 검증에서 실제로 발견됐다).
+        mockMvc.perform(get("/api/v1/spaces")
+                        .param("lat", "37.5445")
+                        .param("lng", "127.0557")
+                        .param("radius", "54000"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    @DisplayName("반경이 음수면 → 400과 VALIDATION_FAILED 에러 봉투")
+    void search_negativeRadius_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/spaces")
+                        .param("lat", "37.5445")
+                        .param("lng", "127.0557")
+                        .param("radius", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    @DisplayName("위도가 범위를 벗어나면 → 400과 VALIDATION_FAILED 에러 봉투")
+    void search_latOutOfRange_returnsBadRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/spaces").param("lat", "999").param("lng", "127.0557"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
     @DisplayName("상가 상세 조회 → 200과 빌더 진입용 grid 정보 포함")
     void detail_returnsGridInformationForBuilder() throws Exception {
         mockMvc.perform(get("/api/v1/spaces/1"))

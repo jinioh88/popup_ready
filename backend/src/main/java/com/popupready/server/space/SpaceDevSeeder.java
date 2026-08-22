@@ -1,0 +1,100 @@
+package com.popupready.server.space;
+
+import com.popupready.server.auth.AuthDevSeeder;
+import com.popupready.server.auth.UserService;
+import java.math.BigDecimal;
+import java.util.List;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * 성수·명동·홍대 일대 상가 시드(스프린트 문서 §4의 5번).
+ *
+ * <p>좌표를 코드에서 만들기 때문에 WKT 문자열을 손으로 적지 않아도 되고, SRID가 어긋날 여지가 없다.
+ * 건물주 계정은 {@link UserService}를 통해 찾는다 — {@code auth}의 리포지토리를 직접 보지 않는다.
+ */
+@Component
+@Order(2)
+public class SpaceDevSeeder implements ApplicationRunner {
+
+    private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
+
+    private static final BigDecimal DEPOSIT_RATE = new BigDecimal("0.10");
+
+    private static final Logger log = LoggerFactory.getLogger(SpaceDevSeeder.class);
+
+    private final SpaceRepository spaceRepository;
+    private final UserService userService;
+
+    public SpaceDevSeeder(SpaceRepository spaceRepository, UserService userService) {
+        this.spaceRepository = spaceRepository;
+        this.userService = userService;
+    }
+
+    @Override
+    @Transactional
+    public void run(ApplicationArguments args) {
+        // 항목별로 확인한다 — 테이블이 비었는지로 판단하면 데이터가 한 건이라도 있을 때
+        // 시드가 영영 들어가지 않는다.
+        Long ownerId = userService.findIdByEmail(AuthDevSeeder.LANDLORD_EMAIL).orElse(null);
+        if (ownerId == null) {
+            log.warn("건물주 계정이 없어 상가 시드를 건너뛴다");
+            return;
+        }
+        List<Space> seeds = List.of(
+                // 성수 — 팝업 성지. 좌표는 연무장길·서울숲 일대다.
+                space("성수 연무장길 팝업 1층", "서울 성동구 연무장길 45", 37.5445, 127.0557, 450_000L, 82.5, 5_000, 20, 12, ownerId),
+                space("성수 서울숲길 코너샵", "서울 성동구 서울숲길 17", 37.5471, 127.0433, 380_000L, 61.0, 4_000, 16, 10, ownerId),
+                space("성수 아틀리에길 지하", "서울 성동구 아차산로 63", 37.5423, 127.0561, 300_000L, 95.0, 6_000, 24, 14, ownerId),
+                // 명동 — 관광 상권. 임대료가 높고 면적이 작다.
+                space("명동 유네스코길 스트리트 스토어", "서울 중구 명동길 26", 37.5636, 126.9827, 780_000L, 41.0, 4_000, 12, 8, ownerId),
+                space("명동 중앙로 1층", "서울 중구 명동8길 12", 37.5608, 126.9852, 920_000L, 55.0, 5_500, 14, 10, ownerId),
+                space("명동 눈스퀘어 인근 소형", "서울 중구 명동7길 13", 37.5641, 126.9839, 640_000L, 28.0, 3_000, 10, 7, ownerId),
+                // 홍대 — 젊은 상권. 지하·복층이 많다.
+                space("홍대 걷고싶은거리 팝업존", "서울 마포구 양화로 152", 37.5551, 126.9236, 520_000L, 73.0, 5_000, 18, 12, ownerId),
+                space("홍대 연남동 골목", "서울 마포구 성미산로 161", 37.5626, 126.9256, 340_000L, 48.0, 3_500, 14, 9, ownerId),
+                space("홍대 상수동 리버뷰", "서울 마포구 와우산로 21", 37.5478, 126.9223, 410_000L, 66.0, 4_500, 16, 11, ownerId));
+        List<Space> missing = seeds.stream()
+                .filter(seed -> !spaceRepository.existsByName(seed.getName()))
+                .toList();
+        if (!missing.isEmpty()) {
+            spaceRepository.saveAll(missing);
+            log.info("상가 시드 {}건을 넣었다", missing.size());
+        }
+    }
+
+    private Space space(
+            String name,
+            String address,
+            double lat,
+            double lng,
+            long dailyRent,
+            double floorAreaM2,
+            int maxPowerWatt,
+            int gridCols,
+            int gridRows,
+            Long ownerId) {
+        Point location = GEOMETRY_FACTORY.createPoint(new Coordinate(lng, lat));
+        return Space.create(
+                name,
+                address,
+                location,
+                dailyRent,
+                DEPOSIT_RATE,
+                floorAreaM2,
+                maxPowerWatt,
+                gridCols,
+                gridRows,
+                500,
+                ownerId);
+    }
+}

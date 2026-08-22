@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface SpaceRepository extends JpaRepository<Space, Long> {
 
+    /** 시드가 이미 들어갔는지 항목별로 판단할 때 쓴다. */
+    boolean existsByName(String name);
+
     /**
      * 중심 좌표 반경 안의 ACTIVE 공간을 찾는다(US-101).
      *
