@@ -11,7 +11,7 @@
     "test": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "verify": "npm run typecheck && npm run lint && vitest run --passWithNoTests"
+    "verify": "npm run typecheck && npm run lint && vitest run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
