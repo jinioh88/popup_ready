@@ -1,4 +1,5 @@
 import { useBuilderStore } from "../../stores/builder";
+import { rotationRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 
 /** 선택된 집기에 대한 조작(회전·삭제). 회전은 `R` 키와 같은 동작이다. */
@@ -37,11 +38,7 @@ export function SelectionToolbar({
           const result = rotateItem(selectedIndex, fixtures);
 
           if (!result.ok) {
-            onRejected(
-              result.reason === "OVERLAP"
-                ? "회전하면 다른 집기와 겹칩니다."
-                : "회전하면 도면 범위를 벗어납니다.",
-            );
+            onRejected(rotationRejectionMessage(result.reason));
           }
         }}
         className="h-10 rounded-lg border border-border bg-surface px-3 text-caption"

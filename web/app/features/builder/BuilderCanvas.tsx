@@ -8,6 +8,7 @@ import type { Placement } from "../../lib/builder/types";
 import type { GridSpec, LayoutItem } from "../../lib/schemas/layout";
 import { useBuilderStore } from "../../stores/builder";
 import { CANVAS_COLORS, CELL_PX, FIXTURE_DRAG_TYPE } from "./constants";
+import { placementRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 
 /**
@@ -90,7 +91,10 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
 
         // 기본 동작을 막아야 드롭이 허용된다.
         event.preventDefault();
-        setPreview(previewAt(event, fixtureId));
+
+        // dragover는 초당 수십 번 발생한다. 대상 셀이 그대로면 리렌더하지 않는다.
+        const next = previewAt(event, fixtureId);
+        setPreview((current) => (isSamePreview(current, next) ? current : next));
       }}
       onDragLeave={() => setPreview(null)}
       onDrop={(event) => {
@@ -118,7 +122,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
         const result = placeItem(item, fixtures);
 
         if (!result.ok) {
-          onRejected(rejectionMessage(result.reason));
+          onRejected(placementRejectionMessage(result.reason));
         }
       }}
     >
@@ -167,7 +171,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
                   const result = moveItem(index, cell.col, cell.row, fixtures);
 
                   if (!result.ok) {
-                    onRejected(rejectionMessage(result.reason));
+                    onRejected(placementRejectionMessage(result.reason));
                   }
 
                   // 성공이든 거부든 스토어의 셀 좌표가 진실이다 — 노드를 거기에 맞춘다.
@@ -220,6 +224,20 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
   );
 }
 
+function isSamePreview(a: DropPreview | null, b: DropPreview | null): boolean {
+  if (a === null || b === null) {
+    return a === b;
+  }
+
+  return (
+    a.valid === b.valid &&
+    a.placement.col === b.placement.col &&
+    a.placement.row === b.placement.row &&
+    a.placement.cols === b.placement.cols &&
+    a.placement.rows === b.placement.rows
+  );
+}
+
 /** 세로선·가로선 points 배열. 셀 경계마다 한 줄씩. */
 function buildGridLines(grid: GridSpec): number[][] {
   const width = grid.gridCols * CELL_PX;
@@ -235,15 +253,4 @@ function buildGridLines(grid: GridSpec): number[][] {
   }
 
   return lines;
-}
-
-function rejectionMessage(reason: "OUT_OF_BOUNDS" | "OVERLAP" | "UNKNOWN_FIXTURE"): string {
-  switch (reason) {
-    case "OUT_OF_BOUNDS":
-      return "도면 범위를 벗어나 배치할 수 없습니다.";
-    case "OVERLAP":
-      return "다른 집기와 겹쳐 배치할 수 없습니다.";
-    case "UNKNOWN_FIXTURE":
-      return "집기 정보를 아직 불러오지 못했습니다.";
-  }
 }

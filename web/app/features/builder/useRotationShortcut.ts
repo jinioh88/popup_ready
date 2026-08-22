@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { useBuilderStore } from "../../stores/builder";
+import { rotationRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 
 /**
@@ -28,11 +29,7 @@ export function useRotationShortcut(fixtures: FixtureCatalog, onRejected: (m: st
       const result = rotateItem(selectedIndex, fixtures);
 
       if (!result.ok) {
-        onRejected(
-          result.reason === "OVERLAP"
-            ? "회전하면 다른 집기와 겹칩니다."
-            : "회전하면 도면 범위를 벗어납니다.",
-        );
+        onRejected(rotationRejectionMessage(result.reason));
       }
     }
 
