@@ -720,7 +720,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description OK */
+            /** @description 로그인 성공 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -731,6 +731,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 이메일 또는 비밀번호 불일치 (INVALID_CREDENTIALS) */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -782,6 +791,15 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 이미 사용 중인 이메일 (EMAIL_ALREADY_EXISTS) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
