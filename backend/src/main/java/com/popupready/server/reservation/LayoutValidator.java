@@ -3,7 +3,7 @@ package com.popupready.server.reservation;
 import com.popupready.server.common.ApiException;
 import com.popupready.server.common.ErrorCode;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -30,14 +30,17 @@ public final class LayoutValidator {
         requireMatchingGrid(layout, spaceGrid);
 
         List<Placement> placed = new ArrayList<>();
+        Map<FixtureSpec, Integer> placedCount = new LinkedHashMap<>();
         for (LayoutItemDto item : layout.items()) {
-            Placement placement = toPlacement(item, spaceGrid, catalog);
+            FixtureSpec fixture = requireKnownFixture(item, catalog);
+            Placement placement = toPlacement(item, fixture, spaceGrid);
             requireInsideGrid(item, placement, spaceGrid);
             requireNoOverlap(item, placement, placed);
             placed.add(placement);
+            placedCount.merge(fixture, 1, Integer::sum);
         }
 
-        requireStockAvailable(layout, catalog);
+        requireStockAvailable(placedCount);
     }
 
     /**
@@ -59,18 +62,22 @@ public final class LayoutValidator {
         }
     }
 
-    private static Placement toPlacement(LayoutItemDto item, GridSpec spaceGrid, Map<Long, FixtureSpec> catalog) {
+    private static FixtureSpec requireKnownFixture(LayoutItemDto item, Map<Long, FixtureSpec> catalog) {
+        FixtureSpec fixture = catalog.get(item.fixtureId());
+        if (fixture == null) {
+            throw new ApiException(
+                    ErrorCode.FIXTURE_NOT_FOUND, "집기를 찾을 수 없습니다 (fixtureId: %d)".formatted(item.fixtureId()));
+        }
+        return fixture;
+    }
+
+    private static Placement toPlacement(LayoutItemDto item, FixtureSpec fixture, GridSpec spaceGrid) {
         // 0|90|180|270만 허용한다. DTO의 Bean Validation은 0~270 범위만 보므로(정수 필드에 문자열
         // enum을 실으면 웹 생성 타입이 깨져 스펙에 열거하지 않았다) 배수 판정은 여기가 맡는다.
         if (item.rotation() % 90 != 0) {
             throw new ApiException(
                     ErrorCode.VALIDATION_FAILED,
                     "rotation은 0·90·180·270 중 하나여야 합니다 (받은 값: %d)".formatted(item.rotation()));
-        }
-        FixtureSpec fixture = catalog.get(item.fixtureId());
-        if (fixture == null) {
-            throw new ApiException(
-                    ErrorCode.FIXTURE_NOT_FOUND, "집기를 찾을 수 없습니다 (fixtureId: %d)".formatted(item.fixtureId()));
         }
         return Placement.of(item, fixture, spaceGrid.cellSizeMm());
     }
@@ -96,18 +103,18 @@ public final class LayoutValidator {
     /**
      * 총 재고 초과만 거른다. 같은 집기가 다른 예약에서 같은 날짜에 잡혀 있는지(날짜별 가용성)는
      * 분산 락과 함께 Sprint 2에서 본다(스프린트 문서 §8).
+     *
+     * <p>세는 단위가 fixtureId가 아니라 규격 그 자체인 것은 의도다 — ID로 세면 여기서 카탈로그를
+     * 다시 조회해야 하고, 위 루프가 존재를 이미 확인했다는 <b>암묵적 전제</b>에 기대게 된다.
+     * 순서를 바꾸는 순간 조용한 NPE가 되는 종류의 전제라 아예 만들지 않는다.
      */
-    private static void requireStockAvailable(LayoutDto layout, Map<Long, FixtureSpec> catalog) {
-        Map<Long, Integer> placedCount = new HashMap<>();
-        for (LayoutItemDto item : layout.items()) {
-            placedCount.merge(item.fixtureId(), 1, Integer::sum);
-        }
-        placedCount.forEach((fixtureId, count) -> {
-            int stock = catalog.get(fixtureId).stockQty();
-            if (count > stock) {
+    private static void requireStockAvailable(Map<FixtureSpec, Integer> placedCount) {
+        placedCount.forEach((fixture, count) -> {
+            if (count > fixture.stockQty()) {
                 throw new ApiException(
                         ErrorCode.FIXTURE_STOCK_EXCEEDED,
-                        "집기 재고를 초과했습니다 (fixtureId: %d, 배치 %d개, 재고 %d개)".formatted(fixtureId, count, stock));
+                        "집기 재고를 초과했습니다 (fixtureId: %d, 배치 %d개, 재고 %d개)"
+                                .formatted(fixture.fixtureId(), count, fixture.stockQty()));
             }
         });
     }
