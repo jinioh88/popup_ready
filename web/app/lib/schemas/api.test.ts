@@ -5,6 +5,7 @@ import {
   fixtureListSchema,
   reservationRequestSchema,
   spaceSummaryListSchema,
+  type EstimateResponse,
   type Fixture,
   type ReservationRequest,
   type SpaceSummary,
@@ -14,17 +15,21 @@ import {
  * 생성 타입(contracts/openapi.json 유래)과의 정합성을 컴파일 타임에 고정한다.
  * 백엔드가 필드명·타입을 바꾸면 타입 재생성 시점에 여기서 먼저 깨진다.
  *
- * 지금은 계약의 응답 스키마에 `required`가 없어 전 필드가 optional이다. 그래서 검사 방향은
- * "웹 스키마(더 엄격) → 생성 타입"만 성립한다. 백엔드의 required 명시 갱신이 오면
- * 반대 방향도 걸 수 있다.
+ * 계약에 required가 명시된 뒤로 **양방향**을 걸 수 있게 됐다. 단 예약 요청 응답만은
+ * 한 방향이다 — 계약의 `rotation`이 정수 범위(0~270)로만 표기되기 때문이다
+ * (springdoc 제약, sprint1.md §2.2 표기 규약). 웹은 `0|90|180|270`으로 더 좁게 잡는다.
  */
 type Assert<T extends true> = T;
+type MutuallyAssignable<A, B> = A extends B ? (B extends A ? true : false) : false;
 
 export type SpaceSummaryMatchesContract = Assert<
-  SpaceSummary extends Schemas["SpaceSummaryResponse"] ? true : false
+  MutuallyAssignable<SpaceSummary, Schemas["SpaceSummaryResponse"]>
 >;
 export type FixtureMatchesContract = Assert<
-  Fixture extends Schemas["FixtureResponse"] ? true : false
+  MutuallyAssignable<Fixture, Schemas["FixtureResponse"]>
+>;
+export type EstimateMatchesContract = Assert<
+  MutuallyAssignable<EstimateResponse, Schemas["EstimateResponse"]>
 >;
 export type ReservationRequestMatchesContract = Assert<
   ReservationRequest extends Schemas["ReservationRequestResponse"] ? true : false
