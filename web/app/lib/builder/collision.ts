@@ -6,7 +6,11 @@ import type { Placement } from "./types";
  * 겹치는 위치는 드롭 자체를 거부하고 시각적 피드백을 준다(sprint1.md §3 US-102).
  */
 
-export type PlacementRejection = "OUT_OF_BOUNDS" | "OVERLAP";
+/**
+ * 거부 사유. 렌더 계층이 이 값으로 피드백 문구를 고르므로 사유를 뭉뚱그리지 않는다.
+ * `UNKNOWN_FIXTURE`는 집기 카탈로그가 아직 없어 **판정 자체가 불가능**한 상태다.
+ */
+export type PlacementRejection = "OUT_OF_BOUNDS" | "OVERLAP" | "UNKNOWN_FIXTURE";
 
 export type PlacementCheck =
   { ok: true } | { ok: false; reason: PlacementRejection; collidingIndexes: number[] };

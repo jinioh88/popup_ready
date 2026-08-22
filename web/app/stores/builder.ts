@@ -37,25 +37,43 @@ export type BuilderState = {
 
 const UNKNOWN_FIXTURE: PlacementCheck = {
   ok: false,
-  reason: "OUT_OF_BOUNDS",
+  reason: "UNKNOWN_FIXTURE",
   collidingIndexes: [],
 };
 
 /** rotation을 시계 방향으로 한 단계(90도) 돌린다. */
 export function nextRotation(rotation: Rotation): Rotation {
-  return ((rotation + 90) % 360) as Rotation satisfies Rotation;
+  return ((rotation + 90) % 360) as Rotation;
 }
 
-/** 배치 목록을 점유 사각형으로 환산한다. 규격을 못 찾은 항목은 제외된다. */
+/**
+ * 배치 목록을 점유 사각형으로 환산한다.
+ *
+ * 규격을 하나라도 못 찾으면 `null`을 돌려준다 — 그 집기를 빼고 판정하면 겹치는 자리를
+ * 빈 자리로 오인해 통과시키고, 서버 재검증에서 400으로 되돌아온다. 조용히 넘기지 않는다.
+ */
 function toPlacements(
   items: readonly LayoutItem[],
   cellSizeMm: number,
   fixtures: FixtureLookup,
-): Placement[] {
-  return items.flatMap((item) => {
+): Placement[] | null {
+  const placements: Placement[] = [];
+
+  for (const item of items) {
     const spec = fixtures[item.fixtureId];
-    return spec ? [toPlacement(item, spec, cellSizeMm, item.rotation)] : [];
-  });
+
+    if (!spec) {
+      return null;
+    }
+
+    placements.push(toPlacement(item, spec, cellSizeMm, item.rotation));
+  }
+
+  return placements;
+}
+
+function isSameGrid(a: GridSpec, b: GridSpec): boolean {
+  return a.gridCols === b.gridCols && a.gridRows === b.gridRows && a.cellSizeMm === b.cellSizeMm;
 }
 
 export const useBuilderStore = create<BuilderState>((set, get) => ({
@@ -63,7 +81,12 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   items: [],
   selectedIndex: null,
 
-  initGrid: (grid) => set({ grid, items: [], selectedIndex: null }),
+  // 같은 그리드로 다시 호출해도 배치를 날리지 않는다 — 쿼리 재요청·리렌더로 사용자의
+  // 작업이 통째로 사라지는 사고를 막기 위한 멱등 처리다.
+  initGrid: (grid) =>
+    set((state) =>
+      isSameGrid(state.grid, grid) ? state : { grid, items: [], selectedIndex: null },
+    ),
 
   selectItem: (index) => set({ selectedIndex: index }),
 
@@ -75,8 +98,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return UNKNOWN_FIXTURE;
     }
 
+    const existing = toPlacements(items, grid.cellSizeMm, fixtures);
+
+    if (!existing) {
+      return UNKNOWN_FIXTURE;
+    }
+
     const candidate = toPlacement(item, spec, grid.cellSizeMm, item.rotation);
-    const check = canPlace(candidate, toPlacements(items, grid.cellSizeMm, fixtures), grid);
+    const check = canPlace(candidate, existing, grid);
 
     if (check.ok) {
       set({ items: [...items, item], selectedIndex: items.length });
@@ -94,8 +123,14 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return UNKNOWN_FIXTURE;
     }
 
+    const existing = toPlacements(items, grid.cellSizeMm, fixtures);
+
+    if (!existing) {
+      return UNKNOWN_FIXTURE;
+    }
+
     const candidate = toPlacement({ col, row }, spec, grid.cellSizeMm, target.rotation);
-    const check = canPlace(candidate, toPlacements(items, grid.cellSizeMm, fixtures), grid, index);
+    const check = canPlace(candidate, existing, grid, index);
 
     if (check.ok) {
       set({ items: items.map((item, i) => (i === index ? { ...item, col, row } : item)) });
@@ -113,9 +148,15 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       return UNKNOWN_FIXTURE;
     }
 
+    const existing = toPlacements(items, grid.cellSizeMm, fixtures);
+
+    if (!existing) {
+      return UNKNOWN_FIXTURE;
+    }
+
     const rotation = nextRotation(target.rotation);
     const candidate = toPlacement(target, spec, grid.cellSizeMm, rotation);
-    const check = canPlace(candidate, toPlacements(items, grid.cellSizeMm, fixtures), grid, index);
+    const check = canPlace(candidate, existing, grid, index);
 
     if (check.ok) {
       set({ items: items.map((item, i) => (i === index ? { ...item, rotation } : item)) });

@@ -42,6 +42,14 @@ describe("initGrid", () => {
     expect(store().items).toEqual([]);
     expect(store().selectedIndex).toBeNull();
   });
+
+  it("같은 그리드로 다시 호출해도 배치가 유지된다 — 리렌더로 작업이 날아가면 안 된다", () => {
+    place(HANGER.id, 0, 0);
+    store().initGrid({ ...GRID });
+
+    expect(store().items).toHaveLength(1);
+    expect(store().selectedIndex).toBe(0);
+  });
 });
 
 describe("placeItem", () => {
@@ -76,11 +84,25 @@ describe("placeItem", () => {
     expect(place(SHOWCASE.id, 5, 5, 90)).toMatchObject({ reason: "OUT_OF_BOUNDS" });
   });
 
-  it("카탈로그에 없는 집기는 배치하지 않는다", () => {
-    expect(store().placeItem({ fixtureId: 999, col: 0, row: 0, rotation: 0 }, FIXTURES).ok).toBe(
-      false,
-    );
+  it("카탈로그에 없는 집기는 UNKNOWN_FIXTURE로 거부한다", () => {
+    expect(store().placeItem({ fixtureId: 999, col: 0, row: 0, rotation: 0 }, FIXTURES)).toEqual({
+      ok: false,
+      reason: "UNKNOWN_FIXTURE",
+      collidingIndexes: [],
+    });
     expect(store().items).toEqual([]);
+  });
+
+  it("이미 놓인 집기의 규격을 못 찾으면 판정을 통과시키지 않는다", () => {
+    place(HANGER.id, 0, 0);
+
+    // 카탈로그가 덜 채워진 상태. 기존 배치를 빼고 판정하면 겹치는 자리를 빈 자리로 오인한다.
+    const partial = { [SHOWCASE.id]: SHOWCASE };
+
+    expect(
+      store().placeItem({ fixtureId: SHOWCASE.id, col: 0, row: 0, rotation: 0 }, partial),
+    ).toMatchObject({ reason: "UNKNOWN_FIXTURE" });
+    expect(store().items).toHaveLength(1);
   });
 });
 
