@@ -1,15 +1,6 @@
-import { Link } from "react-router";
+import { Navigate } from "react-router";
 
-export function meta() {
-  return [{ title: "PopupReady" }];
-}
-
+/** 진입점은 지도 탐색(US-101)이다. SPA 모드라 서버 리다이렉트 대신 클라이언트에서 넘긴다. */
 export default function Home() {
-  return (
-    <main>
-      <h1 className="text-2xl font-bold text-red-500">PopupReady</h1>
-      <p>React Router 프레임워크 모드(SPA) 배선 확인용 페이지입니다.</p>
-      <Link to="/about">about</Link>
-    </main>
-  );
+  return <Navigate to="/spaces" replace />;
 }

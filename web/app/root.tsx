@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Links,
   Meta,
@@ -7,9 +7,22 @@ import {
   ScrollRestoration,
   isRouteErrorResponse,
 } from "react-router";
+import { QueryClientProvider } from "@tanstack/react-query";
 
 import type { Route } from "./+types/root";
+import { createQueryClient } from "./lib/query/client";
 import "./app.css";
+
+export function links(): Route.LinkDescriptors {
+  return [
+    { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
+    {
+      // 스타일가이드 §2 — Pretendard(가변, 동적 서브셋) CDN 로드.
+      rel: "stylesheet",
+      href: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css",
+    },
+  ];
+}
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
@@ -31,12 +44,19 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  // 클라이언트 인스턴스는 앱 생명주기 동안 하나만 유지한다.
+  const [queryClient] = useState(createQueryClient);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Outlet />
+    </QueryClientProvider>
+  );
 }
 
 // SPA 모드에서 빌드 타임에 index.html로 렌더되는 초기 화면.
 export function HydrateFallback() {
-  return <p>불러오는 중…</p>;
+  return <p className="p-6 text-body text-text-muted">불러오는 중…</p>;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -52,9 +72,9 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main>
-      <h1>{message}</h1>
-      <p>{detail}</p>
+    <main className="mx-auto max-w-md p-6">
+      <h1 className="text-title">{message}</h1>
+      <p className="mt-2 text-body text-text-muted">{detail}</p>
     </main>
   );
 }
