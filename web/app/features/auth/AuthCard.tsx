@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
+import { Card } from "../../components/ui/Card";
+
 type AuthCardProps = {
   title: string;
   description: string;
@@ -12,7 +14,7 @@ type AuthCardProps = {
 export function AuthCard({ title, description, children, footer }: AuthCardProps) {
   return (
     <main className="flex min-h-dvh items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-6">
+      <Card padding="lg" className="w-full max-w-sm">
         <h1 className="text-title">{title}</h1>
         <p className="mt-2 text-caption text-text-muted">{description}</p>
         <div className="mt-6">{children}</div>
@@ -22,7 +24,7 @@ export function AuthCard({ title, description, children, footer }: AuthCardProps
             {footer.linkLabel}
           </Link>
         </p>
-      </div>
+      </Card>
     </main>
   );
 }

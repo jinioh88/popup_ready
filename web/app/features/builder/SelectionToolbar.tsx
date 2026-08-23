@@ -1,3 +1,4 @@
+import { Button } from "../../components/ui/Button";
 import { useBuilderStore } from "../../stores/builder";
 import { rotationRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
@@ -32,8 +33,8 @@ export function SelectionToolbar({
       <p className="text-caption text-text-muted">
         선택: <span className="text-text">{fixture.name}</span> · {selected.rotation}°
       </p>
-      <button
-        type="button"
+      <Button
+        variant="secondary"
         onClick={() => {
           const result = rotateItem(selectedIndex, fixtures);
 
@@ -41,17 +42,12 @@ export function SelectionToolbar({
             onRejected(rotationRejectionMessage(result.reason));
           }
         }}
-        className="h-10 rounded-lg border border-border bg-surface px-3 text-caption"
       >
         90° 회전 (R)
-      </button>
-      <button
-        type="button"
-        onClick={() => removeItem(selectedIndex)}
-        className="h-10 rounded-lg border border-error px-3 text-caption text-error"
-      >
+      </Button>
+      <Button variant="destructive" onClick={() => removeItem(selectedIndex)}>
         삭제
-      </button>
+      </Button>
     </div>
   );
 }

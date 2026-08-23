@@ -1,4 +1,4 @@
-import type { ComponentPropsWithRef } from "react";
+import type { ComponentPropsWithRef, ElementType } from "react";
 
 /**
  * 주/보조/파괴적 버튼 (디자인 시스템 기본 4종, sprint2-web.md T0-1).
@@ -8,15 +8,23 @@ import type { ComponentPropsWithRef } from "react";
  *
  * 크기 prop을 두지 않는다 — 스타일가이드 §4가 웹 버튼 높이를 40 하나로 못박았다.
  * 값이 필요해지면 토큰을 늘리기 전에 PM과 협의한다.
+ *
+ * `as`로 요소를 바꿀 수 있다(`Card`와 같은 패턴). 네 갈래 중 하나가 "버튼처럼 보이는 링크"
+ * (`SpaceSummaryPanel`의 '선택 완료')였는데, 그것만 남겨두면 색·높이의 두 번째 원천이 된다.
+ * **다만 앵커는 `disabled`가 없다** — 비활성이 필요한 동작은 링크가 아니라 버튼이어야 한다.
  */
 
 export type ButtonVariant = "primary" | "secondary" | "destructive";
 
-type ButtonProps = Omit<ComponentPropsWithRef<"button">, "className"> & {
+type ButtonOwnProps<T extends ElementType> = {
+  as?: T;
   variant?: ButtonVariant;
   /** 레이아웃 전용 추가 클래스(예: `w-full`, `mt-4`). 색·높이·radius를 덮어쓰지 않는다. */
   className?: string;
 };
+
+type ButtonProps<T extends ElementType> = ButtonOwnProps<T> &
+  Omit<ComponentPropsWithRef<T>, keyof ButtonOwnProps<T>>;
 
 /** 스타일가이드 §4 — 높이 40, radius 8. 주 버튼은 화면당 1개. */
 const BASE =
@@ -35,14 +43,24 @@ const VARIANTS: Record<ButtonVariant, string> = {
     "border border-error bg-surface text-error enabled:hover:bg-error enabled:hover:text-white",
 };
 
-export function Button({ variant = "primary", className, type, ...props }: ButtonProps) {
+export function Button<T extends ElementType = "button">({
+  as,
+  variant = "primary",
+  className,
+  ...props
+}: ButtonProps<T>) {
+  const Component = (as ?? "button") as ElementType;
+
+  // `type`을 지정하지 않은 버튼은 폼 안에서 submit으로 동작한다 — 취소·삭제 버튼이
+  // 폼을 제출해 버리는 사고를 막기 위해 기본값을 button으로 둔다. 앵커·Link에는 붙이지 않는다.
+  const typeProp =
+    Component === "button" ? { type: (props as { type?: string }).type ?? "button" } : null;
+
   return (
-    // `type`을 지정하지 않은 버튼은 폼 안에서 submit으로 동작한다 — 취소·삭제 버튼이
-    // 폼을 제출해 버리는 사고를 막기 위해 기본값을 button으로 둔다.
-    <button
-      type={type ?? "button"}
+    <Component
       className={`${BASE} ${VARIANTS[variant]} ${className ?? ""}`}
       {...props}
+      {...typeProp}
     />
   );
 }

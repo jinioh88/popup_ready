@@ -1,5 +1,5 @@
+import { Card } from "../../components/ui/Card";
 import type { Contract } from "../../lib/schemas/contract";
-
 /**
  * 계약 조항 전문 렌더.
  *
@@ -9,7 +9,7 @@ import type { Contract } from "../../lib/schemas/contract";
  */
 export function ContractDocument({ contract }: { contract: Contract }) {
   return (
-    <article className="rounded-xl border border-border bg-surface p-6">
+    <Card as="article" padding="lg">
       <header className="border-b border-border pb-4">
         <h2 className="text-title">{contract.title}</h2>
         <p className="mt-1 text-caption text-text-muted">
@@ -34,6 +34,6 @@ export function ContractDocument({ contract }: { contract: Contract }) {
           <code className="break-all font-mono text-caption">{contract.contentHash}</code>
         </p>
       </footer>
-    </article>
+    </Card>
   );
 }

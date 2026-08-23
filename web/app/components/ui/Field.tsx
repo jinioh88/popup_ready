@@ -40,14 +40,7 @@ type FieldProps = {
 const CONTROL_BASE =
   "h-10 rounded-lg border bg-surface px-3 text-body text-text outline-none placeholder:text-text-muted focus:border-primary";
 
-export function Field({
-  label,
-  error,
-  help,
-  className,
-  controlClassName,
-  children,
-}: FieldProps) {
+export function Field({ label, error, help, className, controlClassName, children }: FieldProps) {
   const id = useId();
   const errorId = error ? `${id}-error` : undefined;
   const helpId = help ? `${id}-help` : undefined;

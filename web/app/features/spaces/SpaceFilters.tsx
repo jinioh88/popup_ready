@@ -1,3 +1,5 @@
+import { Card } from "../../components/ui/Card";
+import { Field } from "../../components/ui/Field";
 import { AREA_PRESETS, RADIUS_OPTIONS, type SpaceSearchState } from "./searchState";
 
 /**
@@ -25,40 +27,44 @@ export function SpaceFilters({
   );
 
   return (
-    <section className="flex flex-wrap items-end gap-4 rounded-xl border border-border bg-surface p-4">
+    <Card as="section" className="flex flex-wrap items-end gap-4">
       <Field label="지역">
-        <select
-          className={selectClass}
-          value={activePreset?.id ?? CUSTOM_CENTER}
-          onChange={(event) => {
-            const preset = AREA_PRESETS.find((candidate) => candidate.id === event.target.value);
+        {(control) => (
+          <select
+            {...control}
+            value={activePreset?.id ?? CUSTOM_CENTER}
+            onChange={(event) => {
+              const preset = AREA_PRESETS.find((candidate) => candidate.id === event.target.value);
 
-            if (preset) {
-              onChange({ ...search, lat: preset.lat, lng: preset.lng });
-            }
-          }}
-        >
-          {activePreset ? null : <option value={CUSTOM_CENTER}>지도에서 옮긴 위치</option>}
-          {AREA_PRESETS.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
+              if (preset) {
+                onChange({ ...search, lat: preset.lat, lng: preset.lng });
+              }
+            }}
+          >
+            {activePreset ? null : <option value={CUSTOM_CENTER}>지도에서 옮긴 위치</option>}
+            {AREA_PRESETS.map((preset) => (
+              <option key={preset.id} value={preset.id}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        )}
       </Field>
 
       <Field label="반경">
-        <select
-          className={selectClass}
-          value={search.radius}
-          onChange={(event) => onChange({ ...search, radius: Number(event.target.value) })}
-        >
-          {RADIUS_OPTIONS.map((radius) => (
-            <option key={radius} value={radius}>
-              {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}
-            </option>
-          ))}
-        </select>
+        {(control) => (
+          <select
+            {...control}
+            value={search.radius}
+            onChange={(event) => onChange({ ...search, radius: Number(event.target.value) })}
+          >
+            {RADIUS_OPTIONS.map((radius) => (
+              <option key={radius} value={radius}>
+                {radius >= 1000 ? `${radius / 1000}km` : `${radius}m`}
+              </option>
+            ))}
+          </select>
+        )}
       </Field>
 
       <NumberField
@@ -78,18 +84,7 @@ export function SpaceFilters({
         onChange={(minPower) => onChange({ ...search, minPower })}
         step={500}
       />
-    </section>
-  );
-}
-
-const selectClass = "h-10 rounded-lg border border-border bg-surface px-3 text-body";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-2">
-      <span className="text-caption text-text-muted">{label}</span>
-      {children}
-    </label>
+    </Card>
   );
 }
 
@@ -105,19 +100,21 @@ function NumberField({
   step?: number;
 }) {
   return (
-    <Field label={label}>
-      <input
-        type="number"
-        min={0}
-        step={step}
-        value={value ?? ""}
-        placeholder="제한 없음"
-        onChange={(event) => {
-          const raw = event.target.value;
-          onChange(raw === "" ? undefined : Number(raw));
-        }}
-        className="h-10 w-40 rounded-lg border border-border bg-surface px-3 text-body"
-      />
+    <Field label={label} controlClassName="w-40">
+      {(control) => (
+        <input
+          {...control}
+          type="number"
+          min={0}
+          step={step}
+          value={value ?? ""}
+          placeholder="제한 없음"
+          onChange={(event) => {
+            const raw = event.target.value;
+            onChange(raw === "" ? undefined : Number(raw));
+          }}
+        />
+      )}
     </Field>
   );
 }

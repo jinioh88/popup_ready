@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Field } from "../../components/ui/Field";
 import { estimateReservation } from "../../lib/builder/estimate";
 import {
   MAX_RESERVATION_DAYS,
@@ -83,10 +86,7 @@ export function ReservationForm({
       : null;
 
   return (
-    <form
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
-      onSubmit={handleSubmit(onSubmit)}
-    >
+    <Card as="form" className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <div>
         <h2 className="text-heading">예약 기간</h2>
         <p className="mt-1 text-caption text-text-muted">
@@ -96,7 +96,6 @@ export function ReservationForm({
 
       <div className="flex gap-3">
         <DateField
-          id="reservation-start"
           label="시작일"
           error={errors.startDate?.message}
           min={endDate ? minStartDate(endDate) : undefined}
@@ -104,7 +103,6 @@ export function ReservationForm({
           {...register("startDate")}
         />
         <DateField
-          id="reservation-end"
           label="종료일"
           error={errors.endDate?.message}
           min={startDate || undefined}
@@ -140,14 +138,10 @@ export function ReservationForm({
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="h-10 rounded-lg bg-primary text-body-strong text-white hover:bg-primary-dark disabled:opacity-60"
-      >
+      <Button type="submit" disabled={isPending}>
         {isPending ? "예약 요청 중…" : "예약 요청하기"}
-      </button>
-    </form>
+      </Button>
+    </Card>
   );
 }
 
@@ -163,31 +157,15 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 function DateField({
   label,
   error,
-  id,
   ...inputProps
 }: React.ComponentPropsWithRef<"input"> & { label: string; error?: string }) {
   // `min-w-0`이 없으면 flex 항목이 date 입력의 고유 폭(약 160px) 아래로 줄지 않아
   // 두 칸이 카드 밖으로 삐져나온다(2026-08-23 사용자 인수 테스트).
+  // `w-full`도 같은 버그의 짝이다 — 둘 다 레이아웃이라 Field의 시각 규격이 아니라 여기서 준다.
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <label htmlFor={id} className="text-caption text-text-muted">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="date"
-        aria-invalid={error ? true : undefined}
-        className={`h-10 w-full rounded-lg border bg-surface px-3 text-body ${
-          error ? "border-error" : "border-border"
-        }`}
-        {...inputProps}
-      />
-      {error ? (
-        <p role="alert" className="text-caption text-error">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <Field label={label} error={error} className="min-w-0 flex-1" controlClassName="w-full">
+      {(control) => <input {...control} type="date" {...inputProps} />}
+    </Field>
   );
 }
 
