@@ -30,14 +30,14 @@ export function useKeyboardPlacement(
   fixtures: FixtureCatalog,
   onRejected: (message: string) => void,
 ) {
-  const draft = useBuilderStore((state) => state.draft);
-
   useEffect(() => {
-    if (!draft) {
-      return;
-    }
-
     function handle(event: KeyboardEvent) {
+      // 초안 여부는 **핸들러 안에서** 읽는다. 구독해서 effect 의존성에 두면 방향키를 누를
+      // 때마다 초안이 바뀌므로 리스너를 뗐다 붙였다 한다.
+      if (!useBuilderStore.getState().draft) {
+        return;
+      }
+
       // 폼 입력 중에는 방향키가 커서 이동이어야 한다. 예약 기간 입력이 같은 화면에 있다.
       // 수정자 키 조합은 브라우저·OS 단축키다(⌘←는 뒤로 가기 등) — 가로채지 않는다.
       if (isTypingTarget(event.target) || event.metaKey || event.ctrlKey || event.altKey) {
@@ -80,7 +80,7 @@ export function useKeyboardPlacement(
 
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
-  }, [draft, fixtures, onRejected]);
+  }, [fixtures, onRejected]);
 }
 
 /** 입력 요소에 포커스가 있으면 그쪽이 키를 가져간다. */

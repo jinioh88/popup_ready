@@ -33,11 +33,6 @@ export type ResolveAtCellInput = {
   existing: readonly Placement[];
   /** 회전. 키보드 경로는 배치 전에 돌릴 수 있다. */
   rotation?: Rotation;
-  /**
-   * 판정에서 제외할 기존 배치의 인덱스. 이미 놓인 집기를 옮길 때 **자기 자신과의 겹침**을
-   * 겹침으로 세지 않기 위한 것이다.
-   */
-  ignoreIndex?: number;
 };
 
 /** 셀 좌표 기준 판정. 두 입력 경로가 최종적으로 만나는 지점이다. */
@@ -49,7 +44,7 @@ export function resolveDropAtCell(input: ResolveAtCellInput): DropResolution {
   }
 
   const placement = toPlacement(input.cell, spec, input.grid.cellSizeMm, input.rotation ?? 0);
-  const check = canPlace(placement, input.existing, input.grid, input.ignoreIndex);
+  const check = canPlace(placement, input.existing, input.grid);
 
   return { ok: true, placement, valid: check.ok };
 }

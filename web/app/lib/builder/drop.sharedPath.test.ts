@@ -95,17 +95,3 @@ describe("회전은 두 경로에서 같은 점유 크기를 낳는다", () => {
     );
   });
 });
-
-describe("자기 자신과의 겹침 제외", () => {
-  it("옮기는 중인 집기는 자기 자리와 겹쳐도 유효하다", () => {
-    // 이게 없으면 한 칸 옮기기가 항상 자기 자신과의 겹침으로 거부된다.
-    const common = { fixtureId: 1, fixtures: FIXTURES, grid: GRID, existing: OCCUPIED };
-
-    expect(resolveDropAtCell({ ...common, cell: { col: 3, row: 3 } })).toMatchObject({
-      valid: false,
-    });
-    expect(
-      resolveDropAtCell({ ...common, cell: { col: 3, row: 3 }, ignoreIndex: 0 }),
-    ).toMatchObject({ valid: true });
-  });
-});

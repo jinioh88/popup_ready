@@ -266,8 +266,10 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
         `polite`인 것은 방향키를 연타할 때 낭독이 서로를 끊지 않게 하기 위한 것이다.
       */}
       <p aria-live="polite" className="sr-only">
-        {draftPreview
-          ? `${draft?.col ?? 0}열 ${draft?.row ?? 0}행, ${draft?.rotation ?? 0}도. ${
+        {draft && draftPreview
+          ? // 셀 좌표는 0-base지만 **읽어줄 때는 1부터 센다** — 사람은 첫 칸을 1열이라고 부른다.
+            // 저장·계약은 그대로 0-base다(§2.3). 표시 단위만 여기서 바꾼다.
+            `${draft.col + 1}열 ${draft.row + 1}행, ${draft.rotation}도. ${
               draftPreview.valid ? "배치할 수 있습니다." : "여기에는 놓을 수 없습니다."
             }`
           : ""}
