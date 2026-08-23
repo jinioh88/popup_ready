@@ -1768,7 +1768,8 @@
               "PAYMENT_ALREADY_COMPLETED",
               "PAYMENT_AMOUNT_MISMATCH",
               "LOCK_ACQUISITION_FAILED",
-              "DOOR_NOT_YET_OPENABLE"
+              "DOOR_NOT_YET_OPENABLE",
+              "DOOR_EVENT_ALREADY_ACKED"
             ],
             "example": "VALIDATION_FAILED"
           },

@@ -79,6 +79,11 @@ public class DoorEvent {
         this.ackedAt = ackedAt;
     }
 
+    /** 이미 마감됐는가. 호출자가 409로 알릴 수 있게 상태를 물어보는 창구를 연다. */
+    public boolean isClosed() {
+        return status != DoorEventStatus.AUTHORIZED;
+    }
+
     /** 이 이벤트를 마감할 자격이 있는가. 개방을 요청한 본인만이다. */
     public boolean isOwnedBy(long candidateUserId) {
         return userId == candidateUserId;

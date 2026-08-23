@@ -74,6 +74,12 @@ public class DoorService {
         if (!event.isOwnedBy(userId)) {
             throw new ApiException(ErrorCode.FORBIDDEN, "이 도어 이벤트의 요청자가 아닙니다");
         }
+        // 엔티티도 재-ack을 막지만 거기서 나는 IllegalStateException은 500이 된다.
+        // 재-ack은 클라이언트 실수라 409로 알려야 웹·모바일이 재시도하지 않는다.
+        if (event.isClosed()) {
+            throw new ApiException(
+                    ErrorCode.DOOR_EVENT_ALREADY_ACKED, "이미 마감된 도어 이벤트입니다 (현재 상태: %s)".formatted(event.getStatus()));
+        }
         event.ack(success, clock.get());
         return new DoorAckResponse(event.getId(), event.getStatus(), event.getAckedAt());
     }

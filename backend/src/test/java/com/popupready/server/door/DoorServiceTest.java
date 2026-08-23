@@ -166,4 +166,20 @@ class DoorServiceTest {
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("🚨 이미 마감된 이벤트를 다시 ack → 409이지 500이 아니다")
+    void ack_alreadyClosed_isConflictNotServerError() {
+        // 엔티티의 IllegalStateException을 그대로 새어나가게 두면 500이 된다. 재-ack은 더블
+        // 서브밋 같은 클라이언트 실수라, 500으로 알리면 웹·모바일이 서버 장애로 읽고 재시도한다 —
+        // 재시도로 낫는 상황이 아니다. 실서버 왕복에서 실제로 500이 나와 발견했다.
+        DoorEvent event = DoorEvent.authorize(45L, BRAND, "popupready/locks/1/command", INSIDE_WINDOW);
+        event.ack(true, INSIDE_WINDOW);
+        given(doorEventRepository.findById(123L)).willReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service().ack(BRAND, 123L, false))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.DOOR_EVENT_ALREADY_ACKED);
+    }
 }
