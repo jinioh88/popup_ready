@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { isSlideCommitted, slideOffset } from "../lib/doorlock/slide";
+import { createSlideGesture } from "../lib/doorlock/slide-gesture";
 import type { DoorLockView } from "../lib/doorlock/status";
 import { colors, radius, spacing, typography } from "../lib/theme";
 
@@ -39,27 +39,32 @@ export function SmartLockActionSheet({
   const translateX = useRef(new Animated.Value(0)).current;
 
   // canSlide·trackWidth가 바뀌면 판정 기준이 달라지므로 응답기를 다시 만든다.
+  // 정책(무엇을 열림으로 볼지·응답자를 넘길지)은 `lib/doorlock/slide-gesture.ts`에 있고
+  // 여기서는 애니메이션만 붙인다 — 그래야 제스처 수명주기를 테스트로 고정할 수 있다.
   const responder = useMemo(
     () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => canSlide,
-        onMoveShouldSetPanResponder: () => canSlide,
-        onPanResponderMove: (_event, gesture) => {
-          translateX.setValue(slideOffset(gesture.dx, trackWidth, KNOB_SIZE));
-        },
-        onPanResponderRelease: (_event, gesture) => {
-          const committed = isSlideCommitted(gesture.dx, trackWidth);
-          // 임계 미만이면 되돌린다. 끝까지 밀지 않은 손짓으로 문이 열리면 안 된다.
-          Animated.spring(translateX, {
-            toValue: committed ? Math.max(0, trackWidth - KNOB_SIZE) : 0,
-            useNativeDriver: true,
-          }).start(() => {
-            if (!committed) return;
-            translateX.setValue(0);
-          });
-          if (committed) onOpen();
-        },
-      }),
+      PanResponder.create(
+        createSlideGesture({
+          canSlide,
+          trackWidth,
+          knobWidth: KNOB_SIZE,
+          moveKnob: (offset) => translateX.setValue(offset),
+          settleKnob: (committed) => {
+            // **`useNativeDriver: false`여야 한다.** 이 값은 매 move마다 `setValue`로
+            // 밀어 주는데, 네이티브 드라이버로 애니메이션을 한 번이라도 돌리면 노드가
+            // 네이티브로 승격되고(RN `AnimatedValue.js:202-210`) 이후 `setValue`가
+            // 비동기 배치로 큐잉된다 — 두 번째 제스처부터 손잡이가 손가락을 못 따라온다.
+            Animated.spring(translateX, {
+              toValue: committed ? Math.max(0, trackWidth - KNOB_SIZE) : 0,
+              useNativeDriver: false,
+            }).start(() => {
+              if (!committed) return;
+              translateX.setValue(0);
+            });
+          },
+          onCommit: onOpen,
+        }),
+      ),
     [canSlide, trackWidth, translateX, onOpen],
   );
 
@@ -84,6 +89,7 @@ export function SmartLockActionSheet({
       >
         <Text style={styles.trackLabel}>{canSlide ? "밀어서 문 열기" : "지금은 열 수 없다"}</Text>
         <Animated.View
+          testID="doorlock-knob"
           {...responder.panHandlers}
           style={[styles.knob, !canSlide && styles.knobDisabled, { transform: [{ translateX }] }]}
         >
