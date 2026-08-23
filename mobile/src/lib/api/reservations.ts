@@ -43,6 +43,31 @@ export async function fetchReservation(
   return data as ReservationSummary;
 }
 
+/**
+ * 상태 → 화면 문구.
+ *
+ * **`Record<ReservationStatus, string>`으로 못 박는다.** 계약에 상태가 추가되면 여기서
+ * 컴파일이 깨진다 — 그게 정상 신호다. `Record<string, string>`으로 두면 새 상태가 조용히
+ * 폴백으로 흘러 화면에 영문 enum이 그대로 뜬다(2026-08-23 `PAYMENT_PENDING`·`PAID`·
+ * `CANCELLED` 추가 때 실제로 그럴 뻔했다).
+ */
+export const RESERVATION_STATUS_LABEL: Record<ReservationStatus, string> = {
+  DRAFT: "작성 중",
+  CONTRACT_PENDING: "계약 대기",
+  CONTRACT_SIGNED: "계약 완료",
+  PAYMENT_PENDING: "결제 대기",
+  PAID: "결제 완료",
+  CANCELLED: "취소됨",
+};
+
+/**
+ * 타입이 못 잡는 경우(서버가 계약 밖 값을 보냄)에는 원문을 그대로 보여준다.
+ * 빈칸으로 두면 화면에서 상태가 사라져 더 나쁘다.
+ */
+export function reservationStatusLabel(status: string): string {
+  return RESERVATION_STATUS_LABEL[status as ReservationStatus] ?? status;
+}
+
 /** 예약 ID는 경로 파라미터로 문자열로 들어온다. 숫자가 아니면 요청을 보내지 않는다. */
 export function parseReservationId(raw: string | undefined): number | null {
   if (!raw) return null;

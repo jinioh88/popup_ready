@@ -4,7 +4,11 @@ import { Link } from "expo-router";
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
 import { resolveApiBaseUrl } from "../../lib/api/config";
-import { fetchMyReservations, type ReservationSummary } from "../../lib/api/reservations";
+import {
+  fetchMyReservations,
+  reservationStatusLabel,
+  type ReservationSummary,
+} from "../../lib/api/reservations";
 import { colors, radius, spacing, typography } from "../../lib/theme";
 
 /**
@@ -53,20 +57,11 @@ function ReservationRow({ reservation }: { reservation: ReservationSummary }) {
         <Text style={styles.cardMeta}>
           {reservation.startDate} ~ {reservation.endDate}
         </Text>
-        <Text style={styles.cardStatus}>
-          {STATUS_LABEL[reservation.status] ?? reservation.status}
-        </Text>
+        <Text style={styles.cardStatus}>{reservationStatusLabel(reservation.status)}</Text>
       </View>
     </Link>
   );
 }
-
-/** 계약 enum을 화면 문구로. 계약에 새 상태가 늘면 원문을 그대로 보여준다. */
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: "작성 중",
-  CONTRACT_PENDING: "계약 대기",
-  CONTRACT_SIGNED: "계약 완료",
-};
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (

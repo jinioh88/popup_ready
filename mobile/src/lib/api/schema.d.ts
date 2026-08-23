@@ -871,7 +871,7 @@ export interface components {
              * @description 확정된 예약 상태
              * @enum {string}
              */
-            reservationStatus: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+            reservationStatus: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED" | "PAYMENT_PENDING" | "PAID" | "CANCELLED";
             /** @description 이 결제가 만든 분할 정산 Row */
             settlements: components["schemas"]["SettlementResponse"][];
             /**
@@ -941,7 +941,7 @@ export interface components {
              * @description 예약 요청 상태
              * @enum {string}
              */
-            status: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+            status: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED" | "PAYMENT_PENDING" | "PAID" | "CANCELLED";
         };
         /** @description 분할 정산 Row */
         SettlementResponse: {
@@ -1601,7 +1601,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description 거를 상태. 생략하면 전체 */
-                status?: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+                status?: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED" | "PAYMENT_PENDING" | "PAID" | "CANCELLED";
             };
             header?: never;
             path?: never;
