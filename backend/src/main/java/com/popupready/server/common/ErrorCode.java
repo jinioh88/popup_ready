@@ -34,6 +34,10 @@ public enum ErrorCode {
     // contract
     CONTRACT_NOT_FOUND(HttpStatus.NOT_FOUND),
     NOT_CONTRACT_PARTY(HttpStatus.FORBIDDEN),
+    // 예약 하나에 계약은 하나다. 생성을 멱등으로 만들지 않고 이 코드를 내는 이유는, 조용히 기존
+    // 계약을 돌려주면 더블 서브밋 버그가 정상 동작으로 위장되기 때문이다. 웹은 이 코드를 보면
+    // GET /reservation-requests/{id}/contract로 넘어간다.
+    CONTRACT_ALREADY_EXISTS(HttpStatus.CONFLICT),
     CONTRACT_ALREADY_SIGNED(HttpStatus.CONFLICT);
 
     private final HttpStatus status;

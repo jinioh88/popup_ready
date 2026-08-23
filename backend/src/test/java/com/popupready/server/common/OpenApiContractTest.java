@@ -23,8 +23,8 @@ class OpenApiContractTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("계약 스펙 → 스프린트 문서 §2.2의 9개 오퍼레이션이 모두 담긴다")
-    void apiDocs_containsAllNineOperations() throws Exception {
+    @DisplayName("계약 스펙 → 스프린트 문서 §2.2의 10개 오퍼레이션이 모두 담긴다")
+    void apiDocs_containsAllTenOperations() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paths['/api/v1/auth/signup'].post").exists())
@@ -38,7 +38,43 @@ class OpenApiContractTest {
                         .exists())
                 .andExpect(
                         jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post").exists())
-                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get").exists());
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get").exists())
+                // T5-3 추가 — 재진입 시 계약 ID 없이 기존 계약을 되찾는 경로.
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/contract'].get")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("역할·당사자 제한이 걸린 오퍼레이션 → 403이 문서화된다")
+    void apiDocs_documentsForbiddenForRestrictedOperations() throws Exception {
+        // 401(인증 필요)과 403(자격 없음)은 다른 축이다. 판별 기준은 Security 설정과 같은
+        // RestrictedEndpoints이므로 문서와 실제 동작이 갈라지지 않는다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].post.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}'].get.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/contracts/{id}/sign'].post.responses.403")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("자격 제한이 없는 오퍼레이션 → 403을 문서화하지 않는다")
+    void apiDocs_omitsForbiddenWhereAnyoneMayCall() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/spaces'].get.responses.403").doesNotExist())
+                .andExpect(jsonPath("$.paths['/api/v1/auth/login'].post.responses.403")
+                        .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("계약 생성 → 중복 생성 409가 문서화된다")
+    void apiDocs_documentsConflictForContractCreation() throws Exception {
+        // 생성을 멱등으로 만들지 않았으므로 웹은 409를 보고 조회 경로로 넘어간다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .value(org.hamcrest.Matchers.hasItem("CONTRACT_ALREADY_EXISTS")));
     }
 
     @Test
