@@ -71,7 +71,6 @@
 | [`web/`](web/) | 웹 클라이언트 — 공간 탐색, 2D 빌더, 어드민 대시보드 | React · TypeScript · React Router(SPA) · React-Konva |
 | [`mobile/`](mobile/) | 현장 운영 앱 — 무인 입실, 비품 스캔 결제, 퇴실 검수 | React Native (Expo) |
 | [`infra/`](infra/) | 로컬 개발 인프라 | Docker Compose — PostgreSQL+PostGIS · Redis · Mosquitto |
-| `docs/` | 기획 문서 (PRD, MVP 백로그, 페르소나, 사용자 흐름도) — **비공개** | |
 
 ## 로컬 개발 시작
 
