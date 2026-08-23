@@ -111,7 +111,12 @@ export function ReservationForm({
         />
       </div>
 
-      <dl className="flex flex-col gap-1 text-caption">
+      {/*
+        `tabular-nums` — 배치를 바꿀 때마다 금액 자릿수가 바뀌는데, Pretendard 기본 숫자는
+        비례폭이라 같은 자릿수여도 폭이 최대 21.97px 흔들린다(T0-3 실측, sprint2-web.md §8.2).
+        숫자가 제자리에서 바뀌지 않으면 사용자는 값이 아니라 레이아웃 흔들림을 먼저 본다.
+      */}
+      <dl className="flex flex-col gap-1 text-caption tabular-nums">
         <Row label="배치 집기" value={`${items.length}개`} />
         {estimate ? (
           <>

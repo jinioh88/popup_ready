@@ -27,7 +27,7 @@ export function SpaceSummaryPanel({ space }: { space: SpaceSummary | null }) {
           <p className="mt-1 text-caption text-text-muted">{space.address}</p>
         </div>
 
-        <dl className="flex flex-col gap-1 text-caption">
+        <dl className="flex flex-col gap-1 text-caption tabular-nums">
           <Row label="일일 대여료" value={`${space.dailyRent.toLocaleString("ko-KR")}원`} />
           <Row label="실면적" value={`${space.floorAreaM2}㎡`} />
           <Row label="허용 전력" value={`${space.maxPowerWatt.toLocaleString("ko-KR")}W`} />

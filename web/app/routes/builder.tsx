@@ -83,7 +83,7 @@ export default function BuilderRoute() {
     <main className="flex flex-col gap-4 px-6 py-6">
       <header>
         <h1 className="text-display">{space.name}</h1>
-        <p className="mt-2 text-caption text-text-muted">
+        <p className="mt-2 text-caption text-text-muted tabular-nums">
           {space.address} · 그리드 {grid.gridCols}×{grid.gridRows}칸 (한 칸 {grid.cellSizeMm}mm) ·
           허용 전력 {space.maxPowerWatt.toLocaleString("ko-KR")}W
         </p>
