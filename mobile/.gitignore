@@ -41,6 +41,8 @@ yarn-error.*
 /android
 
 # 에이전트 로컬 자산 (git 비공유, 2026-08-23 사용자 결정)
-.claude/
-docs/
+# 슬래시를 붙이지 않는다 — `docs/`는 디렉터리만 매칭해서, worktree에서
+# 원본 체크아웃을 가리키는 심볼릭 링크(= git에겐 파일)가 안 걸린다.
+.claude
+docs
 /CLAUDE.md
