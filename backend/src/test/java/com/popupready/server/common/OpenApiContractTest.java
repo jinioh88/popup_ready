@@ -300,7 +300,8 @@ class OpenApiContractTest {
         // 클라이언트가 토픽을 조립하면 훼손된 채 발행될 수 있다(§2.3).
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(jsonPath("$.components.schemas.DoorOpenResponse.required")
-                        .value(org.hamcrest.Matchers.containsInAnyOrder("eventId", "topic", "payload", "status")))
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "eventId", "topic", "statusTopic", "payload", "status")))
                 .andExpect(jsonPath("$.components.schemas.DoorCommandPayload.required")
                         .value(org.hamcrest.Matchers.containsInAnyOrder(
                                 "eventId", "reservationId", "action", "issuedAt")));
@@ -320,7 +321,7 @@ class OpenApiContractTest {
     }
 
     @Test
-    @DisplayName("계약 목록 → 18개 오퍼레이션의 operationId가 고정된다")
+    @DisplayName("계약 목록 → 19개 오퍼레이션의 operationId가 고정된다")
     void apiDocs_operationIdsArePinned() throws Exception {
         // 이 목록이 곧 계약이다. 오퍼레이션을 추가·개명하면 여기가 먼저 깨져야 한다 —
         // 소비자(웹·모바일)의 생성 타입이 조용히 바뀌는 것보다 낫다.
@@ -336,6 +337,7 @@ class OpenApiContractTest {
                                 "listFixtures",
                                 "createReservationRequest",
                                 "getReservationRequest",
+                                "listReservationRequests",
                                 "createContract",
                                 "getContractByReservation",
                                 "getContract",
@@ -345,6 +347,31 @@ class OpenApiContractTest {
                                 "listSettlements",
                                 "openDoor",
                                 "ackDoorEvent")));
+    }
+
+    @Test
+    @DisplayName("내 예약 목록 → 목록 경로가 계약에 담기고 status는 선택이다")
+    void apiDocs_containsReservationListOperation() throws Exception {
+        // 현장 운영자가 예약 ID를 외우지 않는다 — 단건 조회만으로는 모바일의 진입 경로가 없다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/reservation-requests'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].get.parameters[0].required")
+                        .value(false))
+                // 목록은 '내 것'만 돌려주므로 남의 것을 볼 방법이 없다 — 403이 날 자리가 아니다.
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests'].get.responses.403")
+                        .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("도어 오픈 응답 → 상태 구독 토픽도 서버가 내려준다")
+    void apiDocs_doorOpenCarriesStatusTopic() throws Exception {
+        // topic 문자열에서 spaceId를 파싱해 상태 토픽을 조립하는 것도 조립이다.
+        // §2.3의 "서버가 내려준 것을 그대로 쓴다"는 발행 토픽에만 걸리는 규칙이 아니다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.DoorOpenResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "eventId", "topic", "statusTopic", "payload", "status")));
     }
 
     @Test

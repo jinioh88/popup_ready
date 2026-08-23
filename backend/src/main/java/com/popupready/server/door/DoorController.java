@@ -53,6 +53,7 @@ public class DoorController {
         return ApiResponse.ok(new DoorOpenResponse(
                 123L,
                 "popupready/locks/1/command",
+                "popupready/locks/1/status",
                 new DoorCommandPayload(123L, id, "OPEN", Instant.parse("2026-09-01T09:50:00Z")),
                 DoorEventStatus.AUTHORIZED));
     }

@@ -269,4 +269,46 @@ class ReservationRequestServiceTest {
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.RESERVATION_REQUEST_NOT_FOUND);
     }
+
+    // ── 내 예약 목록 (2026-08-23 계약 추가) ──────────────────────────────────
+
+    @Test
+    @DisplayName("status 없이 목록 조회 → 내 예약 전체를 최근 순으로")
+    void listMine_withoutStatus_returnsAll() {
+        given(reservationRequestRepository.findByBrandUserIdOrderByIdDesc(BRAND_USER_ID))
+                .willReturn(List.of(ReservationRequest.create(
+                        1L,
+                        BRAND_USER_ID,
+                        START,
+                        END,
+                        layout(),
+                        new EstimateResponse(14, 6_300_000L, 0L, 630_000L, 6_930_000L))));
+
+        assertThat(reservationRequestService.listMine(BRAND_USER_ID, null)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("status를 주면 → 그 상태만 거르는 조회로 간다")
+    void listMine_withStatus_filtersByStatus() {
+        // 전체 조회 후 메모리에서 거르지 않는다 — 예약이 늘면 그대로 비용이 된다.
+        given(reservationRequestRepository.findByBrandUserIdAndStatusOrderByIdDesc(
+                        BRAND_USER_ID, ReservationStatus.CONTRACT_SIGNED))
+                .willReturn(List.of());
+
+        assertThat(reservationRequestService.listMine(BRAND_USER_ID, ReservationStatus.CONTRACT_SIGNED))
+                .isEmpty();
+        verify(reservationRequestRepository, never()).findByBrandUserIdOrderByIdDesc(BRAND_USER_ID);
+    }
+
+    @Test
+    @DisplayName("남의 예약은 목록에 섞이지 않는다 → 조회 자체가 내 ID로 걸린다")
+    void listMine_queriesByCallerId() {
+        given(reservationRequestRepository.findByBrandUserIdOrderByIdDesc(999L)).willReturn(List.of());
+
+        reservationRequestService.listMine(999L, null);
+
+        // 목록은 '내 것'만 돌려주므로 당사자 판정이 따로 필요 없다 — 조회 조건이 곧 인가다.
+        verify(reservationRequestRepository).findByBrandUserIdOrderByIdDesc(999L);
+        verify(reservationRequestRepository, never()).findByBrandUserIdOrderByIdDesc(BRAND_USER_ID);
+    }
 }
