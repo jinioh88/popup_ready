@@ -375,6 +375,25 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("예약 상태 → 결제 단계 3종이 추가된 6종으로 고정된다")
+    void apiDocs_reservationStatusCarriesPaymentStates() throws Exception {
+        // 웹·모바일이 이 값으로 화면을 가른다. 값이 늘면 두 파트의 전수 분기가 컴파일에서
+        // 먼저 깨져야 하고, 그러려면 계약에 정확히 실려 있어야 한다.
+        //
+        // springdoc은 이 enum을 별도 스키마로 빼지 않고 쓰는 자리마다 인라인한다. 그래서 경로가
+        // ReservationStatus가 아니라 예약 응답의 status 속성이다 — 클라이언트가 실제로 읽는 자리다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ReservationRequestResponse.properties.status.enum")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "DRAFT",
+                                "CONTRACT_PENDING",
+                                "CONTRACT_SIGNED",
+                                "PAYMENT_PENDING",
+                                "PAID",
+                                "CANCELLED")));
+    }
+
+    @Test
     @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
     void apiDocs_carriesSprint2ErrorCodes() throws Exception {
         // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로

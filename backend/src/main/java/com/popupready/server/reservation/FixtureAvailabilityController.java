@@ -22,13 +22,18 @@ import org.springframework.web.bind.annotation.RestController;
  * {@code space}에 두면 공간 도메인이 예약 저장소를 들여다봐야 해 패키지 경계 규칙이 깨진다.
  * 컨트롤러의 URL이 패키지 이름을 따를 이유는 없으므로 계약(경로)은 그대로 두고 소유만 옮겼다.
  *
- * <p>Phase 0 스텁이다 — 경로·파라미터·응답 필드를 확정해 웹의 빌더 작업을 풀어주는 것이 목적이고,
- * 실제 집계(JSONB 펼치기)는 T1-2에서 채운다.
+ * <p>T1-2 실구현. 경로·파라미터·응답 필드는 Phase 0에서 확정한 그대로이며 속만 채웠다.
  */
 @RestController
 @RequestMapping(value = "/api/v1/spaces", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "reservation", description = "예약 요청")
 public class FixtureAvailabilityController {
+
+    private final FixtureAvailabilityService fixtureAvailabilityService;
+
+    public FixtureAvailabilityController(FixtureAvailabilityService fixtureAvailabilityService) {
+        this.fixtureAvailabilityService = fixtureAvailabilityService;
+    }
 
     @Operation(
             operationId = "getFixtureAvailability",
@@ -46,7 +51,8 @@ public class FixtureAvailabilityController {
                     @RequestParam
                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
                     LocalDate endDate) {
-        // Phase 0 스텁 — T1-2에서 실제 집계로 교체한다.
-        return ApiResponse.ok(List.of(new FixtureAvailabilityResponse(1L, 10, 3, 7)));
+        // 기간 검증은 예약 생성과 같은 규칙을 쓴다 — 뒤집힌 날짜나 30일 초과를 여기서만 통과시키면
+        // 빌더가 배치할 수 있다고 표시한 기간이 예약 단계에서 거절된다.
+        return ApiResponse.ok(fixtureAvailabilityService.availability(ReservationPeriod.of(startDate, endDate)));
     }
 }
