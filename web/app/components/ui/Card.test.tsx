@@ -7,18 +7,20 @@ import { Card } from "./Card";
 afterEach(cleanup);
 
 describe("Card", () => {
-  it("기본은 div이지만 시맨틱 요소로 바꿀 수 있다", () => {
-    // 카드는 시각 규격이지 문서 구조가 아니다 — 항상 div면 스크린리더에서 구조가 뭉개진다.
+  it("as를 주지 않으면 div로 렌더한다", () => {
     const { container } = render(<Card>본문</Card>);
+
     expect(container.firstElementChild?.tagName).toBe("DIV");
+  });
 
-    cleanup();
-
+  it("시맨틱 요소로 바꿀 수 있다", () => {
+    // 카드는 시각 규격이지 문서 구조가 아니다 — 항상 div면 스크린리더에서 구조가 뭉개진다.
     render(
       <Card as="article" aria-label="계약서">
         조항
       </Card>,
     );
+
     expect(screen.getByRole("article", { name: "계약서" })).toBeTruthy();
   });
 

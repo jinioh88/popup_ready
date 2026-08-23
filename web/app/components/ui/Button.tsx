@@ -22,10 +22,17 @@ type ButtonProps = Omit<ComponentPropsWithRef<"button">, "className"> & {
 const BASE =
   "inline-flex h-10 items-center justify-center rounded-lg px-4 text-body-strong transition-colors disabled:cursor-not-allowed disabled:opacity-60";
 
+/**
+ * hover는 **`enabled:`로 잠근다.** CSS `:hover`는 disabled 버튼에도 매칭되므로 그냥 두면
+ * 한도 초과로 잠긴 결제 버튼이 마우스를 올릴 때 진하게 변해 눌리는 것처럼 보인다.
+ * disabled의 시각적 약속(opacity-60 + not-allowed 커서)을 hover가 되돌리는 셈이다.
+ * Sprint 1의 흩어진 버튼들이 전부 이 상태였고, 여기로 모으는 지금이 고칠 자리다.
+ */
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-dark",
-  secondary: "border border-border bg-surface text-text hover:bg-bg",
-  destructive: "border border-error bg-surface text-error hover:bg-error hover:text-white",
+  primary: "bg-primary text-white enabled:hover:bg-primary-dark",
+  secondary: "border border-border bg-surface text-text enabled:hover:bg-bg",
+  destructive:
+    "border border-error bg-surface text-error enabled:hover:bg-error enabled:hover:text-white",
 };
 
 export function Button({ variant = "primary", className, type, ...props }: ButtonProps) {
