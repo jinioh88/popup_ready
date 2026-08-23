@@ -615,6 +615,78 @@
       }
     },
     "/api/v1/reservation-requests": {
+      "get": {
+        "description": "로그인한 사용자가 만든 예약 요청을 최근 순으로 돌려준다. status를 주면 그 상태만 거른다. 건물주의 '내 공간 예약 목록'은 조회 축이 다른 별개의 유스케이스이며 이 경로가 아니다.",
+        "operationId": "listReservationRequests",
+        "parameters": [
+          {
+            "description": "거를 상태. 생략하면 전체",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "예약 요청 상태",
+              "enum": [
+                "DRAFT",
+                "CONTRACT_PENDING",
+                "CONTRACT_SIGNED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListReservationRequestResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "내 예약 목록",
+        "tags": [
+          "reservation"
+        ]
+      },
       "post": {
         "description": "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. 그리드 범위를 벗어나거나 집기가 겹치면 400이다.",
         "operationId": "createReservationRequest",
@@ -1914,6 +1986,37 @@
           "error"
         ]
       },
+      "ApiResponseListReservationRequestResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "성공 시 페이로드. 실패 시 null",
+            "items": {
+              "$ref": "#/components/schemas/ReservationRequestResponse"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
       "ApiResponseListSettlementResponse": {
         "type": "object",
         "description": "공통 응답 봉투",
@@ -2392,6 +2495,11 @@
               "FAILED"
             ]
           },
+          "statusTopic": {
+            "type": "string",
+            "description": "상태 구독 토픽. 구독 실패는 개방 흐름을 막지 않는다(UI 편의일 뿐 개방의 필요조건이 아니다)",
+            "example": "popupready/locks/1/status"
+          },
           "topic": {
             "type": "string",
             "description": "발행할 MQTT 토픽",
@@ -2402,6 +2510,7 @@
           "eventId",
           "payload",
           "status",
+          "statusTopic",
           "topic"
         ]
       },

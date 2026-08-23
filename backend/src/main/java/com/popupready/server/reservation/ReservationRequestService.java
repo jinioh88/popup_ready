@@ -104,6 +104,24 @@ public class ReservationRequestService {
         return toResponse(request);
     }
 
+    /**
+     * 내 예약 목록(§2.2-A, 2026-08-23 추가). 모바일의 진입 경로다 — 현장 운영자가 예약 ID를
+     * 외우지 않으므로 단건 조회만으로는 예약 상세에 닿을 방법이 없다.
+     *
+     * <p><b>돌려주는 것은 "내가 만든 예약"뿐이다.</b> 건물주의 "내 공간에 걸린 예약 목록"은
+     * 조회 축이 다른 별개의 유스케이스이며, 두 가지를 한 경로에 합치면 호출자가 무엇을 받는지
+     * 역할에 따라 달라져 계약이 모호해진다. 필요해지면 별도 경로로 낸다.
+     *
+     * @param status null이면 전체
+     */
+    @Transactional(readOnly = true)
+    public List<ReservationRequestResponse> listMine(long brandUserId, ReservationStatus status) {
+        List<ReservationRequest> found = (status == null)
+                ? reservationRequestRepository.findByBrandUserIdOrderByIdDesc(brandUserId)
+                : reservationRequestRepository.findByBrandUserIdAndStatusOrderByIdDesc(brandUserId, status);
+        return found.stream().map(ReservationRequestService::toResponse).toList();
+    }
+
     /** 예약의 브랜드 본인이거나 그 공간의 건물주여야 한다. */
     private void requireParty(ReservationRequest request, long userId) {
         boolean brand = request.getBrandUserId() == userId;
