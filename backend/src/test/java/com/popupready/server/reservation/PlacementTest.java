@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class PlacementTest {
 
     /** 1,200 × 500mm 행거. 500mm 셀 기준 3칸 × 1칸을 차지한다. */
-    private static final FixtureSpec HANGER = new FixtureSpec(3L, 1_200, 500, 12_000L, 40);
+    private static final FixtureSpec HANGER = new FixtureSpec(3L, 1_200, 500, 0, 12_000L, 40);
 
     private static Placement place(int col, int row, int rotation) {
         return Placement.of(new LayoutItemDto(HANGER.fixtureId(), col, row, rotation), HANGER, 500);
@@ -21,7 +21,7 @@ class PlacementTest {
     @Test
     @DisplayName("규격이 셀 크기로 나누어떨어지지 않음 → 올림으로 점유 칸을 잡는다")
     void of_roundsUpPartialCells() {
-        FixtureSpec showcase = new FixtureSpec(5L, 900, 600, 20_000L, 10);
+        FixtureSpec showcase = new FixtureSpec(5L, 900, 600, 0, 20_000L, 10);
 
         Placement placement = Placement.of(new LayoutItemDto(5L, 0, 0, 0), showcase, 500);
 

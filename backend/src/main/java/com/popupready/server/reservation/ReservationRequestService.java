@@ -56,7 +56,7 @@ public class ReservationRequestService {
 
         LayoutDto layout = request.layout();
         Map<Long, FixtureSpec> catalog = catalogFor(layout);
-        LayoutValidator.validate(layout, gridOf(space), catalog);
+        LayoutValidator.validate(layout, gridOf(space), space.maxPowerWatt(), catalog);
 
         EstimateResponse estimate = EstimateCalculator.calculate(
                 period, space.dailyRent(), space.depositRate(), placedFixtures(layout, catalog));
@@ -184,7 +184,12 @@ public class ReservationRequestService {
 
     private static FixtureSpec toSpec(FixtureResponse fixture) {
         return new FixtureSpec(
-                fixture.id(), fixture.widthMm(), fixture.depthMm(), fixture.dailyRentalFee(), fixture.stockQty());
+                fixture.id(),
+                fixture.widthMm(),
+                fixture.depthMm(),
+                fixture.powerWatt(),
+                fixture.dailyRentalFee(),
+                fixture.stockQty());
     }
 
     private static ReservationRequestResponse toResponse(ReservationRequest request) {
