@@ -9,8 +9,18 @@ const DEFAULT_API_TARGET = "http://localhost:8080";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
 
+  /**
+   * 테스트에서는 reactRouter() 플러그인을 빼야 한다.
+   *
+   * 이 플러그인은 Fast Refresh preamble을 주입하는데, 그 preamble은 dev 서버가 만드는 실제 HTML
+   * 문서에만 존재한다. Vitest+jsdom에서 컴포넌트를 렌더하면 "can't detect preamble"로 죽는다.
+   * JSX 변환은 tsconfig의 `jsx: "react-jsx"`를 보고 esbuild가 처리하므로
+   * **`@vitejs/plugin-react`를 추가하지 않는다**(web/CLAUDE.md 아키텍처 제약).
+   */
+  const isTest = Boolean(process.env.VITEST);
+
   return {
-    plugins: [tailwindcss(), reactRouter()],
+    plugins: isTest ? [tailwindcss()] : [tailwindcss(), reactRouter()],
     server: {
       /**
        * `/api`를 백엔드로 프록시한다.
