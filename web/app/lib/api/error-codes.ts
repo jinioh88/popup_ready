@@ -43,12 +43,38 @@ export const ERROR_CODES = [
   "CONTRACT_ALREADY_EXISTS",
   "CONTRACT_ALREADY_SIGNED",
   "CONTRACT_INTEGRITY_VIOLATION",
+  // reservation (결제 단계)
+  /** 같은 공간·겹치는 기간에 이미 PAID 예약이 있다(409). 집기 문제가 아니다. */
+  "SPACE_ALREADY_BOOKED",
   // payment
   "PAYMENT_ALREADY_COMPLETED",
   "PAYMENT_AMOUNT_MISMATCH",
-  /** 분산 락 획득 실패(503). **사용자 잘못이 아니다** — 재시도로 풀린다. */
+  /** PG가 결제를 거절했다(402). 수단·한도 문제이며 재시도로 풀릴 수 있다. */
+  "PAYMENT_DECLINED",
+  /**
+   * 분산 락 획득 실패(503). **사용자 잘못이 아니고 재시도로 풀린다.**
+   *
+   * 아래 `PAYMENT_RESULT_UNKNOWN`과 **같은 503인데 뜻이 정반대**다. 그래서 이 프로젝트의
+   * 결제 분기는 **HTTP 상태가 아니라 `error.code`로만** 갈라야 한다(sprint2.md §2.2).
+   */
   "LOCK_ACQUISITION_FAILED",
+  /**
+   * 이미 결론이 난 `orderId`로 다시 `confirm`을 불렀다(409).
+   *
+   * 정석 재시도(`prepare`부터)를 지키면 밟지 않는 경로다. 그래도 안내를 갖는 이유는,
+   * 이 코드가 오는 상황 자체가 **직전 시도의 결과를 모르고 있다는 뜻**이기 때문이다.
+   */
+  "ORDER_ID_ALREADY_USED",
+  /**
+   * PG 응답이 유실돼 **승인 여부를 서버도 모른다**(503).
+   *
+   * "실패했다"고 말하면 안 된다 — 실패했는지 아닌지를 모르는 것이 이 상태의 정의다.
+   * 재시도를 권하면 **이중 결제를 유도**한다. 자동 대사는 이번 스프린트 범위 밖이라
+   * 사용자에게 답을 줄 수 있는 곳은 예약 상태뿐이다.
+   */
+  "PAYMENT_RESULT_UNKNOWN",
   // door (모바일 구간이지만 enum은 파트 공용이라 목록을 함께 맞춘다)
+  "RESERVATION_NOT_PAID",
   "DOOR_NOT_YET_OPENABLE",
   "DOOR_EVENT_ALREADY_ACKED",
 ] as const;

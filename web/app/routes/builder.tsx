@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 
 import { BuilderCanvas } from "../features/builder/BuilderCanvas";
@@ -6,12 +6,22 @@ import { CanvasController } from "../features/builder/CanvasController";
 import { FixturePanel } from "../features/builder/FixturePanel";
 import { LimitGauge } from "../features/builder/LimitGauge";
 import { ReservationForm } from "../features/builder/ReservationForm";
-import { toFixtureCatalog, useFixtures, useSpaceDetail } from "../features/builder/queries";
+import {
+  toFixtureCatalog,
+  useFixtureAvailability,
+  useFixtures,
+  useSpaceDetail,
+} from "../features/builder/queries";
 import { useCreateReservation } from "../features/builder/useCreateReservation";
 import { useKeyboardPlacement } from "../features/builder/useKeyboardPlacement";
 import { useLoadSummary } from "../features/builder/useLoadSummary";
 import { useRotationShortcut } from "../features/builder/useRotationShortcut";
 import { useTransientMessage } from "../features/builder/useTransientMessage";
+import {
+  overPlacedFixtureIds,
+  toAvailabilityMap,
+} from "../lib/builder/availability";
+import type { ReservationPeriod } from "../lib/schemas/reservation";
 import { useBuilderStore } from "../stores/builder";
 
 export function meta() {
@@ -28,6 +38,14 @@ export default function BuilderRoute() {
   const initGrid = useBuilderStore((state) => state.initGrid);
 
   const { message: rejection, show: onRejected } = useTransientMessage();
+
+  /**
+   * 집기 가용 수량 조회의 전제가 되는 기간. 폼 상태의 주인은 `ReservationForm`이고
+   * 여기서는 **유효해진 값만** 받아 든다(I-3).
+   */
+  const [period, setPeriod] = useState<ReservationPeriod | null>(null);
+  // ReservationForm의 알림 effect가 매 렌더 다시 돌지 않도록 참조를 고정한다.
+  const onPeriodChange = useCallback((next: ReservationPeriod | null) => setPeriod(next), []);
 
   const catalog = useMemo(() => toFixtureCatalog(fixturesQuery.data), [fixturesQuery.data]);
   const space = spaceQuery.data;
@@ -55,6 +73,14 @@ export default function BuilderRoute() {
   // 훅은 조기 return 위에 모아 둔다. 도면을 못 불러온 동안에는 빈 그리드로 합산되고,
   // 그 결과는 아래 로딩·오류 분기에서 렌더되지 않는다.
   const items = useBuilderStore((state) => state.items);
+
+  const availabilityQuery = useFixtureAvailability(numericSpaceId, period);
+  const availability = useMemo(
+    () => toAvailabilityMap(availabilityQuery.data ?? [], items),
+    [availabilityQuery.data, items],
+  );
+  const overPlaced = useMemo(() => overPlacedFixtureIds(availability), [availability]);
+
   const load = useLoadSummary({
     items,
     fixtures: catalog,
@@ -96,10 +122,19 @@ export default function BuilderRoute() {
       {/* 도면 상단 고정 — 배치를 바꾸면 여기가 먼저 반응한다 (US-103). */}
       <LimitGauge load={load} />
 
-      <CanvasController fixtures={catalog} onRejected={onRejected} rejection={rejection} />
+      <CanvasController
+        fixtures={catalog}
+        onRejected={onRejected}
+        rejection={rejection}
+        overPlacedNames={overPlaced.map((id) => catalog[id]?.name ?? `집기 ${id}`)}
+      />
 
       <div className="flex gap-6">
-        <FixturePanel fixtures={fixturesQuery.data ?? []} isLoading={fixturesQuery.isPending} />
+        <FixturePanel
+          fixtures={fixturesQuery.data ?? []}
+          isLoading={fixturesQuery.isPending}
+          availability={availability}
+        />
         <div className="overflow-auto">
           <BuilderCanvas grid={grid} fixtures={catalog} onRejected={onRejected} />
         </div>
@@ -111,6 +146,7 @@ export default function BuilderRoute() {
             onSubmit={reservation.submit}
             isPending={reservation.isPending}
             errorMessage={reservation.errorMessage}
+            onPeriodChange={onPeriodChange}
             isOverPowerLimit={load.blocksSubmit}
           />
         </div>

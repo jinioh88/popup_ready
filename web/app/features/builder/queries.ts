@@ -1,8 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { listFixtures } from "../../lib/api/fixtures";
+import { getFixtureAvailability, listFixtures } from "../../lib/api/fixtures";
 import { getSpaceDetail } from "../../lib/api/spaces";
 import type { Fixture } from "../../lib/schemas/api";
+import type { ReservationPeriod } from "../../lib/schemas/reservation";
 
 /**
  * fixtureId → 집기 조회표.
@@ -48,4 +49,25 @@ export function toFixtureCatalog(fixtures: readonly Fixture[] | undefined): Fixt
   }
 
   return lookup;
+}
+
+export function fixtureAvailabilityQueryKey(spaceId: number, period: ReservationPeriod | null) {
+  // 기간이 키에 들어가야 날짜를 바꿀 때마다 다시 받는다. 빼면 첫 기간의 결과가 계속 쓰인다.
+  return ["spaces", spaceId, "fixture-availability", period?.startDate, period?.endDate] as const;
+}
+
+/**
+ * 날짜별 집기 가용 수량. **기간이 정해지기 전에는 부르지 않는다** — 조회의 전제가 기간이다.
+ *
+ * 기간이 없는 동안 팔레트는 전부 활성이다. 아직 모르는 것을 품절로 보여주면 사용자는
+ * 고를 수 있는 집기를 못 고른다.
+ */
+export function useFixtureAvailability(spaceId: number, period: ReservationPeriod | null) {
+  return useQuery({
+    queryKey: fixtureAvailabilityQueryKey(spaceId, period),
+    queryFn: () => getFixtureAvailability(spaceId, period!.startDate, period!.endDate),
+    enabled: Number.isFinite(spaceId) && period !== null,
+    // 다른 사용자의 예약으로 수시로 바뀌는 값이라 오래 들고 있지 않는다.
+    staleTime: 30_000,
+  });
 }

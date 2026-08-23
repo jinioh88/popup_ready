@@ -1,5 +1,6 @@
 import { useState } from "react";
 
+import type { AvailabilityMap } from "../../lib/builder/availability";
 import type { Fixture, FixtureCategory } from "../../lib/schemas/api";
 import { useBuilderStore } from "../../stores/builder";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "./constants";
@@ -15,9 +16,11 @@ import { ModularItemCard } from "./ModularItemCard";
 type FixturePanelProps = {
   fixtures: readonly Fixture[];
   isLoading: boolean;
+  /** 선택 기간의 집기별 가용 판정. 기간 전에는 빈 맵이고 아무것도 잠기지 않는다. */
+  availability: AvailabilityMap;
 };
 
-export function FixturePanel({ fixtures, isLoading }: FixturePanelProps) {
+export function FixturePanel({ fixtures, isLoading, availability }: FixturePanelProps) {
   const [category, setCategory] = useState<FixtureCategory | "ALL">("ALL");
   const draft = useBuilderStore((state) => state.draft);
   const startDraft = useBuilderStore((state) => state.startDraft);
@@ -57,6 +60,7 @@ export function FixturePanel({ fixtures, isLoading }: FixturePanelProps) {
               <ModularItemCard
                 fixture={fixture}
                 isDrafting={draft?.fixtureId === fixture.id}
+                availability={availability[fixture.id]}
                 onActivate={startDraft}
               />
             </li>
