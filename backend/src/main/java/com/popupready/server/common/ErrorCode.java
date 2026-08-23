@@ -34,6 +34,10 @@ public enum ErrorCode {
     // 그 날짜에 이미 다른 PAID 예약이 잡아갔다 — "지금은 없다". 위와 달리 기간을 옮기면 해소된다.
     // 웹이 두 상황에 다른 안내를 해야 하므로 코드를 가른다(Sprint 2 §2.2).
     FIXTURE_UNAVAILABLE(HttpStatus.CONFLICT),
+    // 같은 공간·겹치는 기간에 이미 결제된 예약이 있다. 집기 부족과 코드를 나누는 이유는
+    // 사용자가 할 일이 다르기 때문이다 — 이쪽은 기간을 옮겨야 하고, 집기 부족은 배치를 줄여도 된다.
+    // 같은 코드로 뭉개면 "집기를 빼보세요"라는 안내가 나가는데 그래도 해소되지 않는다.
+    SPACE_ALREADY_BOOKED(HttpStatus.CONFLICT),
     // 하드 게이트는 전력 하나다. 면적 한도(AREA_LIMIT_EXCEEDED)는 §2.2-F로 철회됐다 —
     // 그리드 전체 면적이 floorAreaM2보다 작아 그리드 경계 판정을 통과한 배치는 넘을 수 없다.
     POWER_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST),
@@ -58,6 +62,11 @@ public enum ErrorCode {
 
     // payment (US-201)
     PAYMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT),
+    // PG 호출이 타임아웃돼 승인 여부를 모른다. 사용자 잘못이 아니고 재시도로 낫지도 않으므로
+    // 실패(4xx)가 아니라 503으로 알린다 — 수동 확인이 필요한 상태다.
+    PAYMENT_RESULT_UNKNOWN(HttpStatus.SERVICE_UNAVAILABLE),
+    // PG가 거절했다. 카드사 사유는 rawResponse에 남고 클라이언트는 재시도를 안내한다.
+    PAYMENT_DECLINED(HttpStatus.PAYMENT_REQUIRED),
     // 클라이언트가 보낸 금액이 견적 스냅샷과 다르다. 프론트 신뢰를 끊는 지점이다 —
     // 보낸 금액을 그대로 승인하지 않고 대조 대상으로만 쓴다(§2.2-C 2-5).
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST),

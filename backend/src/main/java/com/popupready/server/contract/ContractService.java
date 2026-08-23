@@ -123,6 +123,28 @@ public class ContractService {
      * (생성·조회·서명)가 전부 여기를 지난다. 빠지면 아무 로그인 계정이나 예약 ID만 바꿔가며
      * 남의 계약 전문을 읽거나 계약을 만들어 붙일 수 있다.
      */
+    /**
+     * 계약 조항이 저장된 해시와 일치하는지 확인한다(Sprint 1 이월분 해소).
+     *
+     * <p>호출 자리는 <b>결제 승인 경로 2-0</b>이다 — 돈이 움직이기 직전이 확인할 자리이고,
+     * 검사 비용은 해시 1회 계산이다.
+     *
+     * <p>⚠️ <b>한계를 분명히 해 둔다.</b> 이 해시는 체크섬이지 서명이 아니다. DB 쓰기 권한을 가진
+     * 자는 조항과 해시를 함께 고칠 수 있으므로, 실제로 잡는 것은 <b>"DB를 직접 고치면서 해시
+     * 재계산을 잊은 경우"</b>뿐이다. 그 이상을 막는다고 주장하지 않는다.
+     *
+     * <p>계약이 없으면 통과시킨다 — 계약 존재 여부는 예약 상태가 판정하는 것이고, 여기서 또
+     * 막으면 같은 규칙이 두 곳에 갈라진다.
+     */
+    @Transactional(readOnly = true)
+    public void assertIntact(Long reservationRequestId) {
+        contractRepository.findByReservationRequestId(reservationRequestId).ifPresent(contract -> {
+            if (!contract.hasIntactContent()) {
+                throw new ApiException(ErrorCode.CONTRACT_INTEGRITY_VIOLATION, "계약 내용이 발행 시점과 다릅니다. 관리자에게 문의해 주세요");
+            }
+        });
+    }
+
     private static void requireParty(Long brandUserId, Long landlordUserId, long userId) {
         if (brandUserId != userId && landlordUserId != userId) {
             throw new ApiException(ErrorCode.NOT_CONTRACT_PARTY, "이 계약의 당사자가 아닙니다");
