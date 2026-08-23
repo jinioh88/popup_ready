@@ -80,7 +80,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
 
   return (
     <div
-      className="inline-block rounded-xl border border-border bg-surface p-2"
+      className="inline-block rounded-xl border border-border bg-canvas p-2"
       onDragOver={(event) => {
         const fixtureId = readFixtureId(event);
 
@@ -150,7 +150,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
       >
         {/* 그리드는 바뀌지 않으므로 이벤트를 받지 않는 별도 레이어에 둔다. */}
         <Layer listening={false}>
-          <Rect x={0} y={0} width={width} height={height} fill={CANVAS_COLORS.surface} />
+          <Rect x={0} y={0} width={width} height={height} fill={CANVAS_COLORS.background} />
           {gridLines.map((points, index) => (
             <Line key={index} points={points} stroke={CANVAS_COLORS.grid} strokeWidth={1} />
           ))}
