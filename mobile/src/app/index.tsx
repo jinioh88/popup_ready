@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "expo-router";
 import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -9,7 +8,6 @@ import { colors, radius, spacing, typography } from "../lib/theme";
 
 /** 로그인 화면 (진입점) — POST /auth/login, 토큰은 expo-secure-store에 보관한다. */
 export default function LoginScreen() {
-  const router = useRouter();
   const { mutate, isPending, error } = useLogin();
 
   // 폼은 공유 스택(React Hook Form + Zod)을 따른다 — 웹과 검증 규칙을 같은 방식으로 쓴다.
@@ -18,9 +16,10 @@ export default function LoginScreen() {
     defaultValues: { email: "", password: "" },
   });
 
-  const submit = handleSubmit((values) =>
-    mutate(values, { onSuccess: () => router.replace("/reservations") }),
-  );
+  // 성공 후 이동을 여기서 하지 않는다. 세션이 authenticated로 바뀌면 루트 레이아웃의
+  // 가드가 로그인 화면을 등록 해제하고 예약 목록을 등록한다 — 딥링크로 들어온 경우와
+  // 같은 경로를 지나게 하려면 화면이 라우팅을 직접 결정하면 안 된다.
+  const submit = handleSubmit((values) => mutate(values));
 
   return (
     <View style={styles.container}>

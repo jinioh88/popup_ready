@@ -4,17 +4,20 @@ import Constants from "expo-constants";
 import { resolveApiBaseUrl } from "../lib/api/config";
 import { ApiRequestError } from "../lib/api/client";
 import { login, type AuthResult, type LoginInput } from "../lib/api/auth";
-import { saveAccessToken } from "../lib/auth/token-storage";
+import { useAuthSession } from "./useAuthSession";
 
 const NO_BASE_URL_MESSAGE = "API 주소를 확인할 수 없다. EXPO_PUBLIC_API_URL을 지정하라.";
 
 /**
- * 로그인(§5-2) — POST /auth/login → 토큰을 expo-secure-store에 저장.
+ * 로그인(§5-2) — POST /auth/login → 토큰 저장 → 세션 인증 전이.
  *
  * 서버 상태이므로 TanStack Query의 mutation으로 다룬다. 토큰 저장까지 성공해야 성공이다.
+ * 저장을 세션(`signIn`)에 맡겨 **저장 경로가 하나만 남게** 한다 — 두 곳에서 저장하면
+ * 화면이 보는 상태와 저장소가 어긋날 수 있다.
  */
 export function useLogin() {
   const baseUrl = resolveApiBaseUrl(Constants.expoConfig?.hostUri, process.env.EXPO_PUBLIC_API_URL);
+  const { signIn } = useAuthSession();
 
   const mutation = useMutation<AuthResult, Error, LoginInput>({
     mutationFn: async (input) => {
@@ -22,7 +25,7 @@ export function useLogin() {
 
       const result = await login(baseUrl, input);
       // 저장 실패를 삼키면 다음 화면에서 토큰 없이 요청이 나간다. 로그인 실패로 취급한다.
-      await saveAccessToken(result.accessToken);
+      await signIn({ accessToken: result.accessToken, refreshToken: result.refreshToken });
       return result;
     },
   });

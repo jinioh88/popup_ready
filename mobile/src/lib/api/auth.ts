@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { apiRequest, ApiRequestError, type ApiRequestOptions } from "./client";
+import { apiRequest, type ApiRequestOptions } from "./client";
+import { parseOrThrow } from "./parse";
 import type { components } from "./schema";
 
 /**
@@ -17,18 +18,34 @@ export const userSummarySchema = z.object({
 
 export const authResponseSchema = z.object({
   accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
   user: userSummarySchema,
+});
+
+/** 재발급 응답. 회전 방식이라 두 토큰이 함께 새로 온다. */
+export const tokenPairSchema = z.object({
+  accessToken: z.string().min(1),
+  refreshToken: z.string().min(1),
 });
 
 export type UserSummary = z.infer<typeof userSummarySchema>;
 export type AuthResult = z.infer<typeof authResponseSchema>;
+export type TokenPair = z.infer<typeof tokenPairSchema>;
 
-/** 생성 타입과 Zod 스키마가 어긋나면 여기서 컴파일 에러가 난다. */
-type _ContractCheck = AuthResult extends components["schemas"]["AuthResponse"] ? true : never;
-const _contractCheck: _ContractCheck = true;
-void _contractCheck;
+/**
+ * 생성 타입과 Zod 스키마가 어긋나면 여기서 컴파일 에러가 난다.
+ * (`refreshToken` 추가를 실제로 이 검사가 잡았다 — 2026-08-23)
+ */
+type _AuthCheck = AuthResult extends components["schemas"]["AuthResponse"] ? true : never;
+const _authCheck: _AuthCheck = true;
+void _authCheck;
+
+type _TokenPairCheck = TokenPair extends components["schemas"]["TokenPairResponse"] ? true : never;
+const _tokenPairCheck: _TokenPairCheck = true;
+void _tokenPairCheck;
 
 export type LoginInput = components["schemas"]["LoginRequest"];
+export type RefreshInput = components["schemas"]["RefreshRequest"];
 
 /** 로그인(POST /auth/login). 성공 200, 실패는 봉투 error로 온다(지시서 §2.2). */
 export async function login(
@@ -42,14 +59,24 @@ export async function login(
     fetchImpl: options?.fetchImpl,
   });
 
-  const parsed = authResponseSchema.safeParse(data);
-  if (!parsed.success) {
-    // 계약 위반이다. 조용히 넘기면 토큰 없는 로그인 성공이 되어 더 비싸진다.
-    throw new ApiRequestError(
-      "INTERNAL_ERROR",
-      `로그인 응답이 계약과 다르다: ${parsed.error.issues.map((i) => i.path.join(".")).join(", ")}`,
-      null,
-    );
-  }
-  return parsed.data;
+  return parseOrThrow(authResponseSchema, data, "로그인 응답");
+}
+
+/**
+ * 토큰 재발급(POST /auth/refresh). 회전 방식이라 이전 refresh 토큰은 무효가 된다.
+ *
+ * 실패는 `REFRESH_TOKEN_INVALID`(401)로 온다 — 상태 코드가 아니라 이 코드로 분기한다.
+ */
+export async function refreshTokens(
+  baseUrl: string,
+  input: RefreshInput,
+  options?: Pick<ApiRequestOptions, "fetchImpl">,
+): Promise<TokenPair> {
+  const data = await apiRequest(baseUrl, "/auth/refresh", {
+    method: "POST",
+    body: input,
+    fetchImpl: options?.fetchImpl,
+  });
+
+  return parseOrThrow(tokenPairSchema, data, "재발급 응답");
 }
