@@ -98,8 +98,10 @@ public class DoorService {
      */
     private static void requirePaid(ReservationAccess reservation) {
         if (reservation.status() != ReservationStatus.PAID) {
+            // 시간창 밖과 코드를 나눈다 — 같은 코드로 내보내면 클라이언트가 "조금만 기다리면
+            // 열린다"고 안내하는데 미결제는 기다려도 열리지 않는다(모바일 제기, 2026-08-23).
             throw new ApiException(
-                    ErrorCode.DOOR_NOT_YET_OPENABLE,
+                    ErrorCode.RESERVATION_NOT_PAID,
                     "결제가 완료된 예약만 개방할 수 있습니다 (현재 상태: %s)".formatted(reservation.status()));
         }
     }
