@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "react-router";
 
 import { BuilderCanvas } from "../features/builder/BuilderCanvas";
+import { CanvasController } from "../features/builder/CanvasController";
 import { FixturePanel } from "../features/builder/FixturePanel";
 import { LimitGauge } from "../features/builder/LimitGauge";
 import { ReservationForm } from "../features/builder/ReservationForm";
-import { SelectionToolbar } from "../features/builder/SelectionToolbar";
 import { toFixtureCatalog, useFixtures, useSpaceDetail } from "../features/builder/queries";
 import { useCreateReservation } from "../features/builder/useCreateReservation";
 import { useKeyboardPlacement } from "../features/builder/useKeyboardPlacement";
 import { useLoadSummary } from "../features/builder/useLoadSummary";
 import { useRotationShortcut } from "../features/builder/useRotationShortcut";
+import { useTransientMessage } from "../features/builder/useTransientMessage";
 import { useBuilderStore } from "../stores/builder";
 
 export function meta() {
@@ -26,8 +27,7 @@ export default function BuilderRoute() {
   const fixturesQuery = useFixtures();
   const initGrid = useBuilderStore((state) => state.initGrid);
 
-  const [rejection, setRejection] = useState<string | null>(null);
-  const onRejected = useCallback((message: string) => setRejection(message), []);
+  const { message: rejection, show: onRejected } = useTransientMessage();
 
   const catalog = useMemo(() => toFixtureCatalog(fixturesQuery.data), [fixturesQuery.data]);
   const space = spaceQuery.data;
@@ -65,16 +65,6 @@ export default function BuilderRoute() {
   useRotationShortcut(catalog, onRejected);
   useKeyboardPlacement(catalog, onRejected);
 
-  // 거부 안내는 잠깐만 띄운다.
-  useEffect(() => {
-    if (!rejection) {
-      return;
-    }
-
-    const timer = setTimeout(() => setRejection(null), 2500);
-    return () => clearTimeout(timer);
-  }, [rejection]);
-
   if (spaceQuery.isPending) {
     return <StatusMessage>도면 정보를 불러오는 중…</StatusMessage>;
   }
@@ -106,14 +96,7 @@ export default function BuilderRoute() {
       {/* 도면 상단 고정 — 배치를 바꾸면 여기가 먼저 반응한다 (US-103). */}
       <LimitGauge load={load} />
 
-      <div className="flex items-center gap-4">
-        <SelectionToolbar fixtures={catalog} onRejected={onRejected} />
-        {rejection ? (
-          <p role="alert" className="text-caption text-error">
-            {rejection}
-          </p>
-        ) : null}
-      </div>
+      <CanvasController fixtures={catalog} onRejected={onRejected} rejection={rejection} />
 
       <div className="flex gap-6">
         <FixturePanel fixtures={fixturesQuery.data ?? []} isLoading={fixturesQuery.isPending} />
