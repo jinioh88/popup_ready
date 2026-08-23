@@ -28,9 +28,16 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function renderController(rejection: string | null = null) {
+function renderController(rejection: string | null = null, overPlacedNames: string[] = []) {
   const onRejected = vi.fn();
-  render(<CanvasController fixtures={CATALOG} onRejected={onRejected} rejection={rejection} />);
+  render(
+    <CanvasController
+      fixtures={CATALOG}
+      onRejected={onRejected}
+      rejection={rejection}
+      overPlacedNames={overPlacedNames}
+    />,
+  );
   return onRejected;
 }
 
@@ -105,5 +112,30 @@ describe("CanvasController — 거부 경고", () => {
     renderController(null);
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("CanvasController — 초과 배치 경고 (I-3)", () => {
+  it("수량이 부족한 집기를 이름으로 짚어 준다", () => {
+    // 캔버스에서 조용히 빼면 도면이 왜 바뀌었는지 알 수 없다 — 무엇을 뺄지 사용자가 정한다.
+    renderController(null, ["행거 랙", "POS 단말"]);
+
+    const alert = screen.getByRole("alert");
+
+    expect(alert.textContent).toContain("행거 랙");
+    expect(alert.textContent).toContain("POS 단말");
+  });
+
+  it("초과가 없으면 경고하지 않는다", () => {
+    renderController(null, []);
+
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("거부 문구와 초과 경고는 함께 뜰 수 있다", () => {
+    // 수명이 다르다 — 거부는 곧 사라지고 초과는 집기를 뺄 때까지 남는다.
+    renderController("다른 집기와 겹쳐 배치할 수 없습니다.", ["행거 랙"]);
+
+    expect(screen.getAllByRole("alert")).toHaveLength(2);
   });
 });

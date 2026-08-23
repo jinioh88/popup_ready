@@ -20,9 +20,21 @@ type CanvasControllerProps = {
   onRejected: (message: string) => void;
   /** 방금 거부된 배치·회전의 사유. 없으면 표시하지 않는다. */
   rejection: string | null;
+  /**
+   * 선택 기간의 가용 수량을 넘겨 놓은 집기 이름들 (I-3).
+   *
+   * 거부 문구와 **수명이 다르다** — 거부는 다음 조작으로 해소되지만 이건 사용자가 집기를
+   * 뺄 때까지 계속 참이다. 그래서 자동으로 사라지지 않는다.
+   */
+  overPlacedNames: readonly string[];
 };
 
-export function CanvasController({ fixtures, onRejected, rejection }: CanvasControllerProps) {
+export function CanvasController({
+  fixtures,
+  onRejected,
+  rejection,
+  overPlacedNames,
+}: CanvasControllerProps) {
   const selectedIndex = useBuilderStore((state) => state.selectedIndex);
   const items = useBuilderStore((state) => state.items);
   const draft = useBuilderStore((state) => state.draft);
@@ -72,6 +84,18 @@ export function CanvasController({ fixtures, onRejected, rejection }: CanvasCont
       {rejection ? (
         <p role="alert" className="text-caption text-error">
           {rejection}
+        </p>
+      ) : null}
+
+      {/*
+        기간을 바꿔 이미 놓은 집기가 가용을 넘긴 경우. **캔버스에서 조용히 빼지 않는다** —
+        도면이 왜 바뀌었는지 알 수 없게 된다. 무엇을 빼야 하는지 이름으로 짚어 준다.
+        이 상태로 제출하면 서버가 409 FIXTURE_UNAVAILABLE로 막는다.
+      */}
+      {overPlacedNames.length > 0 ? (
+        <p role="alert" className="w-full text-caption text-error">
+          선택한 기간에 수량이 부족한 집기가 있습니다: {overPlacedNames.join(", ")}. 해당 집기를
+          빼거나 기간을 바꿔 주세요.
         </p>
       ) : null}
     </div>

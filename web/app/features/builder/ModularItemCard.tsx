@@ -1,6 +1,7 @@
 import { Card } from "../../components/ui/Card";
 import { StatusBadge } from "../../components/ui/StatusBadge";
 import { fixtureDragType } from "../../lib/builder/dragTransfer";
+import type { FixtureAvailabilityState } from "../../lib/builder/availability";
 import type { Fixture } from "../../lib/schemas/api";
 
 /**
@@ -20,15 +21,29 @@ type ModularItemCardProps = {
   fixture: Fixture;
   /** 지금 이 집기를 키보드로 배치 중인가. */
   isDrafting: boolean;
+  /**
+   * 선택 기간의 가용 판정. 기간이 정해지기 전이거나 응답에 없으면 `undefined`이고,
+   * 그때는 **막지 않는다** — 아직 모르는 것을 품절로 보여주면 고를 수 있는 집기를 못 고른다.
+   */
+  availability?: FixtureAvailabilityState;
   onActivate: (fixtureId: number) => void;
 };
 
-export function ModularItemCard({ fixture, isDrafting, onActivate }: ModularItemCardProps) {
+export function ModularItemCard({
+  fixture,
+  isDrafting,
+  availability,
+  onActivate,
+}: ModularItemCardProps) {
+  const soldOut = availability?.isSoldOut ?? false;
+
   return (
     <Card
       as="button"
       type="button"
-      draggable
+      // 품절이면 드래그도 막는다 — 버튼만 비활성하고 draggable을 두면 마우스로는 여전히 놓인다.
+      draggable={!soldOut}
+      disabled={soldOut}
       // 색만으로 "지금 이걸 배치 중"을 전달하면 색을 못 보는 경로에서 사라진다.
       aria-pressed={isDrafting}
       onDragStart={(event: React.DragEvent<HTMLButtonElement>) => {
@@ -37,8 +52,10 @@ export function ModularItemCard({ fixture, isDrafting, onActivate }: ModularItem
       }}
       // Space·Enter 모두 button의 기본 클릭으로 들어온다 — 따로 keydown을 달지 않는다.
       onClick={() => onActivate(fixture.id)}
-      className={`w-full cursor-grab text-left active:cursor-grabbing ${
-        isDrafting ? "border-primary bg-primary-light" : ""
+      className={`w-full text-left ${
+        soldOut
+          ? "cursor-not-allowed opacity-60"
+          : `cursor-grab active:cursor-grabbing ${isDrafting ? "border-primary bg-primary-light" : ""}`
       }`}
     >
       <p className="text-body-strong">{fixture.name}</p>
@@ -56,6 +73,20 @@ export function ModularItemCard({ fixture, isDrafting, onActivate }: ModularItem
         </StatusBadge>
         <StatusBadge>{fixture.dailyRentalFee.toLocaleString("ko-KR")}원/일</StatusBadge>
       </div>
+
+      {/*
+        가용 수량은 **색·투명도만으로 전달하지 않는다**(§8 인수 조건). 비활성 카드는 흐리게만
+        보이면 "왜 못 고르는지"를 알 수 없으므로 사유와 남은 수를 글자로 적는다.
+      */}
+      {availability ? (
+        <p className={`mt-2 text-caption ${soldOut ? "text-error" : "text-text-muted"}`}>
+          {availability.isOverPlaced
+            ? `이 기간에 ${availability.availableQty}개만 가능한데 ${availability.placedQty}개를 놓았습니다.`
+            : soldOut
+              ? "선택한 기간에 남은 수량이 없습니다."
+              : `이 기간에 ${availability.remainingQty}개 더 배치할 수 있습니다.`}
+        </p>
+      ) : null}
     </Card>
   );
 }

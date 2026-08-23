@@ -37,6 +37,13 @@ type ReservationFormProps = {
   isPending?: boolean;
   errorMessage?: string;
   /**
+   * 유효한 기간이 정해질 때 알린다 — 집기 가용 수량 조회(I-3)가 기간을 전제로 한다.
+   *
+   * 폼 상태의 주인은 계속 이 컴포넌트(React Hook Form)다. 기간을 라우트로 끌어올리지 않고
+   * **값만 알린다** — 끌어올리면 달력 제약·검증이 두 곳으로 흩어진다.
+   */
+  onPeriodChange?: (period: ReservationPeriod | null) => void;
+  /**
    * 전력 초과로 제출을 막아야 하는가 (US-103).
    *
    * **면적은 여기 들어오지 않는다** — 면적은 잠기지 않는 밀도 표시다(sprint2.md §2.2-F).
@@ -51,6 +58,7 @@ export function ReservationForm({
   onSubmit,
   isPending,
   errorMessage,
+  onPeriodChange,
   isOverPowerLimit = false,
 }: ReservationFormProps) {
   const items = useBuilderStore((state) => state.items);
@@ -76,6 +84,15 @@ export function ReservationForm({
       void trigger("endDate");
     }
   }, [startDate, endDate, isSubmitted, trigger]);
+
+  // 두 칸이 다 채워지고 순서가 맞을 때만 알린다 — 입력 중간 상태로 조회하면 헛돈다.
+  const validPeriod =
+    startDate && endDate && startDate <= endDate ? { startDate, endDate } : null;
+
+  useEffect(() => {
+    onPeriodChange?.(validPeriod ? { ...validPeriod } : null);
+    // 객체를 새로 만들면 매 렌더 알림이 되므로 값으로 비교한다.
+  }, [validPeriod?.startDate, validPeriod?.endDate, onPeriodChange]);
 
   const placedFixtures = items.flatMap((item) => {
     const fixture = fixtures[item.fixtureId];
