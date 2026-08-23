@@ -21,9 +21,6 @@ export const CATEGORY_ORDER: FixtureCategory[] = [
   "ETC",
 ];
 
-/** 드래그 중인 집기를 식별하는 dataTransfer 키. */
-export const FIXTURE_DRAG_TYPE = "application/x-popupready-fixture";
-
 /** 스타일가이드 토큰과 같은 값 — Konva는 CSS 클래스를 못 쓰므로 여기서만 HEX로 참조한다. */
 export const CANVAS_COLORS = {
   surface: "#ffffff",
