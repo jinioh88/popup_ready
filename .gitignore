@@ -1,7 +1,7 @@
 # macOS
 .DS_Store
 
-# 기획 문서 (비공개) — 루트 docs/만. 파트별 {backend|web|mobile}/docs/는 추적한다
+# 기획 문서 (비공개). 파트별 {backend|web|mobile}/docs/·.claude/도 미추적(각 파트 .gitignore, 2026-08-23 결정) — 로컬 관리
 /docs/
 /CLAUDE.md
 
