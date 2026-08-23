@@ -1,6 +1,18 @@
 import { AREA_PRESETS, RADIUS_OPTIONS, type SpaceSearchState } from "./searchState";
 
-/** 지역·반경 + 면적/대여료/전력 필터. 값은 쿼리 파라미터로 그대로 넘어간다. */
+/**
+ * 지역·반경 + 면적/대여료/전력 필터. 값은 쿼리 파라미터로 그대로 넘어간다.
+ *
+ * 지도를 움직이면 중심이 어느 프리셋과도 일치하지 않는다. 그 상태를 나타낼 option이 없으면
+ * `<select value="">`가 표현할 값을 못 찾아 **첫 항목(성수)이 선택된 것처럼 보인다** — 그러면
+ * 사용자가 원래 지역으로 되돌리려고 성수를 다시 골라도 값이 안 바뀌어 change가 발생하지 않고,
+ * 아무 일도 일어나지 않는다(2026-08-23 사용자 인수 테스트의 "필터 되돌림 미동작").
+ * 그래서 프리셋 밖 상태를 담는 option을 명시적으로 둔다.
+ */
+
+/** 지도를 움직여 프리셋 밖으로 나간 상태를 담는 option 값. */
+const CUSTOM_CENTER = "__custom__";
+
 export function SpaceFilters({
   search,
   onChange,
@@ -17,7 +29,7 @@ export function SpaceFilters({
       <Field label="지역">
         <select
           className={selectClass}
-          value={activePreset?.id ?? ""}
+          value={activePreset?.id ?? CUSTOM_CENTER}
           onChange={(event) => {
             const preset = AREA_PRESETS.find((candidate) => candidate.id === event.target.value);
 
@@ -26,6 +38,7 @@ export function SpaceFilters({
             }
           }}
         >
+          {activePreset ? null : <option value={CUSTOM_CENTER}>지도에서 옮긴 위치</option>}
           {AREA_PRESETS.map((preset) => (
             <option key={preset.id} value={preset.id}>
               {preset.label}
