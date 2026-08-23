@@ -444,7 +444,7 @@
     },
     "/api/v1/door-events/{eventId}/ack": {
       "post": {
-        "description": "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. 이 단계가 있어야 승인 기록이 전송 기록이 된다.",
+        "description": "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. 이 단계가 있어야 승인 기록이 전송 기록이 된다. 개방을 요청한 본인만 마감할 수 있다.",
         "operationId": "ackDoorEvent",
         "parameters": [
           {
@@ -1768,7 +1768,8 @@
               "PAYMENT_ALREADY_COMPLETED",
               "PAYMENT_AMOUNT_MISMATCH",
               "LOCK_ACQUISITION_FAILED",
-              "DOOR_NOT_YET_OPENABLE"
+              "DOOR_NOT_YET_OPENABLE",
+              "DOOR_EVENT_ALREADY_ACKED"
             ],
             "example": "VALIDATION_FAILED"
           },

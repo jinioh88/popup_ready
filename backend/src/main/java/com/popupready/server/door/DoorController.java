@@ -1,5 +1,6 @@
 package com.popupready.server.door;
 
+import com.popupready.server.auth.JwtPrincipal;
 import com.popupready.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -7,9 +8,9 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.time.Instant;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,7 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
  * <p><b>백엔드는 MQTT 클라이언트를 갖지 않는다.</b> 발행은 모바일이 하고 서버는 토픽·페이로드를
  * 내려주기만 한다(§2.3 — CLAUDE.md의 모킹 구조 유지).
  *
- * <p>Phase 0 스텁이다. 권한·시간창 판정과 이벤트 기록은 Phase 4에서 채운다.
+ * <p>T4-3·T4-4 실구현. 경로·필드·상태 코드는 Phase 0에서 확정한 그대로이며 속만 채웠다.
+ * 판정(당사자·결제·시간창)과 기록은 {@link DoorService}가 한다.
  */
 @RestController
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -35,6 +37,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class DoorController {
 
     private static final String ERROR_ENVELOPE_REF = "#/components/schemas/ApiErrorResponse";
+
+    private final DoorService doorService;
+
+    public DoorController(DoorService doorService) {
+        this.doorService = doorService;
+    }
 
     @Operation(
             operationId = "openDoor",
@@ -48,29 +56,29 @@ public class DoorController {
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/api/v1/reservation-requests/{id}/door-open")
     public ApiResponse<DoorOpenResponse> open(
+            // 요청자는 본문이 아니라 토큰에서 온다 — 본문에서 받으면 남의 이름으로 문을 열 수 있다.
+            @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal,
             @Parameter(description = "예약 요청 ID", example = "45") @PathVariable Long id) {
-        // Phase 0 스텁 — T4-3에서 실구현.
-        return ApiResponse.ok(new DoorOpenResponse(
-                123L,
-                "popupready/locks/1/command",
-                "popupready/locks/1/status",
-                new DoorCommandPayload(123L, id, "OPEN", Instant.parse("2026-09-01T09:50:00Z")),
-                DoorEventStatus.AUTHORIZED));
+        return ApiResponse.ok(doorService.open(principal.userId(), id));
     }
 
     @Operation(
             operationId = "ackDoorEvent",
             summary = "MQTT 발행 결과 보고",
-            description = "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. " + "이 단계가 있어야 승인 기록이 전송 기록이 된다.")
+            description = "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. "
+                    + "이 단계가 있어야 승인 기록이 전송 기록이 된다. 개방을 요청한 본인만 마감할 수 있다.")
+    // 인가가 door-open과 같은 강도라는 것을 계약에도 드러낸다 — 남의 이벤트를 뒤집을 수 있으면
+    // 전송 기록을 위조하는 경로가 된다.
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "이 도어 이벤트의 요청자가 아님",
+            content = @Content(schema = @Schema(ref = ERROR_ENVELOPE_REF)))
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/api/v1/door-events/{eventId}/ack")
     public ApiResponse<DoorAckResponse> ack(
+            @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal,
             @Parameter(description = "도어 이벤트 ID", example = "123") @PathVariable Long eventId,
             @Valid @RequestBody DoorAckRequest request) {
-        // Phase 0 스텁 — T4-4에서 실구현.
-        return ApiResponse.ok(new DoorAckResponse(
-                eventId,
-                Boolean.TRUE.equals(request.success()) ? DoorEventStatus.DELIVERED : DoorEventStatus.FAILED,
-                Instant.parse("2026-09-01T09:50:02Z")));
+        return ApiResponse.ok(doorService.ack(principal.userId(), eventId, Boolean.TRUE.equals(request.success())));
     }
 }

@@ -66,7 +66,10 @@ public enum ErrorCode {
 
     // door (US-301)
     // 시간창 밖이다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다(§2.3).
-    DOOR_NOT_YET_OPENABLE(HttpStatus.FORBIDDEN);
+    DOOR_NOT_YET_OPENABLE(HttpStatus.FORBIDDEN),
+    // 이미 마감된 도어 이벤트를 다시 ack했다. 더블 서브밋 같은 클라이언트 실수이므로 409다 —
+    // 500으로 알리면 클라이언트가 서버 장애로 읽고 재시도하는데, 재시도로 낫는 상황이 아니다.
+    DOOR_EVENT_ALREADY_ACKED(HttpStatus.CONFLICT);
 
     private final HttpStatus status;
 

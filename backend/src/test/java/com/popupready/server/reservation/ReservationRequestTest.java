@@ -76,4 +76,58 @@ class ReservationRequestTest {
     void estimate_daysDerivedFromStoredDates() {
         assertThat(sampleRequest().getPeriod().days()).isEqualTo(ESTIMATE.days());
     }
+
+    // ── 결제 상태 전이 (§2.1) ────────────────────────────────────────────────
+
+    private ReservationRequest signed() {
+        ReservationRequest request = sampleRequest();
+        request.markContractPending();
+        request.markContractSigned();
+        return request;
+    }
+
+    @Test
+    @DisplayName("서명 완료 → 결제 대기로 전이한다")
+    void markPaymentPending_afterSigned_transitions() {
+        ReservationRequest request = signed();
+
+        request.markPaymentPending();
+
+        assertThat(request.getStatus()).isEqualTo(ReservationStatus.PAYMENT_PENDING);
+    }
+
+    @Test
+    @DisplayName("결제 대기 → 결제 완료로 전이한다")
+    void markPaid_afterPaymentPending_transitions() {
+        ReservationRequest request = signed();
+        request.markPaymentPending();
+
+        request.markPaid();
+
+        assertThat(request.getStatus()).isEqualTo(ReservationStatus.PAID);
+    }
+
+    @Test
+    @DisplayName("🚨 서명만 된 예약을 곧바로 결제 완료로 → 거절한다")
+    void markPaid_skippingPaymentPending_isRejected() {
+        // 결제 준비를 건너뛴 PAID는 orderId 없이 자리를 잡은 예약이다 — 분쟁 시 대조할 것이 없다.
+        assertThatThrownBy(signed()::markPaid).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("🚨 이미 결제된 예약을 다시 결제 완료로 → 거절한다")
+    void markPaid_alreadyPaid_isRejected() {
+        // 예약당 PAID는 최대 1건이라는 실질 제약의 마지막 방어선이다.
+        ReservationRequest request = signed();
+        request.markPaymentPending();
+        request.markPaid();
+
+        assertThatThrownBy(request::markPaid).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("계약 서명 전에 결제 대기로 → 거절한다")
+    void markPaymentPending_beforeSigned_isRejected() {
+        assertThatThrownBy(sampleRequest()::markPaymentPending).isInstanceOf(IllegalStateException.class);
+    }
 }

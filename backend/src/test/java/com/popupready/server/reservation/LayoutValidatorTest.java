@@ -19,10 +19,13 @@ import org.junit.jupiter.api.Test;
 class LayoutValidatorTest {
 
     /** 1,200 × 500mm — 500mm 셀에서 3칸 × 1칸. */
-    private static final FixtureSpec HANGER = new FixtureSpec(3L, 1_200, 500, 12_000L, 40);
+    /** 시드 공간의 허용 전력. 쇼케이스(350W) 2대까지는 들어가고 3대부터 넘는다. */
+    private static final int MAX_POWER_WATT = 800;
+
+    private static final FixtureSpec HANGER = new FixtureSpec(3L, 1_200, 500, 0, 12_000L, 40);
 
     /** 900 × 600mm — 2칸 × 2칸. 재고는 2개뿐이다. */
-    private static final FixtureSpec SHOWCASE = new FixtureSpec(5L, 900, 600, 20_000L, 2);
+    private static final FixtureSpec SHOWCASE = new FixtureSpec(5L, 900, 600, 350, 20_000L, 2);
 
     private static final Map<Long, FixtureSpec> CATALOG = Map.of(3L, HANGER, 5L, SHOWCASE);
 
@@ -33,7 +36,7 @@ class LayoutValidatorTest {
     }
 
     private static void validate(LayoutDto layout) {
-        LayoutValidator.validate(layout, SPACE_GRID, CATALOG);
+        LayoutValidator.validate(layout, SPACE_GRID, MAX_POWER_WATT, CATALOG);
     }
 
     @Test
@@ -140,5 +143,73 @@ class LayoutValidatorTest {
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.FIXTURE_STOCK_EXCEEDED);
+    }
+
+    // ── 전력 한도 (T1-3, §2.2-B) ─────────────────────────────────────────────
+    // 하드 게이트는 전력 하나다. 면적은 §2.2-F가 철회했다 — 그리드 전체 면적이 floorAreaM2보다
+    // 작아 그리드 경계 판정을 통과한 배치는 면적 한도를 구조적으로 넘을 수 없다.
+
+    @Test
+    @DisplayName("합산 소비전력이 한도 안 → 통과")
+    void power_withinLimit_passes() {
+        LayoutDto layout = layout(new LayoutItemDto(5L, 0, 0, 0), new LayoutItemDto(5L, 3, 0, 0));
+
+        LayoutValidator.validate(layout, SPACE_GRID, MAX_POWER_WATT, CATALOG);
+    }
+
+    @Test
+    @DisplayName("합산 소비전력이 한도와 정확히 같음 → 통과(경계는 허용이다)")
+    void power_exactlyAtLimit_passes() {
+        // 800W 한도에 350W 두 대 = 700W. 한도를 100W로 낮춰 경계를 정확히 맞춘다.
+        LayoutDto layout = layout(new LayoutItemDto(5L, 0, 0, 0));
+
+        LayoutValidator.validate(layout, SPACE_GRID, 350, CATALOG);
+    }
+
+    @Test
+    @DisplayName("합산 소비전력이 한도를 1W라도 넘으면 → POWER_LIMIT_EXCEEDED")
+    void power_overLimitByOneWatt_isRejected() {
+        LayoutDto layout = layout(new LayoutItemDto(5L, 0, 0, 0));
+
+        assertThatThrownBy(() -> LayoutValidator.validate(layout, SPACE_GRID, 349, CATALOG))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.POWER_LIMIT_EXCEEDED);
+    }
+
+    @Test
+    @DisplayName("같은 집기를 여러 대 놓으면 → 대수만큼 합산된다")
+    void power_sumsPerPlacedUnit() {
+        // 350W 2대 = 700W. 한도 699W면 넘지만 1대(350W)였다면 통과했을 값이라,
+        // 종류가 아니라 배치된 개수로 세고 있음이 이 한 케이스로 드러난다.
+        // (쇼케이스 재고가 2라 3대를 놓으면 재고 검사가 먼저 걸려 전력을 격리하지 못한다.)
+        LayoutDto layout = layout(new LayoutItemDto(5L, 0, 0, 0), new LayoutItemDto(5L, 3, 0, 0));
+
+        assertThatThrownBy(() -> LayoutValidator.validate(layout, SPACE_GRID, 699, CATALOG))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.POWER_LIMIT_EXCEEDED);
+    }
+
+    @Test
+    @DisplayName("재고와 전력을 동시에 넘기면 → 재고 판정이 먼저 난다")
+    void power_stockCheckedFirst() {
+        // 순서를 못 박아 두는 이유는 클라이언트가 어느 쪽을 먼저 고쳐야 할지 알아야 하기 때문이다.
+        // 재고는 "애초에 그만큼 없다"라서 전력을 줄여도 해소되지 않는다.
+        LayoutDto layout =
+                layout(new LayoutItemDto(5L, 0, 0, 0), new LayoutItemDto(5L, 3, 0, 0), new LayoutItemDto(5L, 6, 0, 0));
+
+        assertThatThrownBy(() -> LayoutValidator.validate(layout, SPACE_GRID, 0, CATALOG))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FIXTURE_STOCK_EXCEEDED);
+    }
+
+    @Test
+    @DisplayName("비전기 집기만 배치 → 한도가 0이어도 통과")
+    void power_nonElectricFixtures_passEvenAtZeroLimit() {
+        LayoutDto layout = layout(new LayoutItemDto(3L, 0, 0, 0), new LayoutItemDto(3L, 3, 0, 0));
+
+        LayoutValidator.validate(layout, SPACE_GRID, 0, CATALOG);
     }
 }

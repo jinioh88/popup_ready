@@ -24,9 +24,11 @@ public final class LayoutValidator {
     /**
      * @param layout 웹 빌더가 만든 도면
      * @param spaceGrid 공간이 실제로 가진 도면 규격 — 판정 기준은 요청이 아니라 이쪽이다
+     * @param maxPowerWatt 공간의 허용 전력(W). 하드 게이트는 이것 하나다
      * @param catalog 배치된 집기의 규격. 키는 fixtureId
      */
-    public static void validate(LayoutDto layout, GridSpec spaceGrid, Map<Long, FixtureSpec> catalog) {
+    public static void validate(
+            LayoutDto layout, GridSpec spaceGrid, int maxPowerWatt, Map<Long, FixtureSpec> catalog) {
         requireMatchingGrid(layout, spaceGrid);
 
         List<Placement> placed = new ArrayList<>();
@@ -41,6 +43,31 @@ public final class LayoutValidator {
         }
 
         requireStockAvailable(placedCount);
+        requireWithinPowerLimit(placedCount, maxPowerWatt);
+    }
+
+    /**
+     * 합산 소비전력이 공간의 허용 전력을 넘지 않아야 한다(§2.2-B, US-103).
+     *
+     * <p>웹은 {@code LimitGauge}로 같은 계산을 실시간으로 보여주고 초과 시 버튼을 잠그지만
+     * <b>그건 UX이지 게이트가 아니다</b>(§2.2-D) — 빌더를 거치지 않은 요청도 같은 문을 지난다.
+     * 계산식은 웹과 <b>한 글자도 달라선 안 된다</b>. 다르면 화면에서 초록이던 배치가 여기서 거절된다.
+     *
+     * <p><b>면적은 판정하지 않는다.</b> §2.2-F가 철회했다 — 그리드 전체 면적이
+     * {@code floorAreaM2}보다 작아 그리드 경계 판정을 이미 통과한 배치는 면적 한도를
+     * 구조적으로 넘을 수 없고, 넘을 수 없는 조건을 검사하면 죽은 코드가 된다.
+     *
+     * <p>세는 단위는 종류가 아니라 <b>배치된 대수</b>다. 같은 집기를 3대 놓으면 3배로 먹는다.
+     */
+    private static void requireWithinPowerLimit(Map<FixtureSpec, Integer> placedCount, int maxPowerWatt) {
+        int totalWatt = placedCount.entrySet().stream()
+                .mapToInt(entry -> entry.getKey().powerWatt() * entry.getValue())
+                .sum();
+        if (totalWatt > maxPowerWatt) {
+            throw new ApiException(
+                    ErrorCode.POWER_LIMIT_EXCEEDED,
+                    "허용 전력을 초과했습니다 (배치 %dW, 한도 %dW)".formatted(totalWatt, maxPowerWatt));
+        }
     }
 
     /**

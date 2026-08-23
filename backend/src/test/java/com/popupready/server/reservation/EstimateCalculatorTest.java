@@ -30,9 +30,9 @@ class EstimateCalculatorTest {
 
     /** 일 렌털료 합계가 30,000원이 되는 집기 3종. 14일이면 420,000원이다. */
     private static final List<FixtureSpec> THREE_FIXTURES = List.of(
-            new FixtureSpec(3L, 1_200, 500, 12_000L, 40),
-            new FixtureSpec(5L, 900, 600, 15_000L, 10),
-            new FixtureSpec(7L, 400, 400, 3_000L, 50));
+            new FixtureSpec(3L, 1_200, 500, 0, 12_000L, 40),
+            new FixtureSpec(5L, 900, 600, 0, 15_000L, 10),
+            new FixtureSpec(7L, 400, 400, 0, 3_000L, 50));
 
     private static EstimateResponse estimate(
             LocalDate start, LocalDate end, long dailyRent, BigDecimal rate, List<FixtureSpec> fixtures) {
@@ -59,7 +59,7 @@ class EstimateCalculatorTest {
     @Test
     @DisplayName("같은 집기를 2개 배치 → 렌털료를 2번 더한다")
     void calculate_duplicateFixtures_countsEach() {
-        FixtureSpec hanger = new FixtureSpec(3L, 1_200, 500, 12_000L, 40);
+        FixtureSpec hanger = new FixtureSpec(3L, 1_200, 500, 0, 12_000L, 40);
 
         EstimateResponse estimate = estimate(START, START, 100_000L, RATE_10_PERCENT, List.of(hanger, hanger));
 
@@ -69,7 +69,7 @@ class EstimateCalculatorTest {
     @Test
     @DisplayName("보증금 기준은 공간 대여료뿐 → 집기 렌털료가 커져도 보증금은 그대로다")
     void calculate_depositIgnoresFixtureRental() {
-        FixtureSpec expensive = new FixtureSpec(9L, 1_000, 1_000, 1_000_000L, 5);
+        FixtureSpec expensive = new FixtureSpec(9L, 1_000, 1_000, 0, 1_000_000L, 5);
 
         EstimateResponse withFixture = estimate(START, END, 450_000L, RATE_10_PERCENT, List.of(expensive));
         EstimateResponse withoutFixture = estimate(START, END, 450_000L, RATE_10_PERCENT, List.of());
