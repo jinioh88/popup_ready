@@ -43,7 +43,6 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
-    "msw": "^2.15.0",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",
@@ -56,10 +55,5 @@
     "openapi-typescript": {
       "typescript": "$typescript"
     }
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }
