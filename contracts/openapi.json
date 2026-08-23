@@ -1,1 +1,3181 @@
-{"openapi":"3.1.0","info":{"description":"단기 팝업스토어 턴키 예약·무인 운영 플랫폼 API. 모든 응답은 {data, error} 봉투로 감싸진다.","title":"PopupReady API","version":"v1"},"servers":[{"url":"http://localhost:8080","description":"로컬 개발"}],"tags":[{"description":"가입·로그인","name":"auth"},{"description":"일시사용 표준 계약(US-202)","name":"contract"},{"description":"예약 요청","name":"reservation"},{"description":"공실 상가 탐색","name":"space"},{"description":"모듈러 집기 라이브러리","name":"fixture"}],"paths":{"/api/v1/auth/login":{"post":{"description":"이메일·비밀번호를 검증하고 Access 토큰을 받는다.","operationId":"login","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/LoginRequest"}}},"required":true},"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseAuthResponse"}}},"description":"로그인 성공"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"이메일 또는 비밀번호 불일치 (INVALID_CREDENTIALS)"},"415":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"지원하지 않는 Content-Type"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"summary":"로그인","tags":["auth"]}},"/api/v1/auth/signup":{"post":{"description":"이메일·비밀번호로 가입하고 즉시 Access 토큰을 받는다.","operationId":"signup","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/SignupRequest"}}},"required":true},"responses":{"201":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseAuthResponse"}}},"description":"Created"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"409":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"이미 사용 중인 이메일 (EMAIL_ALREADY_EXISTS)"},"415":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"지원하지 않는 Content-Type"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"summary":"가입","tags":["auth"]}},"/api/v1/contracts/{id}":{"get":{"description":"조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. 당사자에게만 열린다.","operationId":"detail_1","parameters":[{"description":"계약 ID","example":1,"in":"path","name":"id","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseContractResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"인증이 필요함"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"역할 또는 당사자 자격이 없음"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"리소스를 찾을 수 없음"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"security":[{"bearerAuth":[]}],"summary":"계약 열람","tags":["contract"]}},"/api/v1/contracts/{id}/sign":{"post":{"description":"로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. 당사자가 아니면 403, 이미 서명했으면 409다.","operationId":"sign","parameters":[{"description":"계약 ID","example":1,"in":"path","name":"id","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseContractResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"인증이 필요함"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"역할 또는 당사자 자격이 없음"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"리소스를 찾을 수 없음"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"security":[{"bearerAuth":[]}],"summary":"전자 서명","tags":["contract"]}},"/api/v1/fixtures":{"get":{"description":"category를 주면 해당 분류만, 없으면 전체를 돌려준다.","operationId":"list","parameters":[{"description":"집기 분류 필터. 생략 시 전체","in":"query","name":"category","required":false,"schema":{"type":"string","description":"집기 분류","enum":["HANGER","POS","SHOWCASE","LIGHTING","SHELF","ETC"]}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseListFixtureResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"summary":"집기 라이브러리 조회","tags":["fixture"]}},"/api/v1/reservation-requests":{"post":{"description":"빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. 그리드 범위를 벗어나거나 집기가 겹치면 400이다.","operationId":"create","requestBody":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/CreateReservationRequest"}}},"required":true},"responses":{"201":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseReservationRequestResponse"}}},"description":"Created"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"인증이 필요함"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"역할 또는 당사자 자격이 없음"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"본문이 지목한 공간·집기를 찾을 수 없음"},"415":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"지원하지 않는 Content-Type"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"security":[{"bearerAuth":[]}],"summary":"예약 요청 생성","tags":["reservation"]}},"/api/v1/reservation-requests/{id}/contract":{"get":{"description":"예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. 빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.","operationId":"findByReservation","parameters":[{"description":"예약 요청 ID","example":1,"in":"path","name":"id","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseContractResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"인증이 필요함"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"역할 또는 당사자 자격이 없음"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"리소스를 찾을 수 없음"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"security":[{"bearerAuth":[]}],"summary":"예약 요청의 계약 조회","tags":["contract"]},"post":{"description":"예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다. 예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. 브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.","operationId":"create_1","parameters":[{"description":"예약 요청 ID","example":1,"in":"path","name":"id","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"201":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseContractResponse"}}},"description":"Created"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"401":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"인증이 필요함"},"403":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"역할 또는 당사자 자격이 없음"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"리소스를 찾을 수 없음"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"security":[{"bearerAuth":[]}],"summary":"계약서 생성","tags":["contract"]}},"/api/v1/spaces":{"get":{"description":"중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.","operationId":"search","parameters":[{"description":"중심 위도","example":37.5445,"in":"query","name":"lat","required":true,"schema":{"type":"number","format":"double","maximum":90.0,"minimum":-90.0}},{"description":"중심 경도","example":127.0557,"in":"query","name":"lng","required":true,"schema":{"type":"number","format":"double","maximum":180.0,"minimum":-180.0}},{"description":"검색 반경(m). 미지정 시 1000","example":1500,"in":"query","name":"radius","required":false,"schema":{"type":"integer","format":"int32","default":1000,"exclusiveMinimum":0,"maximum":50000}},{"description":"최소 실면적(㎡)","example":50,"in":"query","name":"minArea","required":false,"schema":{"type":"number","format":"double","minimum":0}},{"description":"일일 대여료 상한(원)","example":600000,"in":"query","name":"maxRent","required":false,"schema":{"type":"integer","format":"int64","minimum":0}},{"description":"최소 허용 전력(W)","example":3000,"in":"query","name":"minPower","required":false,"schema":{"type":"integer","format":"int32","minimum":0}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseListSpaceSummaryResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"summary":"반경 공실 검색","tags":["space"]}},"/api/v1/spaces/{id}":{"get":{"description":"요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.","operationId":"detail","parameters":[{"description":"공간 ID","example":1,"in":"path","name":"id","required":true,"schema":{"type":"integer","format":"int64"}}],"responses":{"200":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiResponseSpaceDetailResponse"}}},"description":"OK"},"400":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"요청 값 검증 실패"},"404":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"리소스를 찾을 수 없음"},"500":{"content":{"application/json":{"schema":{"$ref":"#/components/schemas/ApiErrorResponse"}}},"description":"서버 오류"}},"summary":"상가 상세","tags":["space"]}}},"components":{"schemas":{"ApiError":{"type":"object","description":"에러 상세. 성공 응답에서는 null이다.","properties":{"code":{"type":"string","description":"에러 코드 상수. 클라이언트는 이 값으로 분기한다","enum":["VALIDATION_FAILED","UNAUTHORIZED","FORBIDDEN","NOT_FOUND","METHOD_NOT_ALLOWED","UNSUPPORTED_MEDIA_TYPE","INTERNAL_ERROR","EMAIL_ALREADY_EXISTS","INVALID_CREDENTIALS","SPACE_NOT_FOUND","FIXTURE_NOT_FOUND","RESERVATION_REQUEST_NOT_FOUND","LAYOUT_OUT_OF_BOUNDS","LAYOUT_OVERLAP","FIXTURE_STOCK_EXCEEDED","CONTRACT_NOT_FOUND","NOT_CONTRACT_PARTY","CONTRACT_ALREADY_EXISTS","CONTRACT_ALREADY_SIGNED"],"example":"VALIDATION_FAILED"},"message":{"type":"string","description":"사람이 읽는 설명. 분기 조건으로 쓰지 말 것","example":"email은 필수입니다"}},"required":["code","message"]},"ApiErrorResponse":{"type":"object","description":"실패 응답 봉투. data는 항상 null이고 error에 코드·메시지가 담긴다.","properties":{"data":{"description":"실패 시 항상 null"},"error":{"$ref":"#/components/schemas/ApiError"}},"required":["data","error"]},"ApiResponseAuthResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"anyOf":[{"$ref":"#/components/schemas/AuthResponse"},{"type":"null"}],"description":"성공 시 페이로드. 실패 시 null"},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"ApiResponseContractResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"anyOf":[{"$ref":"#/components/schemas/ContractResponse"},{"type":"null"}],"description":"성공 시 페이로드. 실패 시 null"},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"ApiResponseListFixtureResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"type":["array","null"],"description":"성공 시 페이로드. 실패 시 null","items":{"$ref":"#/components/schemas/FixtureResponse"}},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"ApiResponseListSpaceSummaryResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"type":["array","null"],"description":"성공 시 페이로드. 실패 시 null","items":{"$ref":"#/components/schemas/SpaceSummaryResponse"}},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"ApiResponseReservationRequestResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"anyOf":[{"$ref":"#/components/schemas/ReservationRequestResponse"},{"type":"null"}],"description":"성공 시 페이로드. 실패 시 null"},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"ApiResponseSpaceDetailResponse":{"type":"object","description":"공통 응답 봉투","properties":{"data":{"anyOf":[{"$ref":"#/components/schemas/SpaceDetailResponse"},{"type":"null"}],"description":"성공 시 페이로드. 실패 시 null"},"error":{"anyOf":[{"$ref":"#/components/schemas/ApiError"},{"type":"null"}],"description":"실패 시 에러 상세. 성공 시 null"}},"required":["data","error"]},"AuthResponse":{"type":"object","description":"인증 결과","properties":{"accessToken":{"type":"string","description":"JWT Access 토큰. 이후 요청에 Bearer로 싣는다"},"user":{"$ref":"#/components/schemas/UserSummary","description":"인증된 사용자 정보"}},"required":["accessToken","user"]},"ClauseDto":{"type":"object","description":"계약 조항","properties":{"body":{"type":"string","description":"조항 전문","example":"본 계약은 팝업스토어 단기 운영을 목적으로 한다."},"title":{"type":"string","description":"조항 제목","example":"제1조 (목적)"}},"required":["body","title"]},"ContractResponse":{"type":"object","description":"계약","properties":{"brandSignedAt":{"type":["string","null"],"format":"date-time","description":"브랜드 서명 시각(UTC). 미서명이면 null","example":"2026-08-22T05:12:31Z"},"clauses":{"type":"array","description":"생성 시점의 조항 전문 스냅샷","items":{"$ref":"#/components/schemas/ClauseDto"}},"contentHash":{"type":"string","description":"조항 전문+타임스탬프의 SHA-256 무결성 해시","example":"3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8"},"id":{"type":"integer","format":"int64","description":"계약 ID","example":1},"landlordSignedAt":{"type":["string","null"],"format":"date-time","description":"건물주 서명 시각(UTC). 미서명이면 null","example":"2026-08-22T06:40:02Z"},"reservationRequestId":{"type":"integer","format":"int64","description":"대상 예약 요청 ID","example":1},"status":{"type":"string","description":"계약 상태","enum":["PENDING","SIGNED"]},"templateVersion":{"type":"string","description":"템플릿 버전","example":"v1"},"title":{"type":"string","description":"계약 명칭. 일시사용 임대차 요건 보존을 위해 고정된 값이다","example":"단기 공간사용 제휴계약"}},"required":["brandSignedAt","clauses","contentHash","id","landlordSignedAt","reservationRequestId","status","templateVersion","title"]},"CreateReservationRequest":{"type":"object","description":"예약 요청 생성","properties":{"endDate":{"type":"string","format":"date","description":"사용 종료일(yyyy-MM-dd)","example":"2026-09-14"},"layout":{"$ref":"#/components/schemas/LayoutDto","description":"빌더가 만든 도면"},"spaceId":{"type":"integer","format":"int64","description":"대상 공간 ID","example":1},"startDate":{"type":"string","format":"date","description":"사용 시작일(yyyy-MM-dd)","example":"2026-09-01"}},"required":["endDate","layout","spaceId","startDate"]},"EstimateResponse":{"type":"object","description":"견적 내역","properties":{"days":{"type":"integer","format":"int32","description":"대여 일수","example":14},"deposit":{"type":"integer","format":"int64","description":"보증금(원). 일시사용 요건상 하향 설계된다","example":630000},"fixtureRentalTotal":{"type":"integer","format":"int64","description":"집기 렌털료 합계(원)","example":420000},"spaceRentTotal":{"type":"integer","format":"int64","description":"공간 대여료 합계(원)","example":6300000},"totalAmount":{"type":"integer","format":"int64","description":"총 견적(원)","example":7350000}},"required":["days","deposit","fixtureRentalTotal","spaceRentTotal","totalAmount"]},"FixtureResponse":{"type":"object","description":"모듈러 집기","properties":{"category":{"type":"string","description":"분류","enum":["HANGER","POS","SHOWCASE","LIGHTING","SHELF","ETC"]},"dailyRentalFee":{"type":"integer","format":"int64","description":"일일 렌털료(원)","example":12000},"depthMm":{"type":"integer","format":"int32","description":"세로 규격(mm)","example":500},"id":{"type":"integer","format":"int64","description":"집기 ID","example":1},"name":{"type":"string","description":"집기 이름","example":"스탠드 행거 1200"},"powerWatt":{"type":"integer","format":"int32","description":"소비 전력(W). 비전기 집기는 0","example":0},"stockQty":{"type":"integer","format":"int32","description":"총 재고 수량","example":40},"widthMm":{"type":"integer","format":"int32","description":"가로 규격(mm)","example":1200}},"required":["category","dailyRentalFee","depthMm","id","name","powerWatt","stockQty","widthMm"]},"LayoutDto":{"type":"object","description":"2D 도면 레이아웃","properties":{"cellSizeMm":{"type":"integer","format":"int32","description":"그리드 한 칸의 실제 크기(mm)","example":500,"minimum":0},"gridCols":{"type":"integer","format":"int32","description":"그리드 가로 칸 수","example":20,"minimum":0},"gridRows":{"type":"integer","format":"int32","description":"그리드 세로 칸 수","example":12,"minimum":0},"items":{"type":"array","description":"배치된 집기 목록. 빈 배열도 허용한다","items":{"$ref":"#/components/schemas/LayoutItemDto"}}},"required":["cellSizeMm","gridCols","gridRows","items"]},"LayoutItemDto":{"type":"object","description":"배치된 집기","properties":{"col":{"type":"integer","format":"int32","description":"좌상단 기준 열 좌표(0-base)","example":4,"minimum":0},"fixtureId":{"type":"integer","format":"int64","description":"집기 ID","example":3},"rotation":{"type":"integer","format":"int32","description":"회전각. 0 | 90 | 180 | 270 중 하나여야 한다","example":90,"maximum":270,"minimum":0},"row":{"type":"integer","format":"int32","description":"좌상단 기준 행 좌표(0-base)","example":2,"minimum":0}},"required":["col","fixtureId","rotation","row"]},"LocationDto":{"type":"object","description":"위경도 좌표(WGS84)","properties":{"lat":{"type":"number","format":"double","description":"위도","example":37.5445},"lng":{"type":"number","format":"double","description":"경도","example":127.0557}},"required":["lat","lng"]},"LoginRequest":{"type":"object","description":"로그인 요청","properties":{"email":{"type":"string","description":"이메일(로그인 ID)","example":"brand@popupready.com","minLength":1},"password":{"type":"string","description":"비밀번호","example":"password123","minLength":1}},"required":["email","password"]},"ReservationRequestResponse":{"type":"object","description":"예약 요청","properties":{"brandUserId":{"type":"integer","format":"int64","description":"요청한 브랜드 사용자 ID","example":1},"endDate":{"type":"string","format":"date","description":"사용 종료일","example":"2026-09-14"},"estimate":{"$ref":"#/components/schemas/EstimateResponse","description":"견적 내역"},"id":{"type":"integer","format":"int64","description":"예약 요청 ID","example":1},"layout":{"$ref":"#/components/schemas/LayoutDto","description":"서버가 재검증한 도면. 요청한 내용이 그대로 되돌아온다"},"spaceId":{"type":"integer","format":"int64","description":"대상 공간 ID","example":1},"startDate":{"type":"string","format":"date","description":"사용 시작일","example":"2026-09-01"},"status":{"type":"string","description":"예약 요청 상태","enum":["DRAFT","CONTRACT_PENDING","CONTRACT_SIGNED"]}},"required":["brandUserId","endDate","estimate","id","layout","spaceId","startDate","status"]},"SignupRequest":{"type":"object","description":"가입 요청","properties":{"email":{"type":"string","format":"email","description":"이메일(로그인 ID)","example":"brand@popupready.com","minLength":1},"name":{"type":"string","description":"표시 이름","example":"김브랜드","minLength":1},"password":{"type":"string","description":"비밀번호(8자 이상)","example":"password123","maxLength":64,"minLength":8},"role":{"type":"string","description":"역할","enum":["BRAND","LANDLORD","VENDOR","ADMIN"]}},"required":["email","name","password","role"]},"SpaceDetailResponse":{"type":"object","description":"공간 상세(빌더 진입용)","properties":{"address":{"type":"string","description":"주소","example":"서울 성동구 연무장길 45"},"cellSizeMm":{"type":"integer","format":"int32","description":"그리드 한 칸의 실제 크기(mm)","example":500},"dailyRent":{"type":"integer","format":"int64","description":"일일 대여료(원)","example":450000},"depositRate":{"type":"number","description":"보증금 비율. 일시사용 요건상 하향 설계된다","example":0.1},"floorAreaM2":{"type":"number","format":"double","description":"실면적(㎡)","example":82.5},"gridCols":{"type":"integer","format":"int32","description":"도면 그리드 가로 칸 수","example":20},"gridRows":{"type":"integer","format":"int32","description":"도면 그리드 세로 칸 수","example":12},"id":{"type":"integer","format":"int64","description":"공간 ID","example":1},"location":{"$ref":"#/components/schemas/LocationDto","description":"위치 좌표"},"maxPowerWatt":{"type":"integer","format":"int32","description":"허용 전력(W). 배치한 집기 소비전력 합이 이 값을 넘으면 결제가 차단된다","example":5000},"name":{"type":"string","description":"공간 이름","example":"성수 연무장길 팝업 1층"},"status":{"type":"string","description":"공간 상태","enum":["ACTIVE","INACTIVE"]}},"required":["address","cellSizeMm","dailyRent","depositRate","floorAreaM2","gridCols","gridRows","id","location","maxPowerWatt","name","status"]},"SpaceSummaryResponse":{"type":"object","description":"공간 요약(지도 마커·요약 카드용)","properties":{"address":{"type":"string","description":"주소","example":"서울 성동구 연무장길 45"},"dailyRent":{"type":"integer","format":"int64","description":"일일 대여료(원)","example":450000},"floorAreaM2":{"type":"number","format":"double","description":"실면적(㎡)","example":82.5},"id":{"type":"integer","format":"int64","description":"공간 ID","example":1},"location":{"$ref":"#/components/schemas/LocationDto","description":"위치 좌표"},"maxPowerWatt":{"type":"integer","format":"int32","description":"허용 전력(W)","example":5000},"name":{"type":"string","description":"공간 이름","example":"성수 연무장길 팝업 1층"}},"required":["address","dailyRent","floorAreaM2","id","location","maxPowerWatt","name"]},"UserSummary":{"type":"object","description":"로그인한 사용자 요약","properties":{"email":{"type":"string","description":"이메일(로그인 ID)","example":"brand@popupready.com"},"id":{"type":"integer","format":"int64","description":"사용자 ID","example":1},"name":{"type":"string","description":"표시 이름","example":"김브랜드"},"role":{"type":"string","description":"역할","enum":["BRAND","LANDLORD","VENDOR","ADMIN"]}},"required":["email","id","name","role"]}},"securitySchemes":{"bearerAuth":{"bearerFormat":"JWT","description":"로그인 응답의 accessToken을 Bearer로 전달","scheme":"bearer","type":"http"}}}}
+{
+  "openapi": "3.1.0",
+  "info": {
+    "description": "단기 팝업스토어 턴키 예약·무인 운영 플랫폼 API. 모든 응답은 {data, error} 봉투로 감싸진다.",
+    "title": "PopupReady API",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "로컬 개발"
+    }
+  ],
+  "tags": [
+    {
+      "description": "가입·로그인",
+      "name": "auth"
+    },
+    {
+      "description": "일시사용 표준 계약(US-202)",
+      "name": "contract"
+    },
+    {
+      "description": "예약 요청",
+      "name": "reservation"
+    },
+    {
+      "description": "결제 준비·승인",
+      "name": "payment"
+    },
+    {
+      "description": "공실 상가 탐색",
+      "name": "space"
+    },
+    {
+      "description": "모듈러 집기 라이브러리",
+      "name": "fixture"
+    },
+    {
+      "description": "다자간 분할 정산",
+      "name": "settlement"
+    },
+    {
+      "description": "무인 스마트락 도어 오픈",
+      "name": "door"
+    }
+  ],
+  "paths": {
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "이메일·비밀번호를 검증하고 Access 토큰을 받는다.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            },
+            "description": "로그인 성공"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "이메일 또는 비밀번호 불일치 (INVALID_CREDENTIALS)"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "로그인",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Refresh 토큰으로 Access·Refresh 토큰을 다시 받는다. 회전 방식이라 이전 Refresh 토큰은 무효가 된다.",
+        "operationId": "refresh",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseTokenPairResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "만료·위조·재사용된 토큰 (REFRESH_TOKEN_INVALID)"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "토큰 재발급",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/signup": {
+      "post": {
+        "description": "이메일·비밀번호로 가입하고 즉시 Access 토큰을 받는다.",
+        "operationId": "signup",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignupRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "이미 사용 중인 이메일 (EMAIL_ALREADY_EXISTS)"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "가입",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/contracts/{id}": {
+      "get": {
+        "description": "조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. 당사자에게만 열린다.",
+        "operationId": "getContract",
+        "parameters": [
+          {
+            "description": "계약 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseContractResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "계약 열람",
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/api/v1/contracts/{id}/sign": {
+      "post": {
+        "description": "로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. 당사자가 아니면 403, 이미 서명했으면 409다.",
+        "operationId": "signContract",
+        "parameters": [
+          {
+            "description": "계약 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseContractResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "전자 서명",
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/api/v1/door-events/{eventId}/ack": {
+      "post": {
+        "description": "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. 이 단계가 있어야 승인 기록이 전송 기록이 된다.",
+        "operationId": "ackDoorEvent",
+        "parameters": [
+          {
+            "description": "도어 이벤트 ID",
+            "example": 123,
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoorAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDoorAckResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "MQTT 발행 결과 보고",
+        "tags": [
+          "door"
+        ]
+      }
+    },
+    "/api/v1/fixtures": {
+      "get": {
+        "description": "category를 주면 해당 분류만, 없으면 전체를 돌려준다.",
+        "operationId": "listFixtures",
+        "parameters": [
+          {
+            "description": "집기 분류 필터. 생략 시 전체",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "집기 분류",
+              "enum": [
+                "HANGER",
+                "POS",
+                "SHOWCASE",
+                "LIGHTING",
+                "SHELF",
+                "ETC"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListFixtureResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "집기 라이브러리 조회",
+        "tags": [
+          "fixture"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests": {
+      "post": {
+        "description": "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. 그리드 범위를 벗어나거나 집기가 겹치면 400이다.",
+        "operationId": "createReservationRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReservationRequestResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "본문이 지목한 공간·집기를 찾을 수 없음"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "예약 요청 생성",
+        "tags": [
+          "reservation"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests/{id}": {
+      "get": {
+        "description": "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.",
+        "operationId": "getReservationRequest",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReservationRequestResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "예약 요청 단건 조회",
+        "tags": [
+          "reservation"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests/{id}/contract": {
+      "get": {
+        "description": "예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. 빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.",
+        "operationId": "getContractByReservation",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseContractResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "예약 요청의 계약 조회",
+        "tags": [
+          "contract"
+        ]
+      },
+      "post": {
+        "description": "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다. 예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. 브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.",
+        "operationId": "createContract",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseContractResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "계약서 생성",
+        "tags": [
+          "contract"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests/{id}/door-open": {
+      "post": {
+        "description": "예약 당사자인지와 시간창(시작 10분 전 ~ 종료) 안인지를 서버가 판정하고, 통과하면 발행할 MQTT 토픽과 페이로드를 내려준다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다.",
+        "operationId": "openDoor",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 45,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDoorOpenResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "도어 오픈 권한 검증·기록",
+        "tags": [
+          "door"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests/{id}/payment/confirm": {
+      "post": {
+        "description": "분산 락 안에서 예약 상태·기간 겹침·집기 가용량·전력 한도·금액을 재확인한 뒤 PG 승인을 호출하고, 예약을 PAID로 확정하며 분할 정산 Row를 만든다. 요청 금액은 승인 금액이 아니라 대조 대상이다.",
+        "operationId": "confirmPayment",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentConfirmRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePaymentConfirmResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "이미 결제됨 / 기간 겹침 (PAYMENT_ALREADY_COMPLETED, FIXTURE_UNAVAILABLE)"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "지원하지 않는 Content-Type"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "락 획득 실패 — 사용자 잘못이 아니므로 재시도를 안내한다 (LOCK_ACQUISITION_FAILED)"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "결제 승인",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/api/v1/reservation-requests/{id}/payment/prepare": {
+      "post": {
+        "description": "토스 결제 위젯에 넘길 주문 정보를 발급한다. 락을 잡지 않으며 자리를 선점하지 않는다. orderId는 호출마다 새로 발급되고 재사용하지 않는다.",
+        "operationId": "preparePayment",
+        "parameters": [
+          {
+            "description": "예약 요청 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePaymentPrepareResponse"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "결제 준비",
+        "tags": [
+          "payment"
+        ]
+      }
+    },
+    "/api/v1/settlements": {
+      "get": {
+        "description": "결제 1건이 만든 분할 정산 Row를 모두 돌려준다. 보증금 Row는 ESCROW_HELD 상태이며 정산이 아니라 반환 대상이다.",
+        "operationId": "listSettlements",
+        "parameters": [
+          {
+            "description": "조회할 예약 요청 ID",
+            "example": 1,
+            "in": "query",
+            "name": "reservationId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListSettlementResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "역할 또는 당사자 자격이 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "분할 정산 내역 조회",
+        "tags": [
+          "settlement"
+        ]
+      }
+    },
+    "/api/v1/spaces": {
+      "get": {
+        "description": "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.",
+        "operationId": "searchSpaces",
+        "parameters": [
+          {
+            "description": "중심 위도",
+            "example": 37.5445,
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "maximum": 90.0,
+              "minimum": -90.0
+            }
+          },
+          {
+            "description": "중심 경도",
+            "example": 127.0557,
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "maximum": 180.0,
+              "minimum": -180.0
+            }
+          },
+          {
+            "description": "검색 반경(m). 미지정 시 1000",
+            "example": 1500,
+            "in": "query",
+            "name": "radius",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1000,
+              "exclusiveMinimum": 0,
+              "maximum": 50000
+            }
+          },
+          {
+            "description": "최소 실면적(㎡)",
+            "example": 50,
+            "in": "query",
+            "name": "minArea",
+            "required": false,
+            "schema": {
+              "type": "number",
+              "format": "double",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "일일 대여료 상한(원)",
+            "example": 600000,
+            "in": "query",
+            "name": "maxRent",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "description": "최소 허용 전력(W)",
+            "example": 3000,
+            "in": "query",
+            "name": "minPower",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListSpaceSummaryResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "반경 공실 검색",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/spaces/{id}": {
+      "get": {
+        "description": "요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.",
+        "operationId": "getSpace",
+        "parameters": [
+          {
+            "description": "공간 ID",
+            "example": 1,
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseSpaceDetailResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "summary": "상가 상세",
+        "tags": [
+          "space"
+        ]
+      }
+    },
+    "/api/v1/spaces/{spaceId}/fixture-availability": {
+      "get": {
+        "description": "해당 기간에 배치 가능한 집기 수량을 집기별로 돌려준다. 수량은 질의 기간 중 가장 많이 잡힌 날 기준이며, 다른 공간의 예약이 잡아간 수량도 함께 차감된다.",
+        "operationId": "getFixtureAvailability",
+        "parameters": [
+          {
+            "description": "대상 공간 ID",
+            "example": 1,
+            "in": "path",
+            "name": "spaceId",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "description": "사용 시작일",
+            "example": "2026-09-01",
+            "in": "query",
+            "name": "startDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "description": "사용 종료일",
+            "example": "2026-09-14",
+            "in": "query",
+            "name": "endDate",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListFixtureAvailabilityResponse"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "요청 값 검증 실패"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "인증이 필요함"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "리소스를 찾을 수 없음"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "서버 오류"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "날짜별 집기 가용 수량",
+        "tags": [
+          "reservation"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiError": {
+        "type": "object",
+        "description": "에러 상세. 성공 응답에서는 null이다.",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "에러 코드 상수. 클라이언트는 이 값으로 분기한다",
+            "enum": [
+              "VALIDATION_FAILED",
+              "UNAUTHORIZED",
+              "FORBIDDEN",
+              "NOT_FOUND",
+              "METHOD_NOT_ALLOWED",
+              "UNSUPPORTED_MEDIA_TYPE",
+              "INTERNAL_ERROR",
+              "EMAIL_ALREADY_EXISTS",
+              "INVALID_CREDENTIALS",
+              "SPACE_NOT_FOUND",
+              "FIXTURE_NOT_FOUND",
+              "RESERVATION_REQUEST_NOT_FOUND",
+              "LAYOUT_OUT_OF_BOUNDS",
+              "LAYOUT_OVERLAP",
+              "FIXTURE_STOCK_EXCEEDED",
+              "FIXTURE_UNAVAILABLE",
+              "POWER_LIMIT_EXCEEDED",
+              "CONTRACT_NOT_FOUND",
+              "NOT_CONTRACT_PARTY",
+              "CONTRACT_ALREADY_EXISTS",
+              "CONTRACT_ALREADY_SIGNED",
+              "CONTRACT_INTEGRITY_VIOLATION",
+              "REFRESH_TOKEN_INVALID",
+              "PAYMENT_ALREADY_COMPLETED",
+              "PAYMENT_AMOUNT_MISMATCH",
+              "LOCK_ACQUISITION_FAILED",
+              "DOOR_NOT_YET_OPENABLE"
+            ],
+            "example": "VALIDATION_FAILED"
+          },
+          "message": {
+            "type": "string",
+            "description": "사람이 읽는 설명. 분기 조건으로 쓰지 말 것",
+            "example": "email은 필수입니다"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ]
+      },
+      "ApiErrorResponse": {
+        "type": "object",
+        "description": "실패 응답 봉투. data는 항상 null이고 error에 코드·메시지가 담긴다.",
+        "properties": {
+          "data": {
+            "description": "실패 시 항상 null"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseAuthResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseContractResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContractResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseDoorAckResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DoorAckResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseDoorOpenResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DoorOpenResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseListFixtureAvailabilityResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "성공 시 페이로드. 실패 시 null",
+            "items": {
+              "$ref": "#/components/schemas/FixtureAvailabilityResponse"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseListFixtureResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "성공 시 페이로드. 실패 시 null",
+            "items": {
+              "$ref": "#/components/schemas/FixtureResponse"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseListSettlementResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "성공 시 페이로드. 실패 시 null",
+            "items": {
+              "$ref": "#/components/schemas/SettlementResponse"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseListSpaceSummaryResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "description": "성공 시 페이로드. 실패 시 null",
+            "items": {
+              "$ref": "#/components/schemas/SpaceSummaryResponse"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponsePaymentConfirmResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentConfirmResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponsePaymentPrepareResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentPrepareResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseReservationRequestResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReservationRequestResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseSpaceDetailResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpaceDetailResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "ApiResponseTokenPairResponse": {
+        "type": "object",
+        "description": "공통 응답 봉투",
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenPairResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "성공 시 페이로드. 실패 시 null"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApiError"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "실패 시 에러 상세. 성공 시 null"
+          }
+        },
+        "required": [
+          "data",
+          "error"
+        ]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "description": "인증 결과",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT Access 토큰. 이후 요청에 Bearer로 싣는다"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh 토큰. 만료 시 /auth/refresh로 재발급받는다"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserSummary",
+            "description": "인증된 사용자 정보"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "user"
+        ]
+      },
+      "ClauseDto": {
+        "type": "object",
+        "description": "계약 조항",
+        "properties": {
+          "body": {
+            "type": "string",
+            "description": "조항 전문",
+            "example": "본 계약은 팝업스토어 단기 운영을 목적으로 한다."
+          },
+          "title": {
+            "type": "string",
+            "description": "조항 제목",
+            "example": "제1조 (목적)"
+          }
+        },
+        "required": [
+          "body",
+          "title"
+        ]
+      },
+      "ContractResponse": {
+        "type": "object",
+        "description": "계약",
+        "properties": {
+          "brandSignedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "브랜드 서명 시각(UTC). 미서명이면 null",
+            "example": "2026-08-22T05:12:31Z"
+          },
+          "clauses": {
+            "type": "array",
+            "description": "생성 시점의 조항 전문 스냅샷",
+            "items": {
+              "$ref": "#/components/schemas/ClauseDto"
+            }
+          },
+          "contentHash": {
+            "type": "string",
+            "description": "조항 전문+타임스탬프의 SHA-256 무결성 해시",
+            "example": "3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "계약 ID",
+            "example": 1
+          },
+          "landlordSignedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "건물주 서명 시각(UTC). 미서명이면 null",
+            "example": "2026-08-22T06:40:02Z"
+          },
+          "reservationRequestId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "대상 예약 요청 ID",
+            "example": 1
+          },
+          "status": {
+            "type": "string",
+            "description": "계약 상태",
+            "enum": [
+              "PENDING",
+              "SIGNED"
+            ]
+          },
+          "templateVersion": {
+            "type": "string",
+            "description": "템플릿 버전",
+            "example": "v1"
+          },
+          "title": {
+            "type": "string",
+            "description": "계약 명칭. 일시사용 임대차 요건 보존을 위해 고정된 값이다",
+            "example": "단기 공간사용 제휴계약"
+          }
+        },
+        "required": [
+          "brandSignedAt",
+          "clauses",
+          "contentHash",
+          "id",
+          "landlordSignedAt",
+          "reservationRequestId",
+          "status",
+          "templateVersion",
+          "title"
+        ]
+      },
+      "CreateReservationRequest": {
+        "type": "object",
+        "description": "예약 요청 생성",
+        "properties": {
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "사용 종료일(yyyy-MM-dd)",
+            "example": "2026-09-14"
+          },
+          "layout": {
+            "$ref": "#/components/schemas/LayoutDto",
+            "description": "빌더가 만든 도면"
+          },
+          "spaceId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "대상 공간 ID",
+            "example": 1
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "사용 시작일(yyyy-MM-dd)",
+            "example": "2026-09-01"
+          }
+        },
+        "required": [
+          "endDate",
+          "layout",
+          "spaceId",
+          "startDate"
+        ]
+      },
+      "DoorAckRequest": {
+        "type": "object",
+        "description": "MQTT 발행 결과 보고",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "발행 성공 여부",
+            "example": true
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "DoorAckResponse": {
+        "type": "object",
+        "description": "도어 이벤트 마감 결과",
+        "properties": {
+          "ackedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "보고 접수 시각(UTC)"
+          },
+          "eventId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "도어 이벤트 ID",
+            "example": 123
+          },
+          "status": {
+            "type": "string",
+            "description": "마감 상태 — DELIVERED 또는 FAILED",
+            "enum": [
+              "AUTHORIZED",
+              "DELIVERED",
+              "FAILED"
+            ]
+          }
+        },
+        "required": [
+          "ackedAt",
+          "eventId",
+          "status"
+        ]
+      },
+      "DoorCommandPayload": {
+        "type": "object",
+        "description": "MQTT 발행 페이로드",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "명령",
+            "example": "OPEN"
+          },
+          "eventId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "도어 이벤트 ID",
+            "example": 123
+          },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "발급 시각(UTC)"
+          },
+          "reservationId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "예약 요청 ID",
+            "example": 45
+          }
+        },
+        "required": [
+          "action",
+          "eventId",
+          "issuedAt",
+          "reservationId"
+        ]
+      },
+      "DoorOpenResponse": {
+        "type": "object",
+        "description": "도어 오픈 승인 결과",
+        "properties": {
+          "eventId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "도어 이벤트 ID. ack에 이 값을 쓴다",
+            "example": 123
+          },
+          "payload": {
+            "$ref": "#/components/schemas/DoorCommandPayload",
+            "description": "발행할 페이로드. 그대로 발행한다"
+          },
+          "status": {
+            "type": "string",
+            "description": "이벤트 상태. 승인 직후는 항상 AUTHORIZED다",
+            "enum": [
+              "AUTHORIZED",
+              "DELIVERED",
+              "FAILED"
+            ]
+          },
+          "topic": {
+            "type": "string",
+            "description": "발행할 MQTT 토픽",
+            "example": "popupready/locks/1/command"
+          }
+        },
+        "required": [
+          "eventId",
+          "payload",
+          "status",
+          "topic"
+        ]
+      },
+      "EstimateResponse": {
+        "type": "object",
+        "description": "견적 내역",
+        "properties": {
+          "days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "대여 일수",
+            "example": 14
+          },
+          "deposit": {
+            "type": "integer",
+            "format": "int64",
+            "description": "보증금(원). 일시사용 요건상 하향 설계된다",
+            "example": 630000
+          },
+          "fixtureRentalTotal": {
+            "type": "integer",
+            "format": "int64",
+            "description": "집기 렌털료 합계(원)",
+            "example": 420000
+          },
+          "spaceRentTotal": {
+            "type": "integer",
+            "format": "int64",
+            "description": "공간 대여료 합계(원)",
+            "example": 6300000
+          },
+          "totalAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "총 견적(원)",
+            "example": 7350000
+          }
+        },
+        "required": [
+          "days",
+          "deposit",
+          "fixtureRentalTotal",
+          "spaceRentTotal",
+          "totalAmount"
+        ]
+      },
+      "FixtureAvailabilityResponse": {
+        "type": "object",
+        "description": "날짜별 집기 가용 수량",
+        "properties": {
+          "availableQty": {
+            "type": "integer",
+            "format": "int32",
+            "description": "배치 가능 수량 (totalStock - reservedQty)",
+            "example": 7
+          },
+          "fixtureId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "집기 ID",
+            "example": 1
+          },
+          "reservedQty": {
+            "type": "integer",
+            "format": "int32",
+            "description": "질의 기간 중 가장 많이 잡힌 날의 예약 수량",
+            "example": 3
+          },
+          "totalStock": {
+            "type": "integer",
+            "format": "int32",
+            "description": "총 보유 수량",
+            "example": 10
+          }
+        },
+        "required": [
+          "availableQty",
+          "fixtureId",
+          "reservedQty",
+          "totalStock"
+        ]
+      },
+      "FixtureResponse": {
+        "type": "object",
+        "description": "모듈러 집기",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "분류",
+            "enum": [
+              "HANGER",
+              "POS",
+              "SHOWCASE",
+              "LIGHTING",
+              "SHELF",
+              "ETC"
+            ]
+          },
+          "dailyRentalFee": {
+            "type": "integer",
+            "format": "int64",
+            "description": "일일 렌털료(원)",
+            "example": 12000
+          },
+          "depthMm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "세로 규격(mm)",
+            "example": 500
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "집기 ID",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "집기 이름",
+            "example": "스탠드 행거 1200"
+          },
+          "powerWatt": {
+            "type": "integer",
+            "format": "int32",
+            "description": "소비 전력(W). 비전기 집기는 0",
+            "example": 0
+          },
+          "stockQty": {
+            "type": "integer",
+            "format": "int32",
+            "description": "총 재고 수량",
+            "example": 40
+          },
+          "widthMm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "가로 규격(mm)",
+            "example": 1200
+          }
+        },
+        "required": [
+          "category",
+          "dailyRentalFee",
+          "depthMm",
+          "id",
+          "name",
+          "powerWatt",
+          "stockQty",
+          "widthMm"
+        ]
+      },
+      "LayoutDto": {
+        "type": "object",
+        "description": "2D 도면 레이아웃",
+        "properties": {
+          "cellSizeMm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "그리드 한 칸의 실제 크기(mm)",
+            "example": 500,
+            "minimum": 0
+          },
+          "gridCols": {
+            "type": "integer",
+            "format": "int32",
+            "description": "그리드 가로 칸 수",
+            "example": 20,
+            "minimum": 0
+          },
+          "gridRows": {
+            "type": "integer",
+            "format": "int32",
+            "description": "그리드 세로 칸 수",
+            "example": 12,
+            "minimum": 0
+          },
+          "items": {
+            "type": "array",
+            "description": "배치된 집기 목록. 빈 배열도 허용한다",
+            "items": {
+              "$ref": "#/components/schemas/LayoutItemDto"
+            }
+          }
+        },
+        "required": [
+          "cellSizeMm",
+          "gridCols",
+          "gridRows",
+          "items"
+        ]
+      },
+      "LayoutItemDto": {
+        "type": "object",
+        "description": "배치된 집기",
+        "properties": {
+          "col": {
+            "type": "integer",
+            "format": "int32",
+            "description": "좌상단 기준 열 좌표(0-base)",
+            "example": 4,
+            "minimum": 0
+          },
+          "fixtureId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "집기 ID",
+            "example": 3
+          },
+          "rotation": {
+            "type": "integer",
+            "format": "int32",
+            "description": "회전각. 0 | 90 | 180 | 270 중 하나여야 한다",
+            "example": 90,
+            "maximum": 270,
+            "minimum": 0
+          },
+          "row": {
+            "type": "integer",
+            "format": "int32",
+            "description": "좌상단 기준 행 좌표(0-base)",
+            "example": 2,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "col",
+          "fixtureId",
+          "rotation",
+          "row"
+        ]
+      },
+      "LocationDto": {
+        "type": "object",
+        "description": "위경도 좌표(WGS84)",
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double",
+            "description": "위도",
+            "example": 37.5445
+          },
+          "lng": {
+            "type": "number",
+            "format": "double",
+            "description": "경도",
+            "example": 127.0557
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "로그인 요청",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "이메일(로그인 ID)",
+            "example": "brand@popupready.com",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호",
+            "example": "password123",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "PaymentConfirmRequest": {
+        "type": "object",
+        "description": "결제 승인 요청",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "클라이언트가 본 금액(원). 서버 견적과 대조만 한다",
+            "example": 6930000,
+            "minimum": 0
+          },
+          "orderId": {
+            "type": "string",
+            "description": "결제 준비 때 받은 주문 ID",
+            "minLength": 1
+          },
+          "paymentKey": {
+            "type": "string",
+            "description": "토스가 발급한 결제 키",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "orderId",
+          "paymentKey"
+        ]
+      },
+      "PaymentConfirmResponse": {
+        "type": "object",
+        "description": "결제 승인 결과",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "승인된 금액(원)",
+            "example": 6930000
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "PG 승인 시각(UTC)"
+          },
+          "orderId": {
+            "type": "string",
+            "description": "토스 주문 ID"
+          },
+          "reservationRequestId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "예약 요청 ID",
+            "example": 1
+          },
+          "reservationStatus": {
+            "type": "string",
+            "description": "확정된 예약 상태",
+            "enum": [
+              "DRAFT",
+              "CONTRACT_PENDING",
+              "CONTRACT_SIGNED"
+            ]
+          },
+          "settlements": {
+            "type": "array",
+            "description": "이 결제가 만든 분할 정산 Row",
+            "items": {
+              "$ref": "#/components/schemas/SettlementResponse"
+            }
+          },
+          "status": {
+            "type": "string",
+            "description": "결제 상태",
+            "enum": [
+              "READY",
+              "PAID",
+              "FAILED",
+              "CANCELLED",
+              "UNKNOWN"
+            ]
+          }
+        },
+        "required": [
+          "amount",
+          "approvedAt",
+          "orderId",
+          "reservationRequestId",
+          "reservationStatus",
+          "settlements",
+          "status"
+        ]
+      },
+      "PaymentPrepareResponse": {
+        "type": "object",
+        "description": "결제 준비 결과",
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "결제할 금액(원). 견적 스냅샷의 합계다",
+            "example": 6930000
+          },
+          "orderId": {
+            "type": "string",
+            "description": "토스 주문 ID. 호출마다 새로 발급되며 재사용하지 않는다"
+          },
+          "orderName": {
+            "type": "string",
+            "description": "위젯에 표시할 주문명",
+            "example": "성수 팝업 스페이스 14일 대여"
+          }
+        },
+        "required": [
+          "amount",
+          "orderId",
+          "orderName"
+        ]
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "description": "토큰 재발급 요청",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "발급받은 Refresh 토큰",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "ReservationRequestResponse": {
+        "type": "object",
+        "description": "예약 요청",
+        "properties": {
+          "brandUserId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "요청한 브랜드 사용자 ID",
+            "example": 1
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "description": "사용 종료일",
+            "example": "2026-09-14"
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/EstimateResponse",
+            "description": "견적 내역"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "예약 요청 ID",
+            "example": 1
+          },
+          "layout": {
+            "$ref": "#/components/schemas/LayoutDto",
+            "description": "서버가 재검증한 도면. 요청한 내용이 그대로 되돌아온다"
+          },
+          "spaceId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "대상 공간 ID",
+            "example": 1
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "description": "사용 시작일",
+            "example": "2026-09-01"
+          },
+          "status": {
+            "type": "string",
+            "description": "예약 요청 상태",
+            "enum": [
+              "DRAFT",
+              "CONTRACT_PENDING",
+              "CONTRACT_SIGNED"
+            ]
+          }
+        },
+        "required": [
+          "brandUserId",
+          "endDate",
+          "estimate",
+          "id",
+          "layout",
+          "spaceId",
+          "startDate",
+          "status"
+        ]
+      },
+      "SettlementResponse": {
+        "type": "object",
+        "description": "분할 정산 Row",
+        "properties": {
+          "feeAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "원천 차감된 플랫폼 수수료(원)",
+            "example": 630000
+          },
+          "grossAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "정산 대상 총액(원)",
+            "example": 6300000
+          },
+          "netAmount": {
+            "type": "integer",
+            "format": "int64",
+            "description": "실제로 이체할 금액(원)",
+            "example": 5670000
+          },
+          "payeeId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "정산 대상 사용자 ID",
+            "example": 2
+          },
+          "status": {
+            "type": "string",
+            "description": "정산 상태. 보증금만 ESCROW_HELD로 생성된다",
+            "enum": [
+              "PENDING",
+              "ESCROW_HELD",
+              "APPROVED",
+              "TRANSFERRED"
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "정산 종류",
+            "enum": [
+              "SPACE_RENT",
+              "FIXTURE_RENTAL",
+              "DEPOSIT",
+              "PLATFORM_FEE"
+            ]
+          }
+        },
+        "required": [
+          "feeAmount",
+          "grossAmount",
+          "netAmount",
+          "payeeId",
+          "status",
+          "type"
+        ]
+      },
+      "SignupRequest": {
+        "type": "object",
+        "description": "가입 요청",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "이메일(로그인 ID)",
+            "example": "brand@popupready.com",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "표시 이름",
+            "example": "김브랜드",
+            "minLength": 1
+          },
+          "password": {
+            "type": "string",
+            "description": "비밀번호(8자 이상)",
+            "example": "password123",
+            "maxLength": 64,
+            "minLength": 8
+          },
+          "role": {
+            "type": "string",
+            "description": "역할",
+            "enum": [
+              "BRAND",
+              "LANDLORD",
+              "VENDOR",
+              "ADMIN"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "password",
+          "role"
+        ]
+      },
+      "SpaceDetailResponse": {
+        "type": "object",
+        "description": "공간 상세(빌더 진입용)",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "주소",
+            "example": "서울 성동구 연무장길 45"
+          },
+          "cellSizeMm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "그리드 한 칸의 실제 크기(mm)",
+            "example": 500
+          },
+          "dailyRent": {
+            "type": "integer",
+            "format": "int64",
+            "description": "일일 대여료(원)",
+            "example": 450000
+          },
+          "depositRate": {
+            "type": "number",
+            "description": "보증금 비율. 일시사용 요건상 하향 설계된다",
+            "example": 0.1
+          },
+          "floorAreaM2": {
+            "type": "number",
+            "format": "double",
+            "description": "실면적(㎡)",
+            "example": 82.5
+          },
+          "gridCols": {
+            "type": "integer",
+            "format": "int32",
+            "description": "도면 그리드 가로 칸 수",
+            "example": 20
+          },
+          "gridRows": {
+            "type": "integer",
+            "format": "int32",
+            "description": "도면 그리드 세로 칸 수",
+            "example": 12
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "공간 ID",
+            "example": 1
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationDto",
+            "description": "위치 좌표"
+          },
+          "maxPowerWatt": {
+            "type": "integer",
+            "format": "int32",
+            "description": "허용 전력(W). 배치한 집기 소비전력 합이 이 값을 넘으면 결제가 차단된다",
+            "example": 5000
+          },
+          "name": {
+            "type": "string",
+            "description": "공간 이름",
+            "example": "성수 연무장길 팝업 1층"
+          },
+          "status": {
+            "type": "string",
+            "description": "공간 상태",
+            "enum": [
+              "ACTIVE",
+              "INACTIVE"
+            ]
+          }
+        },
+        "required": [
+          "address",
+          "cellSizeMm",
+          "dailyRent",
+          "depositRate",
+          "floorAreaM2",
+          "gridCols",
+          "gridRows",
+          "id",
+          "location",
+          "maxPowerWatt",
+          "name",
+          "status"
+        ]
+      },
+      "SpaceSummaryResponse": {
+        "type": "object",
+        "description": "공간 요약(지도 마커·요약 카드용)",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "주소",
+            "example": "서울 성동구 연무장길 45"
+          },
+          "dailyRent": {
+            "type": "integer",
+            "format": "int64",
+            "description": "일일 대여료(원)",
+            "example": 450000
+          },
+          "floorAreaM2": {
+            "type": "number",
+            "format": "double",
+            "description": "실면적(㎡)",
+            "example": 82.5
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "공간 ID",
+            "example": 1
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationDto",
+            "description": "위치 좌표"
+          },
+          "maxPowerWatt": {
+            "type": "integer",
+            "format": "int32",
+            "description": "허용 전력(W)",
+            "example": 5000
+          },
+          "name": {
+            "type": "string",
+            "description": "공간 이름",
+            "example": "성수 연무장길 팝업 1층"
+          }
+        },
+        "required": [
+          "address",
+          "dailyRent",
+          "floorAreaM2",
+          "id",
+          "location",
+          "maxPowerWatt",
+          "name"
+        ]
+      },
+      "TokenPairResponse": {
+        "type": "object",
+        "description": "토큰 재발급 결과",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "새 JWT Access 토큰"
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "새 Refresh 토큰. 이전 것은 무효가 된다"
+          }
+        },
+        "required": [
+          "accessToken",
+          "refreshToken"
+        ]
+      },
+      "UserSummary": {
+        "type": "object",
+        "description": "로그인한 사용자 요약",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "이메일(로그인 ID)",
+            "example": "brand@popupready.com"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "사용자 ID",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "표시 이름",
+            "example": "김브랜드"
+          },
+          "role": {
+            "type": "string",
+            "description": "역할",
+            "enum": [
+              "BRAND",
+              "LANDLORD",
+              "VENDOR",
+              "ADMIN"
+            ]
+          }
+        },
+        "required": [
+          "email",
+          "id",
+          "name",
+          "role"
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "bearerFormat": "JWT",
+        "description": "로그인 응답의 accessToken을 Bearer로 전달",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  }
+}

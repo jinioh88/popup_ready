@@ -206,6 +206,171 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → refresh 경로가 계약에 담긴다")
+    void apiDocs_containsRefreshOperation() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/auth/refresh'].post").exists())
+                // 토큰을 얻는 경로라 인증을 요구할 수 없다 — signup·login과 같은 이유다.
+                .andExpect(jsonPath("$.paths['/api/v1/auth/refresh'].post.security")
+                        .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("인증 응답 → refreshToken이 required 필드로 담긴다")
+    void apiDocs_authResponseCarriesRefreshToken() throws Exception {
+        // refresh 회전을 도입하면 로그인 시점에 refresh 토큰을 함께 내려야 한다.
+        // 기존 오퍼레이션 2종(signup·login)의 스키마 변경이며 §2.2-B에 반영돼 있다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.AuthResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken", "user")))
+                .andExpect(jsonPath("$.components.schemas.TokenPairResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken")));
+    }
+
+    @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → 예약 단건 조회·집기 가용성이 계약에 담긴다")
+    void apiDocs_containsReadOperations() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/spaces/{spaceId}/fixture-availability'].get")
+                        .exists())
+                // 예약 단건 조회는 당사자만 볼 수 있다 — 역할로는 가를 수 없다(브랜드도 건물주도 본다).
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}'].get.responses.403")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("집기 가용성 응답 → 총재고·예약수량·가용수량이 모두 required로 담긴다")
+    void apiDocs_fixtureAvailabilityFieldsAreRequired() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.FixtureAvailabilityResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "fixtureId", "totalStock", "reservedQty", "availableQty")));
+    }
+
+    @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → 결제·정산·도어 5종이 계약에 담긴다")
+    void apiDocs_containsPaymentSettlementDoorOperations() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/prepare'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/confirm'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/settlements'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/door-open'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/door-events/{eventId}/ack'].post")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("결제·정산·도어 오퍼레이션 → 인증을 요구하고 당사자 403을 문서화한다")
+    void apiDocs_sprint2OperationsRequireAuthAndDocumentForbidden() throws Exception {
+        // 어느 것도 공개 경로가 아니다. 그리고 전부 역할이 아니라 당사자로 갈리므로
+        // Security는 인증까지만 보고 판정은 서비스가 한다 — 그래도 403이 난다는 사실은 문서에 있어야 한다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/settlements'].get.security").isArray())
+                .andExpect(jsonPath("$.paths['/api/v1/settlements'].get.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/confirm'].post.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/door-open'].post.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/door-events/{eventId}/ack'].post.responses.403")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("결제 승인 응답 → 정산 Row 요약을 함께 담는다")
+    void apiDocs_paymentConfirmCarriesSettlements() throws Exception {
+        // 별도 조회를 강제하면 "결제는 됐는데 내역은 아직"인 중간 상태가 화면에 생긴다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.PaymentConfirmResponse.required")
+                        .value(org.hamcrest.Matchers.hasItem("settlements")))
+                .andExpect(jsonPath("$.components.schemas.SettlementResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "type", "payeeId", "grossAmount", "feeAmount", "netAmount", "status")));
+    }
+
+    @Test
+    @DisplayName("도어 오픈 응답 → 서버가 조립한 토픽·페이로드를 담는다")
+    void apiDocs_doorOpenCarriesTopicAndPayload() throws Exception {
+        // 클라이언트가 토픽을 조립하면 훼손된 채 발행될 수 있다(§2.3).
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.DoorOpenResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("eventId", "topic", "payload", "status")))
+                .andExpect(jsonPath("$.components.schemas.DoorCommandPayload.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "eventId", "reservationId", "action", "issuedAt")));
+    }
+
+    @Test
+    @DisplayName("모든 오퍼레이션 → operationId가 명시적으로 부여된다(_1·_2 접미사 없음)")
+    void apiDocs_operationIdsAreExplicit() throws Exception {
+        // springdoc은 메서드 이름이 겹치면 _1·_2를 붙이는데 그 번호는 컨트롤러 스캔 순서에
+        // 달려 있다. 무관한 컨트롤러가 같은 이름의 메서드를 추가하는 것만으로 남의 operationId가
+        // 밀린다 — 실제로 예약 단건 조회를 detail()로 두었을 때 /contracts/{id}가 detail_1에서
+        // detail_2로 조용히 바뀌었다. 그래서 접미사가 하나라도 생기면 여기서 실패시킨다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$..operationId")
+                        .value(org.hamcrest.Matchers.everyItem(
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.matchesPattern(".*_\\d+$")))));
+    }
+
+    @Test
+    @DisplayName("계약 목록 → 18개 오퍼레이션의 operationId가 고정된다")
+    void apiDocs_operationIdsArePinned() throws Exception {
+        // 이 목록이 곧 계약이다. 오퍼레이션을 추가·개명하면 여기가 먼저 깨져야 한다 —
+        // 소비자(웹·모바일)의 생성 타입이 조용히 바뀌는 것보다 낫다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$..operationId")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "signup",
+                                "login",
+                                "refresh",
+                                "searchSpaces",
+                                "getSpace",
+                                "getFixtureAvailability",
+                                "listFixtures",
+                                "createReservationRequest",
+                                "getReservationRequest",
+                                "createContract",
+                                "getContractByReservation",
+                                "getContract",
+                                "signContract",
+                                "preparePayment",
+                                "confirmPayment",
+                                "listSettlements",
+                                "openDoor",
+                                "ackDoorEvent")));
+    }
+
+    @Test
+    @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
+    void apiDocs_carriesSprint2ErrorCodes() throws Exception {
+        // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로
+        // 죽으므로(생성 타입에 값이 없어 비교 자체가 컴파일 오류다) 목록을 여기서 잠근다.
+        //
+        // ⚠️ AREA_LIMIT_EXCEEDED는 없다 — 지시서 §2.2-F가 철회했다. 그리드 전체 면적이
+        //    floorAreaM2보다 작아 그리드 경계 판정을 통과한 배치는 면적 한도를 넘을 수 없다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .value(org.hamcrest.Matchers.hasItems(
+                                "POWER_LIMIT_EXCEEDED",
+                                "FIXTURE_UNAVAILABLE",
+                                "CONTRACT_INTEGRITY_VIOLATION",
+                                "PAYMENT_ALREADY_COMPLETED",
+                                "PAYMENT_AMOUNT_MISMATCH",
+                                "LOCK_ACQUISITION_FAILED",
+                                "DOOR_NOT_YET_OPENABLE",
+                                "REFRESH_TOKEN_INVALID")))
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("AREA_LIMIT_EXCEEDED"))));
+    }
+
+    @Test
     @DisplayName("응답 봉투 → data·error가 항상 존재하는 키로 표기된다")
     void apiDocs_envelopeFieldsAreAlwaysPresent() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
@@ -241,7 +406,7 @@ class OpenApiContractTest {
         // 서버가 항상 채워 보내는 값에도 클라이언트가 옵셔널 체이닝을 써야 한다.
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(jsonPath("$.components.schemas.AuthResponse.required")
-                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "user")))
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken", "user")))
                 .andExpect(jsonPath("$.components.schemas.EstimateResponse.required")
                         .value(org.hamcrest.Matchers.containsInAnyOrder(
                                 "days", "spaceRentTotal", "fixtureRentalTotal", "deposit", "totalAmount")));

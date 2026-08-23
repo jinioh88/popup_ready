@@ -44,10 +44,13 @@ class AuthControllerTest {
     void stubAuthService() {
         // 이 슬라이스가 보는 것은 HTTP 계약(상태 코드·봉투·입력 검증)이다.
         // 가입·로그인 규칙 자체는 AuthServiceTest가, 실제 흐름은 AuthFlowTest가 맡는다.
-        AuthResponse response =
-                new AuthResponse("issued-token", new UserSummary(1L, "brand@popupready.com", "김브랜드", UserRole.BRAND));
+        AuthResponse response = new AuthResponse(
+                "issued-token",
+                "issued-refresh-token",
+                new UserSummary(1L, "brand@popupready.com", "김브랜드", UserRole.BRAND));
         given(authService.signup(any())).willReturn(response);
         given(authService.login(any())).willReturn(response);
+        given(authService.refresh(any())).willReturn(new TokenPairResponse("new-access-token", "new-refresh-token"));
     }
 
     @Test
@@ -191,6 +194,56 @@ class AuthControllerTest {
     @DisplayName("본문 없는 요청 → 400과 VALIDATION_FAILED 에러 봉투")
     void login_missingBody_returnsBadRequestWithErrorEnvelope() throws Exception {
         mockMvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    @DisplayName("정상 가입 요청 → 응답에 refreshToken이 담긴다")
+    void signup_validRequest_returnsRefreshToken() throws Exception {
+        String body =
+                """
+                {
+                  "email": "brand@popupready.com",
+                  "password": "password123",
+                  "name": "김브랜드",
+                  "role": "BRAND"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("refresh 요청 → 200과 토큰 쌍 반환")
+    void refresh_validRequest_returnsTokenPair() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                {"refreshToken": "some-refresh-token"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("refreshToken 누락 → 400")
+    void refresh_missingToken_returnsBadRequest() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                {"refreshToken": ""}
+                                """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
     }

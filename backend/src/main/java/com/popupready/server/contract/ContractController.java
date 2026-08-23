@@ -37,6 +37,7 @@ public class ContractController {
     }
 
     @Operation(
+            operationId = "createContract",
             summary = "계약서 생성",
             description = "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. "
                     + "예약 요청 상태는 CONTRACT_PENDING으로 전이된다. "
@@ -51,6 +52,7 @@ public class ContractController {
     }
 
     @Operation(
+            operationId = "getContractByReservation",
             summary = "예약 요청의 계약 조회",
             description = "예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. "
                     + "빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 "
@@ -63,6 +65,7 @@ public class ContractController {
     }
 
     @Operation(
+            operationId = "signContract",
             summary = "전자 서명",
             description = "로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. "
                     + "양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. "
@@ -75,7 +78,10 @@ public class ContractController {
         return ApiResponse.ok(contractService.sign(id, principal.userId()));
     }
 
-    @Operation(summary = "계약 열람", description = "조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. " + "당사자에게만 열린다.")
+    @Operation(
+            operationId = "getContract",
+            summary = "계약 열람",
+            description = "조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. " + "당사자에게만 열린다.")
     @GetMapping("/api/v1/contracts/{id}")
     public ApiResponse<ContractResponse> detail(
             @Parameter(description = "계약 ID", example = "1") @PathVariable Long id,

@@ -25,6 +25,14 @@ public class AuthService {
      */
     private static final String DUMMY_PASSWORD_HASH = "$2a$10$ABCDEFGHIJKLMNOPQRSTUOxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
+    /**
+     * ⚠️ <b>Phase 0 스텁 값이다. T1-1(Refresh 토큰 회전)에서 반드시 사라져야 한다.</b>
+     *
+     * <p>값을 눈에 띄게 적어 둔 것은 의도다 — 그럴듯한 임의 문자열을 내보내면 웹이 실제 토큰으로
+     * 오인해 저장하고, T1-1 이후 조용히 401을 맞는다. 이 값은 보는 즉시 스텁임이 드러난다.
+     */
+    private static final String STUB_TOKEN = "STUB-NOT-A-REAL-TOKEN";
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
@@ -72,9 +80,19 @@ public class AuthService {
         return toResponse(user);
     }
 
+    /**
+     * 토큰 재발급(§2.2-A). <b>Phase 0 스텁이다</b> — 경로·필드명·상태 코드를 확정해 웹·모바일의
+     * 블로킹을 푸는 것이 목적이고, 실제 회전·저장·재사용 감지는 T1-1에서 채운다.
+     */
+    public TokenPairResponse refresh(RefreshRequest request) {
+        return new TokenPairResponse(STUB_TOKEN, STUB_TOKEN);
+    }
+
     private AuthResponse toResponse(User user) {
         String accessToken = jwtProvider.issue(user.getId(), user.getRole());
         return new AuthResponse(
-                accessToken, new UserSummary(user.getId(), user.getEmail(), user.getName(), user.getRole()));
+                accessToken,
+                STUB_TOKEN,
+                new UserSummary(user.getId(), user.getEmail(), user.getName(), user.getRole()));
     }
 }
