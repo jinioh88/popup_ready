@@ -24,6 +24,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 토큰 재발급
+         * @description Refresh 토큰으로 Access·Refresh 토큰을 다시 받는다. 회전 방식이라 이전 Refresh 토큰은 무효가 된다.
+         */
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/signup": {
         parameters: {
             query?: never;
@@ -55,7 +75,7 @@ export interface paths {
          * 계약 열람
          * @description 조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. 당사자에게만 열린다.
          */
-        get: operations["detail_1"];
+        get: operations["getContract"];
         put?: never;
         post?: never;
         delete?: never;
@@ -77,7 +97,27 @@ export interface paths {
          * 전자 서명
          * @description 로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. 당사자가 아니면 403, 이미 서명했으면 409다.
          */
-        post: operations["sign"];
+        post: operations["signContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/door-events/{eventId}/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * MQTT 발행 결과 보고
+         * @description 모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. 이 단계가 있어야 승인 기록이 전송 기록이 된다.
+         */
+        post: operations["ackDoorEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -95,7 +135,7 @@ export interface paths {
          * 집기 라이브러리 조회
          * @description category를 주면 해당 분류만, 없으면 전체를 돌려준다.
          */
-        get: operations["list"];
+        get: operations["listFixtures"];
         put?: never;
         post?: never;
         delete?: never;
@@ -117,7 +157,27 @@ export interface paths {
          * 예약 요청 생성
          * @description 빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. 그리드 범위를 벗어나거나 집기가 겹치면 400이다.
          */
-        post: operations["create"];
+        post: operations["createReservationRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservation-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 예약 요청 단건 조회
+         * @description 견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.
+         */
+        get: operations["getReservationRequest"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -135,13 +195,93 @@ export interface paths {
          * 예약 요청의 계약 조회
          * @description 예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. 빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.
          */
-        get: operations["findByReservation"];
+        get: operations["getContractByReservation"];
         put?: never;
         /**
          * 계약서 생성
          * @description 예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다. 예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. 브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.
          */
-        post: operations["create_1"];
+        post: operations["createContract"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservation-requests/{id}/door-open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 도어 오픈 권한 검증·기록
+         * @description 예약 당사자인지와 시간창(시작 10분 전 ~ 종료) 안인지를 서버가 판정하고, 통과하면 발행할 MQTT 토픽과 페이로드를 내려준다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다.
+         */
+        post: operations["openDoor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservation-requests/{id}/payment/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 결제 승인
+         * @description 분산 락 안에서 예약 상태·기간 겹침·집기 가용량·전력 한도·금액을 재확인한 뒤 PG 승인을 호출하고, 예약을 PAID로 확정하며 분할 정산 Row를 만든다. 요청 금액은 승인 금액이 아니라 대조 대상이다.
+         */
+        post: operations["confirmPayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reservation-requests/{id}/payment/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 결제 준비
+         * @description 토스 결제 위젯에 넘길 주문 정보를 발급한다. 락을 잡지 않으며 자리를 선점하지 않는다. orderId는 호출마다 새로 발급되고 재사용하지 않는다.
+         */
+        post: operations["preparePayment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 분할 정산 내역 조회
+         * @description 결제 1건이 만든 분할 정산 Row를 모두 돌려준다. 보증금 Row는 ESCROW_HELD 상태이며 정산이 아니라 반환 대상이다.
+         */
+        get: operations["listSettlements"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -159,7 +299,7 @@ export interface paths {
          * 반경 공실 검색
          * @description 중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.
          */
-        get: operations["search"];
+        get: operations["searchSpaces"];
         put?: never;
         post?: never;
         delete?: never;
@@ -179,7 +319,27 @@ export interface paths {
          * 상가 상세
          * @description 요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.
          */
-        get: operations["detail"];
+        get: operations["getSpace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/spaces/{spaceId}/fixture-availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 날짜별 집기 가용 수량
+         * @description 해당 기간에 배치 가능한 집기 수량을 집기별로 돌려준다. 수량은 질의 기간 중 가장 많이 잡힌 날 기준이며, 다른 공간의 예약이 잡아간 수량도 함께 차감된다.
+         */
+        get: operations["getFixtureAvailability"];
         put?: never;
         post?: never;
         delete?: never;
@@ -199,7 +359,7 @@ export interface components {
              * @example VALIDATION_FAILED
              * @enum {string}
              */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_EXISTS" | "CONTRACT_ALREADY_SIGNED";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "FIXTURE_UNAVAILABLE" | "POWER_LIMIT_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_EXISTS" | "CONTRACT_ALREADY_SIGNED" | "CONTRACT_INTEGRITY_VIOLATION" | "REFRESH_TOKEN_INVALID" | "PAYMENT_ALREADY_COMPLETED" | "PAYMENT_AMOUNT_MISMATCH" | "LOCK_ACQUISITION_FAILED" | "DOOR_NOT_YET_OPENABLE";
             /**
              * @description 사람이 읽는 설명. 분기 조건으로 쓰지 말 것
              * @example email은 필수입니다
@@ -227,6 +387,27 @@ export interface components {
             error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
+        ApiResponseDoorAckResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["DoorAckResponse"] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
+        ApiResponseDoorOpenResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["DoorOpenResponse"] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
+        ApiResponseListFixtureAvailabilityResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["FixtureAvailabilityResponse"][] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
         ApiResponseListFixtureResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
             data: components["schemas"]["FixtureResponse"][] | null;
@@ -234,9 +415,30 @@ export interface components {
             error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
+        ApiResponseListSettlementResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["SettlementResponse"][] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
         ApiResponseListSpaceSummaryResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
             data: components["schemas"]["SpaceSummaryResponse"][] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
+        ApiResponsePaymentConfirmResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["PaymentConfirmResponse"] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
+        ApiResponsePaymentPrepareResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["PaymentPrepareResponse"] | null;
             /** @description 실패 시 에러 상세. 성공 시 null */
             error: components["schemas"]["ApiError"] | null;
         };
@@ -254,10 +456,19 @@ export interface components {
             /** @description 실패 시 에러 상세. 성공 시 null */
             error: components["schemas"]["ApiError"] | null;
         };
+        /** @description 공통 응답 봉투 */
+        ApiResponseTokenPairResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["TokenPairResponse"] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
         /** @description 인증 결과 */
         AuthResponse: {
             /** @description JWT Access 토큰. 이후 요청에 Bearer로 싣는다 */
             accessToken: string;
+            /** @description Refresh 토큰. 만료 시 /auth/refresh로 재발급받는다 */
+            refreshToken: string;
             /** @description 인증된 사용자 정보 */
             user: components["schemas"]["UserSummary"];
         };
@@ -346,6 +557,79 @@ export interface components {
              */
             startDate: string;
         };
+        /** @description MQTT 발행 결과 보고 */
+        DoorAckRequest: {
+            /**
+             * @description 발행 성공 여부
+             * @example true
+             */
+            success: boolean;
+        };
+        /** @description 도어 이벤트 마감 결과 */
+        DoorAckResponse: {
+            /**
+             * Format: date-time
+             * @description 보고 접수 시각(UTC)
+             */
+            ackedAt: string;
+            /**
+             * Format: int64
+             * @description 도어 이벤트 ID
+             * @example 123
+             */
+            eventId: number;
+            /**
+             * @description 마감 상태 — DELIVERED 또는 FAILED
+             * @enum {string}
+             */
+            status: "AUTHORIZED" | "DELIVERED" | "FAILED";
+        };
+        /** @description MQTT 발행 페이로드 */
+        DoorCommandPayload: {
+            /**
+             * @description 명령
+             * @example OPEN
+             */
+            action: string;
+            /**
+             * Format: int64
+             * @description 도어 이벤트 ID
+             * @example 123
+             */
+            eventId: number;
+            /**
+             * Format: date-time
+             * @description 발급 시각(UTC)
+             */
+            issuedAt: string;
+            /**
+             * Format: int64
+             * @description 예약 요청 ID
+             * @example 45
+             */
+            reservationId: number;
+        };
+        /** @description 도어 오픈 승인 결과 */
+        DoorOpenResponse: {
+            /**
+             * Format: int64
+             * @description 도어 이벤트 ID. ack에 이 값을 쓴다
+             * @example 123
+             */
+            eventId: number;
+            /** @description 발행할 페이로드. 그대로 발행한다 */
+            payload: components["schemas"]["DoorCommandPayload"];
+            /**
+             * @description 이벤트 상태. 승인 직후는 항상 AUTHORIZED다
+             * @enum {string}
+             */
+            status: "AUTHORIZED" | "DELIVERED" | "FAILED";
+            /**
+             * @description 발행할 MQTT 토픽
+             * @example popupready/locks/1/command
+             */
+            topic: string;
+        };
         /** @description 견적 내역 */
         EstimateResponse: {
             /**
@@ -378,6 +662,33 @@ export interface components {
              * @example 7350000
              */
             totalAmount: number;
+        };
+        /** @description 날짜별 집기 가용 수량 */
+        FixtureAvailabilityResponse: {
+            /**
+             * Format: int32
+             * @description 배치 가능 수량 (totalStock - reservedQty)
+             * @example 7
+             */
+            availableQty: number;
+            /**
+             * Format: int64
+             * @description 집기 ID
+             * @example 1
+             */
+            fixtureId: number;
+            /**
+             * Format: int32
+             * @description 질의 기간 중 가장 많이 잡힌 날의 예약 수량
+             * @example 3
+             */
+            reservedQty: number;
+            /**
+             * Format: int32
+             * @description 총 보유 수량
+             * @example 10
+             */
+            totalStock: number;
         };
         /** @description 모듈러 집기 */
         FixtureResponse: {
@@ -506,6 +817,74 @@ export interface components {
              */
             password: string;
         };
+        /** @description 결제 승인 요청 */
+        PaymentConfirmRequest: {
+            /**
+             * Format: int64
+             * @description 클라이언트가 본 금액(원). 서버 견적과 대조만 한다
+             * @example 6930000
+             */
+            amount?: number;
+            /** @description 결제 준비 때 받은 주문 ID */
+            orderId: string;
+            /** @description 토스가 발급한 결제 키 */
+            paymentKey: string;
+        };
+        /** @description 결제 승인 결과 */
+        PaymentConfirmResponse: {
+            /**
+             * Format: int64
+             * @description 승인된 금액(원)
+             * @example 6930000
+             */
+            amount: number;
+            /**
+             * Format: date-time
+             * @description PG 승인 시각(UTC)
+             */
+            approvedAt: string;
+            /** @description 토스 주문 ID */
+            orderId: string;
+            /**
+             * Format: int64
+             * @description 예약 요청 ID
+             * @example 1
+             */
+            reservationRequestId: number;
+            /**
+             * @description 확정된 예약 상태
+             * @enum {string}
+             */
+            reservationStatus: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+            /** @description 이 결제가 만든 분할 정산 Row */
+            settlements: components["schemas"]["SettlementResponse"][];
+            /**
+             * @description 결제 상태
+             * @enum {string}
+             */
+            status: "READY" | "PAID" | "FAILED" | "CANCELLED" | "UNKNOWN";
+        };
+        /** @description 결제 준비 결과 */
+        PaymentPrepareResponse: {
+            /**
+             * Format: int64
+             * @description 결제할 금액(원). 견적 스냅샷의 합계다
+             * @example 6930000
+             */
+            amount: number;
+            /** @description 토스 주문 ID. 호출마다 새로 발급되며 재사용하지 않는다 */
+            orderId: string;
+            /**
+             * @description 위젯에 표시할 주문명
+             * @example 성수 팝업 스페이스 14일 대여
+             */
+            orderName: string;
+        };
+        /** @description 토큰 재발급 요청 */
+        RefreshRequest: {
+            /** @description 발급받은 Refresh 토큰 */
+            refreshToken: string;
+        };
         /** @description 예약 요청 */
         ReservationRequestResponse: {
             /**
@@ -547,6 +926,43 @@ export interface components {
              * @enum {string}
              */
             status: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+        };
+        /** @description 분할 정산 Row */
+        SettlementResponse: {
+            /**
+             * Format: int64
+             * @description 원천 차감된 플랫폼 수수료(원)
+             * @example 630000
+             */
+            feeAmount: number;
+            /**
+             * Format: int64
+             * @description 정산 대상 총액(원)
+             * @example 6300000
+             */
+            grossAmount: number;
+            /**
+             * Format: int64
+             * @description 실제로 이체할 금액(원)
+             * @example 5670000
+             */
+            netAmount: number;
+            /**
+             * Format: int64
+             * @description 정산 대상 사용자 ID
+             * @example 2
+             */
+            payeeId: number;
+            /**
+             * @description 정산 상태. 보증금만 ESCROW_HELD로 생성된다
+             * @enum {string}
+             */
+            status: "PENDING" | "ESCROW_HELD" | "APPROVED" | "TRANSFERRED";
+            /**
+             * @description 정산 종류
+             * @enum {string}
+             */
+            type: "SPACE_RENT" | "FIXTURE_RENTAL" | "DEPOSIT" | "PLATFORM_FEE";
         };
         /** @description 가입 요청 */
         SignupRequest: {
@@ -678,6 +1094,13 @@ export interface components {
              */
             name: string;
         };
+        /** @description 토큰 재발급 결과 */
+        TokenPairResponse: {
+            /** @description 새 JWT Access 토큰 */
+            accessToken: string;
+            /** @description 새 Refresh 토큰. 이전 것은 무효가 된다 */
+            refreshToken: string;
+        };
         /** @description 로그인한 사용자 요약 */
         UserSummary: {
             /**
@@ -771,6 +1194,66 @@ export interface operations {
             };
         };
     };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseTokenPairResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 만료·위조·재사용된 토큰 (REFRESH_TOKEN_INVALID) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
     signup: {
         parameters: {
             query?: never;
@@ -831,7 +1314,7 @@ export interface operations {
             };
         };
     };
-    detail_1: {
+    getContract: {
         parameters: {
             query?: never;
             header?: never;
@@ -902,7 +1385,7 @@ export interface operations {
             };
         };
     };
-    sign: {
+    signContract: {
         parameters: {
             query?: never;
             header?: never;
@@ -973,7 +1456,91 @@ export interface operations {
             };
         };
     };
-    list: {
+    ackDoorEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 도어 이벤트 ID
+                 * @example 123
+                 */
+                eventId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DoorAckRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDoorAckResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    listFixtures: {
         parameters: {
             query?: {
                 /** @description 집기 분류 필터. 생략 시 전체 */
@@ -1014,7 +1581,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    createReservationRequest: {
         parameters: {
             query?: never;
             header?: never;
@@ -1092,7 +1659,78 @@ export interface operations {
             };
         };
     };
-    findByReservation: {
+    getReservationRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 예약 요청 ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseReservationRequestResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    getContractByReservation: {
         parameters: {
             query?: never;
             header?: never;
@@ -1163,7 +1801,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    createContract: {
         parameters: {
             query?: never;
             header?: never;
@@ -1234,7 +1872,313 @@ export interface operations {
             };
         };
     };
-    search: {
+    openDoor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 예약 요청 ID
+                 * @example 45
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseDoorOpenResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    confirmPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 예약 요청 ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentConfirmResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 이미 결제됨 / 기간 겹침 (PAYMENT_ALREADY_COMPLETED, FIXTURE_UNAVAILABLE) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 지원하지 않는 Content-Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 락 획득 실패 — 사용자 잘못이 아니므로 재시도를 안내한다 (LOCK_ACQUISITION_FAILED) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    preparePayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 예약 요청 ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponsePaymentPrepareResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    listSettlements: {
+        parameters: {
+            query: {
+                /**
+                 * @description 조회할 예약 요청 ID
+                 * @example 1
+                 */
+                reservationId: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListSettlementResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    searchSpaces: {
         parameters: {
             query: {
                 /**
@@ -1303,7 +2247,7 @@ export interface operations {
             };
         };
     };
-    detail: {
+    getSpace: {
         parameters: {
             query?: never;
             header?: never;
@@ -1329,6 +2273,79 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    getFixtureAvailability: {
+        parameters: {
+            query: {
+                /**
+                 * @description 사용 시작일
+                 * @example 2026-09-01
+                 */
+                startDate: string;
+                /**
+                 * @description 사용 종료일
+                 * @example 2026-09-14
+                 */
+                endDate: string;
+            };
+            header?: never;
+            path: {
+                /**
+                 * @description 대상 공간 ID
+                 * @example 1
+                 */
+                spaceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListFixtureAvailabilityResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

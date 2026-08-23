@@ -18,6 +18,7 @@ export const ERROR_CODES = [
   // auth
   "EMAIL_ALREADY_EXISTS",
   "INVALID_CREDENTIALS",
+  "REFRESH_TOKEN_INVALID",
   // space / fixture
   "SPACE_NOT_FOUND",
   "FIXTURE_NOT_FOUND",
@@ -26,11 +27,29 @@ export const ERROR_CODES = [
   "LAYOUT_OUT_OF_BOUNDS",
   "LAYOUT_OVERLAP",
   "FIXTURE_STOCK_EXCEEDED",
+  /** 날짜별 가용 수량 초과(409). `FIXTURE_STOCK_EXCEEDED`(총 재고)와 다르다. */
+  "FIXTURE_UNAVAILABLE",
+  /**
+   * 합산 소비전력이 `space.maxPowerWatt` 초과(400).
+   *
+   * **면적 초과 코드는 없다** — `AREA_LIMIT_EXCEEDED`는 sprint2.md §2.2-F로 철회됐다.
+   * 그리드 경계 판정을 통과한 배치는 면적 한도를 구조적으로 넘을 수 없어 죽은 검사였다.
+   * 면적은 게이트가 아니라 점유율 표시이며 서버가 판정하지 않는다.
+   */
+  "POWER_LIMIT_EXCEEDED",
   // contract
   "CONTRACT_NOT_FOUND",
   "NOT_CONTRACT_PARTY",
   "CONTRACT_ALREADY_EXISTS",
   "CONTRACT_ALREADY_SIGNED",
+  "CONTRACT_INTEGRITY_VIOLATION",
+  // payment
+  "PAYMENT_ALREADY_COMPLETED",
+  "PAYMENT_AMOUNT_MISMATCH",
+  /** 분산 락 획득 실패(503). **사용자 잘못이 아니다** — 재시도로 풀린다. */
+  "LOCK_ACQUISITION_FAILED",
+  // door (모바일 구간이지만 enum은 파트 공용이라 목록을 함께 맞춘다)
+  "DOOR_NOT_YET_OPENABLE",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
