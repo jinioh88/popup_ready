@@ -40,23 +40,26 @@ public class ContractController {
             summary = "계약서 생성",
             description = "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. "
                     + "예약 요청 상태는 CONTRACT_PENDING으로 전이된다. "
-                    + "예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다.")
+                    + "예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. "
+                    + "브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.")
     @PostMapping("/api/v1/reservation-requests/{id}/contract")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ContractResponse> create(
-            @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id) {
-        return ApiResponse.ok(contractService.create(id));
+            @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id,
+            @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal) {
+        return ApiResponse.ok(contractService.create(id, principal.userId()));
     }
 
     @Operation(
             summary = "예약 요청의 계약 조회",
             description = "예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. "
                     + "빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 "
-                    + "기존 계약을 되찾기 위한 경로다.")
+                    + "기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.")
     @GetMapping("/api/v1/reservation-requests/{id}/contract")
     public ApiResponse<ContractResponse> findByReservation(
-            @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id) {
-        return ApiResponse.ok(contractService.findByReservation(id));
+            @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id,
+            @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal) {
+        return ApiResponse.ok(contractService.findByReservation(id, principal.userId()));
     }
 
     @Operation(

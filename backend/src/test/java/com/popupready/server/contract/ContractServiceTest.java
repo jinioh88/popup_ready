@@ -71,7 +71,7 @@ class ContractServiceTest {
     void create_returnsClauseSnapshotWithHash() {
         givenBindableReservation();
 
-        ContractResponse response = service().create(RESERVATION_ID);
+        ContractResponse response = service().create(RESERVATION_ID, BRAND_USER_ID);
 
         assertThat(response.clauses()).isNotEmpty();
         assertThat(response.contentHash()).matches("[0-9a-f]{64}");
@@ -83,7 +83,7 @@ class ContractServiceTest {
     void create_bindsEveryPlaceholder() {
         givenBindableReservation();
 
-        assertThat(service().create(RESERVATION_ID).clauses())
+        assertThat(service().create(RESERVATION_ID, BRAND_USER_ID).clauses())
                 .allSatisfy(clause -> assertThat(clause.body()).doesNotContain("{{"));
     }
 
@@ -92,7 +92,7 @@ class ContractServiceTest {
     void create_movesReservationToContractPending() {
         givenBindableReservation();
 
-        service().create(RESERVATION_ID);
+        service().create(RESERVATION_ID, BRAND_USER_ID);
 
         verify(reservationRequestService).markContractPending(RESERVATION_ID);
     }
@@ -100,9 +100,13 @@ class ContractServiceTest {
     @Test
     @DisplayName("이미 계약이 있는 예약에 재생성 → 409로 거부하고 저장하지 않는다")
     void create_whenContractExists_isRejected() {
+        given(reservationRequestService.findParties(RESERVATION_ID)).willReturn(parties());
+        given(partyLookup.of(parties()))
+                .willReturn(new ContractParties(
+                        BRAND_USER_ID, LANDLORD_USER_ID, "김브랜드", "박건물주", "성수 연무장길 팝업 1층", "서울 성동구 연무장길 45"));
         given(contractRepository.existsByReservationRequestId(RESERVATION_ID)).willReturn(true);
 
-        assertThatThrownBy(() -> service().create(RESERVATION_ID))
+        assertThatThrownBy(() -> service().create(RESERVATION_ID, BRAND_USER_ID))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.CONTRACT_ALREADY_EXISTS);
@@ -115,7 +119,7 @@ class ContractServiceTest {
         Contract existing = contract();
         given(contractRepository.findByReservationRequestId(RESERVATION_ID)).willReturn(Optional.of(existing));
 
-        assertThat(service().findByReservation(RESERVATION_ID).reservationRequestId())
+        assertThat(service().findByReservation(RESERVATION_ID, BRAND_USER_ID).reservationRequestId())
                 .isEqualTo(RESERVATION_ID);
     }
 
@@ -124,7 +128,7 @@ class ContractServiceTest {
     void findByReservation_missing_isNotFound() {
         given(contractRepository.findByReservationRequestId(RESERVATION_ID)).willReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service().findByReservation(RESERVATION_ID))
+        assertThatThrownBy(() -> service().findByReservation(RESERVATION_ID, BRAND_USER_ID))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.CONTRACT_NOT_FOUND);
@@ -214,5 +218,42 @@ class ContractServiceTest {
                                 630_000L,
                                 7_350_000L)),
                 NOW);
+    }
+
+    @Test
+    @DisplayName("제3자가 남의 예약으로 계약 생성 → 403으로 거부한다")
+    void create_byNonParty_isForbidden() {
+        // Security는 '인증됐는가'까지만 본다. 여기서 막지 않으면 아무 로그인 계정이나
+        // 남의 예약에 계약을 만들어 붙일 수 있다.
+        given(reservationRequestService.findParties(RESERVATION_ID)).willReturn(parties());
+        given(partyLookup.of(parties()))
+                .willReturn(new ContractParties(
+                        BRAND_USER_ID, LANDLORD_USER_ID, "김브랜드", "박건물주", "성수 연무장길 팝업 1층", "서울 성동구 연무장길 45"));
+
+        assertThatThrownBy(() -> service().create(RESERVATION_ID, 999L))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_CONTRACT_PARTY);
+        verify(contractRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("건물주도 계약을 생성할 수 있다(양쪽 모두 당사자다)")
+    void create_byLandlord_isAllowed() {
+        givenBindableReservation();
+
+        assertThat(service().create(RESERVATION_ID, LANDLORD_USER_ID).status()).isEqualTo(ContractStatus.PENDING);
+    }
+
+    @Test
+    @DisplayName("제3자가 예약으로 계약 조회 → 403으로 거부한다(계약 전문이 새면 안 된다)")
+    void findByReservation_byNonParty_isForbidden() {
+        // contractId를 몰라도 reservationId만 알면 계약 전문을 통째로 읽을 수 있는 경로였다.
+        given(contractRepository.findByReservationRequestId(RESERVATION_ID)).willReturn(Optional.of(contract()));
+
+        assertThatThrownBy(() -> service().findByReservation(RESERVATION_ID, 999L))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.NOT_CONTRACT_PARTY);
     }
 }

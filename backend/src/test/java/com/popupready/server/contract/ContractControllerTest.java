@@ -79,7 +79,7 @@ class ContractControllerTest {
     @Test
     @DisplayName("예약 요청에 대한 계약 생성 → 201과 계약 반환")
     void create_returnsCreatedContract() throws Exception {
-        given(contractService.create(1L)).willReturn(sample(ContractStatus.PENDING, null));
+        given(contractService.create(1L, TOKEN_USER_ID)).willReturn(sample(ContractStatus.PENDING, null));
 
         mockMvc.perform(post("/api/v1/reservation-requests/1/contract"))
                 .andExpect(status().isCreated())
@@ -91,7 +91,7 @@ class ContractControllerTest {
     @Test
     @DisplayName("계약 생성 → 명칭은 '단기 공간사용 제휴계약'으로 고정된다")
     void create_hasFixedTitle() throws Exception {
-        given(contractService.create(1L)).willReturn(sample(ContractStatus.PENDING, null));
+        given(contractService.create(1L, TOKEN_USER_ID)).willReturn(sample(ContractStatus.PENDING, null));
 
         mockMvc.perform(post("/api/v1/reservation-requests/1/contract"))
                 .andExpect(jsonPath("$.data.title").value("단기 공간사용 제휴계약"));
@@ -100,7 +100,7 @@ class ContractControllerTest {
     @Test
     @DisplayName("계약 생성 → 상태는 서명 대기(PENDING)")
     void create_startsPending() throws Exception {
-        given(contractService.create(1L)).willReturn(sample(ContractStatus.PENDING, null));
+        given(contractService.create(1L, TOKEN_USER_ID)).willReturn(sample(ContractStatus.PENDING, null));
 
         mockMvc.perform(post("/api/v1/reservation-requests/1/contract"))
                 .andExpect(jsonPath("$.data.status").value("PENDING"));
@@ -111,7 +111,7 @@ class ContractControllerTest {
     void create_whenExists_returnsConflictEnvelope() throws Exception {
         willThrow(new ApiException(ErrorCode.CONTRACT_ALREADY_EXISTS, "이미 계약이 있습니다"))
                 .given(contractService)
-                .create(1L);
+                .create(1L, TOKEN_USER_ID);
 
         mockMvc.perform(post("/api/v1/reservation-requests/1/contract"))
                 .andExpect(status().isConflict())
@@ -121,7 +121,7 @@ class ContractControllerTest {
     @Test
     @DisplayName("예약 요청으로 계약 조회 → 200과 기존 계약 반환")
     void findByReservation_returnsExistingContract() throws Exception {
-        given(contractService.findByReservation(1L)).willReturn(sample(ContractStatus.PENDING, null));
+        given(contractService.findByReservation(1L, TOKEN_USER_ID)).willReturn(sample(ContractStatus.PENDING, null));
 
         mockMvc.perform(get("/api/v1/reservation-requests/1/contract"))
                 .andExpect(status().isOk())
@@ -133,7 +133,7 @@ class ContractControllerTest {
     void findByReservation_missing_returnsNotFoundEnvelope() throws Exception {
         willThrow(new ApiException(ErrorCode.CONTRACT_NOT_FOUND, "아직 계약이 없습니다"))
                 .given(contractService)
-                .findByReservation(1L);
+                .findByReservation(1L, TOKEN_USER_ID);
 
         mockMvc.perform(get("/api/v1/reservation-requests/1/contract"))
                 .andExpect(status().isNotFound())
@@ -183,6 +183,30 @@ class ContractControllerTest {
         mockMvc.perform(post("/api/v1/contracts/1/sign"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("CONTRACT_ALREADY_SIGNED"));
+    }
+
+    @Test
+    @DisplayName("제3자가 예약으로 계약 조회 → 403과 NOT_CONTRACT_PARTY")
+    void findByReservation_byNonParty_returnsForbiddenEnvelope() throws Exception {
+        willThrow(new ApiException(ErrorCode.NOT_CONTRACT_PARTY, "당사자가 아닙니다"))
+                .given(contractService)
+                .findByReservation(1L, TOKEN_USER_ID);
+
+        mockMvc.perform(get("/api/v1/reservation-requests/1/contract"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_CONTRACT_PARTY"));
+    }
+
+    @Test
+    @DisplayName("제3자가 남의 예약으로 계약 생성 → 403과 NOT_CONTRACT_PARTY")
+    void create_byNonParty_returnsForbiddenEnvelope() throws Exception {
+        willThrow(new ApiException(ErrorCode.NOT_CONTRACT_PARTY, "당사자가 아닙니다"))
+                .given(contractService)
+                .create(1L, TOKEN_USER_ID);
+
+        mockMvc.perform(post("/api/v1/reservation-requests/1/contract"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_CONTRACT_PARTY"));
     }
 
     @Test

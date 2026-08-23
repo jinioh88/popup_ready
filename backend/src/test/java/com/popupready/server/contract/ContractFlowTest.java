@@ -272,4 +272,49 @@ class ContractFlowTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("CONTRACT_ALREADY_SIGNED"));
     }
+
+    @Test
+    @DisplayName("제3자가 남의 예약으로 계약 생성 → 403(웹 라우트 진입만으로 POST가 나가는 경로의 유일한 방어선)")
+    void create_byNonParty_isForbidden() throws Exception {
+        long outsiderId = signup("flowtest-outsider3@popupready.com", "제3자", UserRole.BRAND);
+
+        mockMvc.perform(post("/api/v1/reservation-requests/%d/contract".formatted(reservationId))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(outsiderId, UserRole.BRAND)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_CONTRACT_PARTY"));
+    }
+
+    @Test
+    @DisplayName("제3자가 예약으로 계약 조회 → 403(계약 전문이 새면 안 된다)")
+    void findByReservation_byNonParty_isForbidden() throws Exception {
+        contractId();
+        long outsiderId = signup("flowtest-outsider4@popupready.com", "제3자", UserRole.BRAND);
+
+        mockMvc.perform(get("/api/v1/reservation-requests/%d/contract".formatted(reservationId))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(outsiderId, UserRole.BRAND)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_CONTRACT_PARTY"));
+    }
+
+    @Test
+    @DisplayName("제3자에게는 계약 존재 여부도 새지 않는다 → 계약이 있든 없든 403이다")
+    void create_byNonParty_doesNotLeakExistence() throws Exception {
+        // 자격 확인이 중복 확인보다 뒤에 있으면 403/409의 차이로 "저 예약에 계약이 있는가"를
+        // 알아낼 수 있다. 계약을 만든 뒤에도 제3자에게는 똑같이 403이어야 한다.
+        contractId();
+        long outsiderId = signup("flowtest-outsider5@popupready.com", "제3자", UserRole.BRAND);
+
+        mockMvc.perform(post("/api/v1/reservation-requests/%d/contract".formatted(reservationId))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(outsiderId, UserRole.BRAND)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_CONTRACT_PARTY"));
+    }
+
+    @Test
+    @DisplayName("건물주가 계약을 생성해도 된다 → 양쪽 모두 당사자다")
+    void create_byLandlord_isAllowed() throws Exception {
+        mockMvc.perform(post("/api/v1/reservation-requests/%d/contract".formatted(reservationId))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(landlordUserId, UserRole.LANDLORD)))
+                .andExpect(status().isCreated());
+    }
 }
