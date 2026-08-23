@@ -15,7 +15,15 @@ services:
     image: redis:7-alpine
     container_name: popupready-redis
     ports:
-      - "6379:6379"
+      # ⚠️ 6380이다. 되돌리지 말 것 (2026-08-23).
+      #    이 머신의 6379는 다른 프로젝트(mvno-backoffice-redis)가 이미 잡고 있어서
+      #    popupready-redis가 조용히 뜨지 못했고(Created 상태로 남는다), 백엔드의
+      #    localhost:6379 접속이 남의 Redis로 흘러들어가 refresh 토큰·패밀리·재사용 감지
+      #    상태가 전부 그쪽에 저장되고 있었다. 컨테이너 목록에는 popupready-redis가
+      #    보이므로 아무도 이상을 눈치채지 못한다 — 그쪽이 재시작하거나 FLUSHALL 하면
+      #    PopupReady 전 세션이 이유 없이 끊긴다.
+      #    남의 프로젝트를 멈추지 않고 우리가 비키는 쪽을 택했다.
+      - "6380:6379"
 
   mosquitto:
     image: eclipse-mosquitto:2

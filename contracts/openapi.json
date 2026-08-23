@@ -630,7 +630,10 @@
               "enum": [
                 "DRAFT",
                 "CONTRACT_PENDING",
-                "CONTRACT_SIGNED"
+                "CONTRACT_SIGNED",
+                "PAYMENT_PENDING",
+                "PAID",
+                "CANCELLED"
               ]
             }
           }
@@ -2844,7 +2847,10 @@
             "enum": [
               "DRAFT",
               "CONTRACT_PENDING",
-              "CONTRACT_SIGNED"
+              "CONTRACT_SIGNED",
+              "PAYMENT_PENDING",
+              "PAID",
+              "CANCELLED"
             ]
           },
           "settlements": {
@@ -2964,7 +2970,10 @@
             "enum": [
               "DRAFT",
               "CONTRACT_PENDING",
-              "CONTRACT_SIGNED"
+              "CONTRACT_SIGNED",
+              "PAYMENT_PENDING",
+              "PAID",
+              "CANCELLED"
             ]
           }
         },
