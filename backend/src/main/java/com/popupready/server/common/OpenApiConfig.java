@@ -56,7 +56,9 @@ public class OpenApiConfig {
      * 실패 경로도 계약이다. 컨트롤러 시그니처만으로는 성공 응답밖에 문서화되지 않아,
      * {@link GlobalExceptionHandler}가 실제로 내보내는 400·500 봉투를 모든 오퍼레이션에 얹는다.
      *
-     * <p>인증이 붙는 Phase 2(T2-2)에서 보호 엔드포인트에 401을 같은 방식으로 추가한다.
+     * <p>401은 인증 필요 여부({@link PublicEndpoints}), 403은 역할·당사자 제한
+     * ({@link RestrictedEndpoints})을 기준으로 붙인다. 두 목록 모두 Security 설정이 보는 것과
+     * 같은 것이라 문서와 실제 동작이 갈라지지 않는다.
      */
     @Bean
     public OpenApiCustomizer errorResponseCustomizer() {
@@ -71,6 +73,11 @@ public class OpenApiConfig {
                         if (!PublicEndpoints.isPublic(path, method.name())) {
                             responses.addApiResponse("401", errorResponse("인증이 필요함"));
                             operation.addSecurityItem(new SecurityRequirement().addList(BEARER_AUTH));
+                        }
+                        // 403은 인증과 다른 축이다 — 로그인은 됐는데 역할이 아니거나 당사자가
+                        // 아닌 경우다. 판별 기준은 Security 설정과 같은 RestrictedEndpoints다.
+                        if (RestrictedEndpoints.canReturnForbidden(path, method.name())) {
+                            responses.addApiResponse("403", errorResponse("역할 또는 당사자 자격이 없음"));
                         }
                         // 404·415는 실제로 그 오퍼레이션의 응답인 곳에만 붙인다. 목록 조회에 404를,
                         // 본문 없는 GET에 415를 달면 문서가 거짓말을 한다.

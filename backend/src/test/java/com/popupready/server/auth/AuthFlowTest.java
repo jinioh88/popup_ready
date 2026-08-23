@@ -1,5 +1,6 @@
 package com.popupready.server.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -62,13 +63,24 @@ class AuthFlowTest {
         return JsonPath.read(body, "$.data.accessToken");
     }
 
+    /**
+     * 이 테스트가 볼 것은 <b>토큰이 인증 필터를 통과하는가</b>다. 그래서 보호 경로의 업무 결과
+     * (계약이 실제로 있는지)가 아니라 401이 아닌 것만 확인한다 — 여기서 200을 기대하면 인증
+     * 테스트가 계약 도메인의 데이터에 묶여 조용히 깨진다(T5-3에서 실제로 그렇게 됐다).
+     */
+    private void assertPassesAuthentication(String token) throws Exception {
+        mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(result -> assertThat(result.getResponse().getStatus())
+                        .as("인증 필터에 막히지 않아야 한다")
+                        .isNotEqualTo(401));
+    }
+
     @Test
     @DisplayName("가입 → 발급된 토큰으로 보호 API 호출이 통과한다")
     void signup_thenAccessProtectedApi() throws Exception {
         String token = signupAndGetToken();
 
-        mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk());
+        assertPassesAuthentication(token);
     }
 
     @Test
@@ -98,8 +110,7 @@ class AuthFlowTest {
                 .getContentAsString();
         String token = JsonPath.read(body, "$.data.accessToken");
 
-        mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk());
+        assertPassesAuthentication(token);
     }
 
     @Test

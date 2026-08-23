@@ -37,6 +37,19 @@ public class SpaceService {
         return toDetail(space);
     }
 
+    /**
+     * 공간 소유자(건물주) 식별자. 계약의 당사자를 정하는 데 쓴다(US-202).
+     *
+     * <p><b>API 응답에는 넣지 않는다.</b> {@code GET /spaces/{id}}는 로그인 없이 열려 있어
+     * 소유자 사용자 ID가 그대로 공개되기 때문이다 — 내부 조회 창구로만 연다.
+     */
+    public Long ownerIdOf(Long spaceId) {
+        return spaceRepository
+                .findById(spaceId)
+                .map(Space::getOwnerId)
+                .orElseThrow(() -> new ApiException(ErrorCode.SPACE_NOT_FOUND, "공간을 찾을 수 없습니다"));
+    }
+
     private static SpaceSummaryResponse toSummary(Space space) {
         return new SpaceSummaryResponse(
                 space.getId(),

@@ -20,6 +20,11 @@ public class UserService {
         this.userRepository = userRepository;
     }
 
+    /** 계약서에 당사자 이름을 적기 위한 조회(US-202). 없는 사용자는 빈 값이다. */
+    public Optional<String> findNameById(Long userId) {
+        return userRepository.findById(userId).map(User::getName);
+    }
+
     /** 시드·소유자 연결에 쓰는 식별자 조회. 없으면 빈 값이다. */
     public Optional<Long> findIdByEmail(String email) {
         return userRepository.findByEmail(email).map(User::getId);

@@ -117,10 +117,15 @@ class SecurityAccessTest {
     }
 
     @Test
-    @DisplayName("건물주 역할로 계약 열람 → 허용된다(계약은 양 당사자가 본다)")
+    @DisplayName("건물주 역할로 계약 열람 → 역할로는 막히지 않는다(계약은 양 당사자가 본다)")
     void contractRead_withLandlordRole_isAllowed() throws Exception {
+        // 계약 열람은 역할이 아니라 '당사자인가'로 갈린다. 여기서 볼 것은 Security 설정이 건물주
+        // 역할을 통째로 막지 않는다는 것뿐이고, 당사자 판정은 ContractServiceTest가 본다.
+        // 실제 열람 결과(존재하지 않는 계약이면 404)에 이 보안 테스트를 묶지 않는다.
         mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, bearer(UserRole.LANDLORD)))
-                .andExpect(status().isOk());
+                .andExpect(result -> assertThat(result.getResponse().getStatus())
+                        .as("역할 때문에 막히면 안 된다")
+                        .isNotIn(401, 403));
     }
 
     @Test

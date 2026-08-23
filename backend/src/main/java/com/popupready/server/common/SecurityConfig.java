@@ -1,7 +1,6 @@
 package com.popupready.server.common;
 
 import com.popupready.server.auth.JwtAuthenticationFilter;
-import com.popupready.server.auth.UserRole;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -39,21 +38,25 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(formLogin -> formLogin.disable())
-                // 공개 경로 목록은 PublicEndpoints가 단일 진실이다 — OpenAPI 문서도 같은 목록을 본다.
-                .authorizeHttpRequests(auth -> auth.requestMatchers(PublicEndpoints.AUTH_ANT)
-                        .permitAll()
-                        .requestMatchers(HttpMethod.GET, PublicEndpoints.DISCOVERY_GET_ANT)
-                        .permitAll()
-                        .requestMatchers(PublicEndpoints.DOCS_ANT)
-                        .permitAll()
-                        // 예약을 만드는 것은 브랜드 운영자다. 인증만 통과하면 누구나 되는 상태로 두면
-                        // 건물주·공급사 계정으로도 예약이 생성된다.
-                        .requestMatchers(HttpMethod.POST, "/api/v1/reservation-requests")
-                        .hasRole(UserRole.BRAND.name())
-                        // 계약 열람·서명은 역할이 아니라 '당사자인가'로 갈린다. 브랜드와 건물주 양쪽이
-                        // 접근해야 하므로 여기서는 인증까지만 보고, 당사자 검증은 T5-3이 맡는다.
-                        .anyRequest()
-                        .authenticated())
+                // 공개 경로 목록은 PublicEndpoints가, 역할 제한 목록은 RestrictedEndpoints가
+                // 단일 진실이다 — OpenAPI 문서의 401·403 표기도 같은 목록을 본다.
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(PublicEndpoints.AUTH_ANT)
+                            .permitAll()
+                            .requestMatchers(HttpMethod.GET, PublicEndpoints.DISCOVERY_GET_ANT)
+                            .permitAll()
+                            .requestMatchers(PublicEndpoints.DOCS_ANT)
+                            .permitAll();
+                    // 예: 예약을 만드는 것은 브랜드 운영자다. 인증만 통과하면 누구나 되는 상태로
+                    // 두면 건물주·공급사 계정으로도 예약이 생성된다.
+                    for (RestrictedEndpoints.RoleRule rule : RestrictedEndpoints.ROLE_RULES) {
+                        auth.requestMatchers(rule.method(), rule.antPattern())
+                                .hasRole(rule.role().name());
+                    }
+                    // 계약 열람·서명은 역할이 아니라 '당사자인가'로 갈린다. 브랜드와 건물주 양쪽이
+                    // 접근해야 하므로 여기서는 인증까지만 보고, 당사자 검증은 ContractService가 한다.
+                    auth.anyRequest().authenticated();
+                })
                 // 401·403은 필터 단계라 GlobalExceptionHandler가 잡지 못한다. 봉투 형태를 여기서 맞춘다.
                 .exceptionHandling(handling -> handling.authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))

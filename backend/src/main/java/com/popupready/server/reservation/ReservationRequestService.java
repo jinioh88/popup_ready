@@ -67,6 +67,43 @@ public class ReservationRequestService {
         return toResponse(saved);
     }
 
+    /**
+     * 계약 바인딩용 읽기 모델(US-202). {@code contract}가 예약을 들여다보는 유일한 창구다.
+     *
+     * <p>금액은 저장된 값을 그대로 옮긴다 — 여기서 다시 계산하면 계약서와 예약 금액이 갈라진다.
+     */
+    @Transactional(readOnly = true)
+    public ReservationParties findParties(Long reservationRequestId) {
+        ReservationRequest request = require(reservationRequestId);
+        EstimateResponse estimate = request.getEstimate();
+        return new ReservationParties(
+                request.getId(),
+                request.getSpaceId(),
+                request.getBrandUserId(),
+                request.getStartDate(),
+                request.getEndDate(),
+                estimate.days(),
+                estimate.spaceRentTotal(),
+                estimate.deposit(),
+                estimate.totalAmount());
+    }
+
+    /** 계약서가 만들어졌다(US-202). 잘못된 전이는 엔티티가 막는다. */
+    public void markContractPending(Long reservationRequestId) {
+        require(reservationRequestId).markContractPending();
+    }
+
+    /** 양 당사자 서명이 끝났다(US-202). */
+    public void markContractSigned(Long reservationRequestId) {
+        require(reservationRequestId).markContractSigned();
+    }
+
+    private ReservationRequest require(Long reservationRequestId) {
+        return reservationRequestRepository
+                .findById(reservationRequestId)
+                .orElseThrow(() -> new ApiException(ErrorCode.RESERVATION_REQUEST_NOT_FOUND, "예약 요청을 찾을 수 없습니다"));
+    }
+
     /** 판정 기준이 되는 도면은 요청이 아니라 공간이 가진 값이다. */
     private static GridSpec gridOf(SpaceDetailResponse space) {
         return new GridSpec(space.gridCols(), space.gridRows(), space.cellSizeMm());
