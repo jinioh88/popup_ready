@@ -35,16 +35,34 @@ export const DEFAULT_SEARCH: SpaceSearchState = {
   radius: 1000,
 };
 
-/** 검색 상태 → API 쿼리 파라미터. 비어 있는 필터는 보내지 않는다. */
+/**
+ * 검색 상태 → API 쿼리 파라미터. 비어 있는 필터는 보내지 않는다.
+ *
+ * **0은 "제한 없음"으로 읽어 파라미터를 빼고 보낸다** (2026-08-23 사용자 인수 테스트).
+ * 세 필터는 모두 선택적 경계값이고, 0에는 쓸모 있는 검색 의미가 없다 —
+ * `minArea`·`minPower`의 0은 모든 값이 통과하므로 미전송과 결과가 같고(무의미),
+ * `maxRent`의 0은 "일일 대여료 0원 이하"라 **반드시 빈 결과**가 된다.
+ * 사용자가 상한을 스피너로 내려 0에 닿으면(`min`이 0이라 거기서 멈춘다) 화면이 조용히
+ * 비고, 그 뒤로 다른 필터를 어떻게 바꿔도 결과가 그대로여서 "필터가 안 먹는다"로 보인다.
+ * 0을 해제로 읽으면 그 상태 자체가 생기지 않고, 스피너를 0까지 내리는 동작이 곧
+ * "상한 없앰"이 되어 입력칸의 `제한 없음` 안내와도 말이 맞는다.
+ *
+ * 서버 계약은 그대로다 — 선택적 파라미터를 빼고 보내는 것은 언제나 유효하다.
+ */
 export function toSearchParams(state: SpaceSearchState): SpaceSearchParams {
   return {
     lat: state.lat,
     lng: state.lng,
     radius: state.radius,
-    minArea: state.minArea,
-    maxRent: state.maxRent,
-    minPower: state.minPower,
+    minArea: withoutZero(state.minArea),
+    maxRent: withoutZero(state.maxRent),
+    minPower: withoutZero(state.minPower),
   };
+}
+
+/** 0을 "제한 없음"으로 접는다. 위 주석의 근거를 한 곳에서만 적용하기 위한 것. */
+function withoutZero(value: number | undefined): number | undefined {
+  return value === 0 ? undefined : value;
 }
 
 /**

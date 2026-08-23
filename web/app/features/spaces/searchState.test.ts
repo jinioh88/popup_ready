@@ -42,8 +42,29 @@ describe("toSearchParams", () => {
     });
   });
 
-  it("0은 유효한 필터 값이라 빠뜨리지 않는다", () => {
-    expect(toSearchParams({ ...DEFAULT_SEARCH, minPower: 0 }).minPower).toBe(0);
+  /**
+   * 0은 "제한 없음"이다. 특히 `maxRent: 0`을 그대로 보내면 "0원 이하"라 반드시 빈 결과가
+   * 나오고, 사용자는 그 뒤 어떤 필터를 만져도 결과가 안 바뀌는 상태에 갇힌다
+   * (2026-08-23 인수 테스트에서 실제로 발생). 근거는 `toSearchParams` 주석.
+   */
+  it("0은 제한 없음으로 읽어 파라미터에서 뺀다", () => {
+    const params = toSearchParams({ ...DEFAULT_SEARCH, minArea: 0, maxRent: 0, minPower: 0 });
+
+    expect(params.minArea).toBeUndefined();
+    expect(params.maxRent).toBeUndefined();
+    expect(params.minPower).toBeUndefined();
+  });
+
+  it("0으로 내린 필터는 아무것도 넣지 않은 상태와 같은 요청이 된다", () => {
+    const zeroed = toSearchParams({ ...DEFAULT_SEARCH, minArea: 0, maxRent: 0, minPower: 0 });
+
+    expect(JSON.stringify(zeroed)).toBe(JSON.stringify(toSearchParams(DEFAULT_SEARCH)));
+  });
+
+  it("0이 아닌 값은 그대로 보낸다 — 해제 처리가 유효한 경계값까지 삼키면 안 된다", () => {
+    const params = toSearchParams({ ...DEFAULT_SEARCH, minArea: 1, maxRent: 1, minPower: 1 });
+
+    expect(params).toMatchObject({ minArea: 1, maxRent: 1, minPower: 1 });
   });
 });
 

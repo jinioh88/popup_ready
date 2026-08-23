@@ -22,6 +22,7 @@ export function SpaceMapView({
   spaces,
   selectedId,
   onSelect,
+  isLoading,
   isError,
   center,
   onCenterChange,
@@ -83,6 +84,17 @@ export function SpaceMapView({
           </Map>
         )}
       </div>
+
+      {/*
+        결과가 0건일 때 지도는 그냥 빈 지도라 **이유를 말해주지 않는다** — 리스트 폴백에만
+        안내가 있어서, 필터를 잘못 좁힌 사용자가 "검색이 고장났다"로 읽었다
+        (2026-08-23 인수 테스트). 조건 때문이라는 것과 다음 행동을 같이 알려준다.
+      */}
+      {!isLoading && !isError && spaces.length === 0 ? (
+        <p className="text-caption text-text-muted">
+          조건에 맞는 공실이 없습니다. 반경을 넓히거나 필터를 완화해 보세요.
+        </p>
+      ) : null}
 
       <p className="text-caption text-text-muted">
         마커 {spaces.length}개 · 지도를 움직이면 그 중심으로 다시 찾습니다.
