@@ -4,7 +4,7 @@ import { Card } from "../components/ui/Card";
 import { PaymentFailureCard } from "../features/payment/PaymentFailureCard";
 import { PaymentSummary } from "../features/payment/PaymentSummary";
 import { PaymentMethodPanel } from "../features/payment/PaymentMethodPanel";
-import { paymentFailure } from "../features/payment/failureMessage";
+import { allowsAnotherAttempt, paymentFailure } from "../features/payment/failureMessage";
 import { usePayReservation, useReservation } from "../features/payment/queries";
 
 export function meta() {
@@ -36,6 +36,16 @@ export default function PaymentRoute() {
   }
 
   const reservation = reservationQuery.data;
+  const failure = payment.isError ? paymentFailure(payment.error) : null;
+
+  /**
+   * 결제 수단을 계속 보여줘도 되는가.
+   *
+   * **실패 카드에서 재시도 버튼을 빼는 것만으로는 부족하다** — 경고 바로 아래에 동작하는
+   * 결제 폼이 남아 있으면 사용자는 그것을 누른다. 직전 결과를 모르는 실패에서는
+   * 결제 수단 자체를 치운다.
+   */
+  const canPayHere = !payment.isSuccess && (failure === null || allowsAnotherAttempt(failure));
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-6">
@@ -48,25 +58,23 @@ export default function PaymentRoute() {
 
       <PaymentSummary reservation={reservation} />
 
-      {payment.isError ? (
+      {failure ? (
         <PaymentFailureCard
-          failure={paymentFailure(payment.error)}
+          failure={failure}
           reservationId={numericId}
           spaceId={reservation.spaceId}
-          onRetry={payment.reset}
-          isRetrying={payment.isPending}
         />
       ) : null}
 
-      {payment.isSuccess ? (
-        <PaymentResult confirm={payment.data} />
-      ) : (
+      {payment.isSuccess ? <PaymentResult confirm={payment.data} /> : null}
+
+      {canPayHere ? (
         <PaymentMethodPanel
           status={reservation.status}
           isPending={payment.isPending}
           onPay={(paymentKey) => payment.mutate({ paymentKey })}
         />
-      )}
+      ) : null}
     </main>
   );
 }

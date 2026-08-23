@@ -149,3 +149,17 @@ export function paymentFailure(error: unknown): PaymentFailure {
 
   return (error.code !== "UNKNOWN" && FAILURES[error.code]) || UNKNOWN_FAILURE;
 }
+
+/**
+ * 이 실패 뒤에 **같은 화면에서 결제를 다시 시도해도 되는가.**
+ *
+ * 화면은 이 값으로 결제 수단 패널의 노출을 정한다. 재시도 버튼을 없애는 것만으로는
+ * 부족하다 — **결제 폼이 그대로 남아 있으면 버튼을 없앤 의미가 없다.** 경고 바로 아래에
+ * 동작하는 결제 버튼이 있으면 사용자는 그것을 누른다.
+ *
+ * `PAYMENT_RESULT_UNKNOWN`·`ORDER_ID_ALREADY_USED`처럼 **직전 결과를 모르는** 상태에서
+ * 한 번 더 시도하면 이중 청구가 된다. 그 상태에서는 결제 수단 자체를 치운다.
+ */
+export function allowsAnotherAttempt(failure: PaymentFailure): boolean {
+  return failure.recovery === "retry";
+}

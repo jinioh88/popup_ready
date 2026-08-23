@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 
@@ -10,7 +10,6 @@ import { ApiRequestError } from "../../lib/api/client";
 afterEach(cleanup);
 
 function renderFailure(code: string, status = 400) {
-  const onRetry = vi.fn();
   const router = createMemoryRouter(
     [
       {
@@ -20,7 +19,6 @@ function renderFailure(code: string, status = 400) {
             failure={paymentFailure(new ApiRequestError(status, code, "서버 문구"))}
             reservationId={7}
             spaceId={24}
-            onRetry={onRetry}
           />
         ),
       },
@@ -29,28 +27,31 @@ function renderFailure(code: string, status = 400) {
   );
 
   render(<RouterProvider router={router} />);
-  return onRetry;
 }
 
-describe("PaymentFailureCard — 재시도 버튼의 유무", () => {
-  it("락 실패에는 재시도 버튼을 준다", () => {
+describe("PaymentFailureCard — 재시도 경로 안내", () => {
+  it("다시 시도해도 되는 실패는 아래 패널을 가리킨다", () => {
+    // 카드 자체에는 재시도 버튼을 두지 않는다 — 같은 일을 하는 것이 둘이 되면 갈라진다.
     renderFailure("LOCK_ACQUISITION_FAILED", 503);
 
-    expect(screen.getByRole("button", { name: "다시 결제하기" })).toBeTruthy();
+    expect(screen.getByText(/아래 결제 수단에서 다시 시도/)).toBeTruthy();
   });
 
-  it("승인 여부 불명에는 재시도 버튼을 주지 않는다", () => {
-    // 같은 503이지만 이 버튼이 곧 이중 결제다.
+  it("승인 여부 불명에는 재시도를 권하지 않는다", () => {
     renderFailure("PAYMENT_RESULT_UNKNOWN", 503);
 
-    expect(screen.queryByRole("button", { name: "다시 결제하기" })).toBeNull();
+    expect(screen.queryByText(/다시 시도/)).toBeNull();
     expect(screen.getByRole("link", { name: "예약 상세 확인" })).toBeTruthy();
   });
 
-  it("모르는 실패에도 재시도 버튼을 주지 않는다", () => {
-    renderFailure("INTERNAL_ERROR", 500);
+  it("어떤 실패 카드에도 결제를 실행하는 버튼이 없다", () => {
+    // 결제를 실행하는 곳은 결제 수단 패널 하나뿐이어야 한다.
+    for (const code of ["LOCK_ACQUISITION_FAILED", "PAYMENT_RESULT_UNKNOWN", "PAYMENT_DECLINED"]) {
+      cleanup();
+      renderFailure(code, 503);
 
-    expect(screen.queryByRole("button", { name: "다시 결제하기" })).toBeNull();
+      expect(screen.queryByRole("button", { name: /결제하기/ })).toBeNull();
+    }
   });
 });
 

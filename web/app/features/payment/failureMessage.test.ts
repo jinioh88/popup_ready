@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { paymentFailure } from "./failureMessage";
+import { allowsAnotherAttempt, paymentFailure } from "./failureMessage";
 import { ApiRequestError } from "../../lib/api/client";
 import { ERROR_CODES } from "../../lib/api/error-codes";
 
@@ -138,5 +138,37 @@ describe("paymentFailure — 모르는 실패", () => {
       expect(failure.title.length).toBeGreaterThan(0);
       expect(failure.description.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("allowsAnotherAttempt — 결제 수단을 계속 보여줘도 되는가", () => {
+  it("직전 결과를 모르는 실패에서는 결제 수단을 치운다", () => {
+    // **재시도 버튼을 없애는 것만으로는 부족하다** — 경고 바로 아래에 동작하는 결제 폼이
+    // 남아 있으면 사용자는 그것을 누른다. 버튼만 없앤 보호는 보호가 아니다.
+    for (const code of ["PAYMENT_RESULT_UNKNOWN", "ORDER_ID_ALREADY_USED"]) {
+      expect(allowsAnotherAttempt(failWith(code, 503))).toBe(false);
+    }
+  });
+
+  it("이미 결제된 예약에서도 결제 수단을 치운다", () => {
+    expect(allowsAnotherAttempt(failWith("PAYMENT_ALREADY_COMPLETED", 409))).toBe(false);
+  });
+
+  it("모르는 실패에서도 치운다 — 안전한 기본값", () => {
+    expect(allowsAnotherAttempt(paymentFailure(new ApiRequestError(500, "INTERNAL_ERROR", "")))).toBe(
+      false,
+    );
+    expect(allowsAnotherAttempt(paymentFailure(new TypeError("Failed to fetch")))).toBe(false);
+  });
+
+  it("락 실패·PG 거절은 그 자리에서 다시 시도할 수 있다", () => {
+    expect(allowsAnotherAttempt(failWith("LOCK_ACQUISITION_FAILED", 503))).toBe(true);
+    expect(allowsAnotherAttempt(failWith("PAYMENT_DECLINED", 402))).toBe(true);
+  });
+
+  it("배치·기간을 고쳐야 하는 실패도 이 자리에서는 못 한다", () => {
+    // 같은 조건으로 다시 눌러봐야 같은 실패다.
+    expect(allowsAnotherAttempt(failWith("SPACE_ALREADY_BOOKED", 409))).toBe(false);
+    expect(allowsAnotherAttempt(failWith("FIXTURE_UNAVAILABLE", 409))).toBe(false);
   });
 });
