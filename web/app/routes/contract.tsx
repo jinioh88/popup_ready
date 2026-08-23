@@ -1,21 +1,66 @@
 import { useParams } from "react-router";
 
+import { ContractDocument } from "../features/contract/ContractDocument";
+import { SignaturePanel } from "../features/contract/SignaturePanel";
+import { contractLoadMessage, signMessage } from "../features/contract/messages";
+import { useContract, useSignContract } from "../features/contract/queries";
+
 export function meta() {
   return [{ title: "계약 · PopupReady" }];
 }
 
 /**
- * 계약 열람·서명 화면(최소). 조항 전문·서명 배선은 F-2에서 채운다.
- * 계약 명칭 '단기 공간사용 제휴계약'은 법률 세이프가드이므로 임의로 바꾸지 않는다.
+ * 계약 열람·서명 화면 (US-202, F-2). 이 모듈은 화면 조립만 한다.
+ *
+ * 계약 명칭 '단기 공간사용 제휴계약'과 조항 문구는 **서버가 준 것을 그대로 쓴다** —
+ * 상가건물 임대차보호법상 일시사용 임대차 요건이 걸려 있어 웹이 지어내거나 다듬지 않는다.
  */
 export default function ContractRoute() {
   const { reservationId } = useParams();
+  const numericId = Number(reservationId);
+
+  const contractQuery = useContract(numericId);
+  const sign = useSignContract(numericId);
+
+  if (contractQuery.isPending) {
+    return <StatusMessage>계약서를 불러오는 중…</StatusMessage>;
+  }
+
+  if (contractQuery.isError || !contractQuery.data) {
+    return <StatusMessage tone="error">{contractLoadMessage(contractQuery.error)}</StatusMessage>;
+  }
+
+  const contract = contractQuery.data;
 
   return (
+    <main className="flex flex-col gap-4 px-6 py-6">
+      <header>
+        <h1 className="text-display">{contract.title}</h1>
+        <p className="mt-2 text-caption text-text-muted">
+          조항 전문을 확인하고 서명합니다. 서명 시각과 무결성 해시는 분쟁 시 소명 자료가 됩니다.
+        </p>
+      </header>
+
+      <div className="flex items-start gap-6">
+        <div className="min-w-0 flex-1">
+          <ContractDocument contract={contract} />
+        </div>
+        <SignaturePanel
+          contract={contract}
+          onSign={() => sign.mutate(contract.id)}
+          isPending={sign.isPending}
+          errorMessage={sign.isError ? signMessage(sign.error) : undefined}
+        />
+      </div>
+    </main>
+  );
+}
+
+function StatusMessage({ children, tone }: { children: React.ReactNode; tone?: "error" }) {
+  return (
     <main className="px-6 py-6">
-      <h1 className="text-display">단기 공간사용 제휴계약</h1>
-      <p className="mt-2 text-body text-text-muted">
-        예약 요청 #{reservationId}의 계약서를 확인하고 서명합니다. (US-202 연계 — Phase F)
+      <p className={`text-body ${tone === "error" ? "text-error" : "text-text-muted"}`}>
+        {children}
       </p>
     </main>
   );
