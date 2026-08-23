@@ -5,6 +5,7 @@ import { useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { SessionLoading } from "../components/SessionLoading";
+import { SignOutButton } from "../components/SignOutButton";
 import { AuthProvider, useAuthSession } from "../hooks/useAuthSession";
 
 /**
@@ -58,8 +59,14 @@ function RootNavigator() {
       </Stack.Protected>
 
       <Stack.Protected guard={signedIn}>
-        <Stack.Screen name="reservations/index" options={{ title: "예약 목록" }} />
-        <Stack.Screen name="reservations/[id]" options={{ title: "예약 상세" }} />
+        <Stack.Screen
+          name="reservations/index"
+          options={{ title: "예약 목록", headerRight: () => <SignOutButton /> }}
+        />
+        <Stack.Screen
+          name="reservations/[id]"
+          options={{ title: "예약 상세", headerRight: () => <SignOutButton /> }}
+        />
       </Stack.Protected>
     </Stack>
   );
