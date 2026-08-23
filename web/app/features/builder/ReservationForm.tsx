@@ -2,7 +2,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { estimateReservation } from "../../lib/builder/estimate";
-import { reservationPeriodSchema, type ReservationPeriod } from "../../lib/schemas/reservation";
+import {
+  MAX_RESERVATION_DAYS,
+  maxEndDate,
+  reservationPeriodSchema,
+  type ReservationPeriod,
+} from "../../lib/schemas/reservation";
 import { useBuilderStore } from "../../stores/builder";
 import type { FixtureCatalog } from "./queries";
 
@@ -11,6 +16,9 @@ import type { FixtureCatalog } from "./queries";
  *
  * 화면에 띄우는 견적은 **표시용 미리보기**다 — 금액의 원장은 서버 응답(`estimate`)이다.
  * 두 값이 다르면 계산식이 어긋난 것이므로 통합 단계에서 잡아야 한다.
+ *
+ * 사용 기간 상한(30일)은 **법률 세이프가드**다(일시사용 임대차 요건). 달력에서 아예 고를 수 없게
+ * `max`로 막고, 직접 입력·붙여넣기로 넘어오는 경로는 Zod 스키마가 잡는다 — 최종 판정은 서버다.
  */
 
 type ReservationFormProps = {
@@ -64,7 +72,12 @@ export function ReservationForm({
       className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
       onSubmit={handleSubmit(onSubmit)}
     >
-      <h2 className="text-heading">예약 기간</h2>
+      <div>
+        <h2 className="text-heading">예약 기간</h2>
+        <p className="mt-1 text-caption text-text-muted">
+          일시사용 계약이라 최대 {MAX_RESERVATION_DAYS}일까지 예약할 수 있습니다.
+        </p>
+      </div>
 
       <div className="flex gap-3">
         <DateField
@@ -77,6 +90,8 @@ export function ReservationForm({
           id="reservation-end"
           label="종료일"
           error={errors.endDate?.message}
+          min={startDate || undefined}
+          max={startDate ? maxEndDate(startDate) : undefined}
           {...register("endDate")}
         />
       </div>
