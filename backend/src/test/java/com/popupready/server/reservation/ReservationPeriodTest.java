@@ -45,4 +45,31 @@ class ReservationPeriodTest {
                 .extracting(e -> ((ApiException) e).getErrorCode())
                 .isEqualTo(ErrorCode.VALIDATION_FAILED);
     }
+
+    @Test
+    @DisplayName("정확히 30일 → 상한 경계이므로 통과한다")
+    void of_exactlyThirtyDays_passes() {
+        // 9/1 시작이면 9/30이 30일째다(양끝 포함).
+        ReservationPeriod period = ReservationPeriod.of(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 30));
+
+        assertThat(period.days()).isEqualTo(30);
+    }
+
+    @Test
+    @DisplayName("31일 → 일시사용 요건 보존을 위한 상한 초과로 거부한다")
+    void of_overThirtyDays_isRejected() {
+        assertThatThrownBy(() -> ReservationPeriod.of(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 10, 1)))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+    }
+
+    @Test
+    @DisplayName("몇 년에 걸친 기간 → 일수 계산이 넘치기 전에 상한에서 걸린다")
+    void of_absurdlyLongPeriod_isRejected() {
+        assertThatThrownBy(() -> ReservationPeriod.of(LocalDate.of(2026, 9, 1), LocalDate.of(9999, 12, 31)))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.VALIDATION_FAILED);
+    }
 }
