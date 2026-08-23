@@ -31,7 +31,10 @@ public class ReservationRequestController {
         this.reservationRequestService = reservationRequestService;
     }
 
-    @Operation(summary = "예약 요청 단건 조회", description = "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.")
+    @Operation(
+            operationId = "getReservationRequest",
+            summary = "예약 요청 단건 조회",
+            description = "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.")
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{id}")
     // ⚠️ 메서드 이름이 곧 operationId다. springdoc은 이름이 겹치면 _1·_2 접미사를 붙이는데,
@@ -45,6 +48,7 @@ public class ReservationRequestController {
     }
 
     @Operation(
+            operationId = "createReservationRequest",
             summary = "예약 요청 생성",
             description = "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. " + "그리드 범위를 벗어나거나 집기가 겹치면 400이다.")
     // 경로에 변수가 없어 공통 커스터마이저(OpenApiConfig)는 404를 붙이지 않는다. 하지만 이 오퍼레이션은

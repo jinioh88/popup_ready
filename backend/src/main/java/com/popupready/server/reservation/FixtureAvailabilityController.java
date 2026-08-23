@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class FixtureAvailabilityController {
 
     @Operation(
+            operationId = "getFixtureAvailability",
             summary = "날짜별 집기 가용 수량",
             description =
                     "해당 기간에 배치 가능한 집기 수량을 집기별로 돌려준다. " + "수량은 질의 기간 중 가장 많이 잡힌 날 기준이며, 다른 공간의 예약이 잡아간 수량도 함께 차감된다.")

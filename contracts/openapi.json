@@ -265,7 +265,7 @@
     "/api/v1/contracts/{id}": {
       "get": {
         "description": "조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. 당사자에게만 열린다.",
-        "operationId": "detail_1",
+        "operationId": "getContract",
         "parameters": [
           {
             "description": "계약 ID",
@@ -355,7 +355,7 @@
     "/api/v1/contracts/{id}/sign": {
       "post": {
         "description": "로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. 당사자가 아니면 403, 이미 서명했으면 409다.",
-        "operationId": "sign",
+        "operationId": "signContract",
         "parameters": [
           {
             "description": "계약 ID",
@@ -445,7 +445,7 @@
     "/api/v1/door-events/{eventId}/ack": {
       "post": {
         "description": "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. 이 단계가 있어야 승인 기록이 전송 기록이 된다.",
-        "operationId": "ack",
+        "operationId": "ackDoorEvent",
         "parameters": [
           {
             "description": "도어 이벤트 ID",
@@ -555,7 +555,7 @@
     "/api/v1/fixtures": {
       "get": {
         "description": "category를 주면 해당 분류만, 없으면 전체를 돌려준다.",
-        "operationId": "list",
+        "operationId": "listFixtures",
         "parameters": [
           {
             "description": "집기 분류 필터. 생략 시 전체",
@@ -617,7 +617,7 @@
     "/api/v1/reservation-requests": {
       "post": {
         "description": "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. 그리드 범위를 벗어나거나 집기가 겹치면 400이다.",
-        "operationId": "create",
+        "operationId": "createReservationRequest",
         "requestBody": {
           "content": {
             "application/json": {
@@ -714,7 +714,7 @@
     "/api/v1/reservation-requests/{id}": {
       "get": {
         "description": "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.",
-        "operationId": "findById",
+        "operationId": "getReservationRequest",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -804,7 +804,7 @@
     "/api/v1/reservation-requests/{id}/contract": {
       "get": {
         "description": "예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. 빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.",
-        "operationId": "findByReservation",
+        "operationId": "getContractByReservation",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -892,7 +892,7 @@
       },
       "post": {
         "description": "예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다. 예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. 브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.",
-        "operationId": "create_1",
+        "operationId": "createContract",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -982,7 +982,7 @@
     "/api/v1/reservation-requests/{id}/door-open": {
       "post": {
         "description": "예약 당사자인지와 시간창(시작 10분 전 ~ 종료) 안인지를 서버가 판정하고, 통과하면 발행할 MQTT 토픽과 페이로드를 내려준다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다.",
-        "operationId": "open",
+        "operationId": "openDoor",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -1072,7 +1072,7 @@
     "/api/v1/reservation-requests/{id}/payment/confirm": {
       "post": {
         "description": "분산 락 안에서 예약 상태·기간 겹침·집기 가용량·전력 한도·금액을 재확인한 뒤 PG 승인을 호출하고, 예약을 PAID로 확정하며 분할 정산 Row를 만든다. 요청 금액은 승인 금액이 아니라 대조 대상이다.",
-        "operationId": "confirm",
+        "operationId": "confirmPayment",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -1202,7 +1202,7 @@
     "/api/v1/reservation-requests/{id}/payment/prepare": {
       "post": {
         "description": "토스 결제 위젯에 넘길 주문 정보를 발급한다. 락을 잡지 않으며 자리를 선점하지 않는다. orderId는 호출마다 새로 발급되고 재사용하지 않는다.",
-        "operationId": "prepare",
+        "operationId": "preparePayment",
         "parameters": [
           {
             "description": "예약 요청 ID",
@@ -1292,7 +1292,7 @@
     "/api/v1/settlements": {
       "get": {
         "description": "결제 1건이 만든 분할 정산 Row를 모두 돌려준다. 보증금 Row는 ESCROW_HELD 상태이며 정산이 아니라 반환 대상이다.",
-        "operationId": "byReservation",
+        "operationId": "listSettlements",
         "parameters": [
           {
             "description": "조회할 예약 요청 ID",
@@ -1372,7 +1372,7 @@
     "/api/v1/spaces": {
       "get": {
         "description": "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.",
-        "operationId": "search",
+        "operationId": "searchSpaces",
         "parameters": [
           {
             "description": "중심 위도",
@@ -1492,7 +1492,7 @@
     "/api/v1/spaces/{id}": {
       "get": {
         "description": "요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.",
-        "operationId": "detail",
+        "operationId": "getSpace",
         "parameters": [
           {
             "description": "공간 ID",
@@ -1557,7 +1557,7 @@
     "/api/v1/spaces/{spaceId}/fixture-availability": {
       "get": {
         "description": "해당 기간에 배치 가능한 집기 수량을 집기별로 돌려준다. 수량은 질의 기간 중 가장 많이 잡힌 날 기준이며, 다른 공간의 예약이 잡아간 수량도 함께 차감된다.",
-        "operationId": "availability",
+        "operationId": "getFixtureAvailability",
         "parameters": [
           {
             "description": "대상 공간 ID",

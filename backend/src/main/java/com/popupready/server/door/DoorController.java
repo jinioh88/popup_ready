@@ -37,6 +37,7 @@ public class DoorController {
     private static final String ERROR_ENVELOPE_REF = "#/components/schemas/ApiErrorResponse";
 
     @Operation(
+            operationId = "openDoor",
             summary = "도어 오픈 권한 검증·기록",
             description = "예약 당사자인지와 시간창(시작 10분 전 ~ 종료) 안인지를 서버가 판정하고, "
                     + "통과하면 발행할 MQTT 토픽과 페이로드를 내려준다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다.")
@@ -57,6 +58,7 @@ public class DoorController {
     }
 
     @Operation(
+            operationId = "ackDoorEvent",
             summary = "MQTT 발행 결과 보고",
             description = "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. " + "이 단계가 있어야 승인 기록이 전송 기록이 된다.")
     @ResponseStatus(HttpStatus.OK)

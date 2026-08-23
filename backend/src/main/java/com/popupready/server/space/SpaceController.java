@@ -38,7 +38,10 @@ public class SpaceController {
         this.spaceService = spaceService;
     }
 
-    @Operation(summary = "반경 공실 검색", description = "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.")
+    @Operation(
+            operationId = "searchSpaces",
+            summary = "반경 공실 검색",
+            description = "중심 좌표 기준 반경(m) 안의 ACTIVE 공간을 찾는다. 면적·대여료·전력 필터는 모두 선택이다.")
     @GetMapping
     public ApiResponse<List<SpaceSummaryResponse>> search(
             @Parameter(description = "중심 위도", required = true, example = "37.5445")
@@ -65,7 +68,7 @@ public class SpaceController {
         return ApiResponse.ok(spaceService.search(lat, lng, radius, minArea, maxRent, minPower));
     }
 
-    @Operation(summary = "상가 상세", description = "요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.")
+    @Operation(operationId = "getSpace", summary = "상가 상세", description = "요약 카드 필드에 빌더 캔버스용 grid 정보를 더해 돌려준다.")
     @GetMapping("/{id}")
     public ApiResponse<SpaceDetailResponse> detail(
             @Parameter(description = "공간 ID", example = "1") @PathVariable Long id) {

@@ -33,7 +33,7 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @Operation(summary = "가입", description = "이메일·비밀번호로 가입하고 즉시 Access 토큰을 받는다.")
+    @Operation(operationId = "signup", summary = "가입", description = "이메일·비밀번호로 가입하고 즉시 Access 토큰을 받는다.")
     // 공개 경로라 인증 401은 붙지 않지만, 이 오퍼레이션이 실제로 내보내는 실패는 문서에 있어야 한다.
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "409",
@@ -45,7 +45,7 @@ public class AuthController {
         return ApiResponse.ok(authService.signup(request));
     }
 
-    @Operation(summary = "로그인", description = "이메일·비밀번호를 검증하고 Access 토큰을 받는다.")
+    @Operation(operationId = "login", summary = "로그인", description = "이메일·비밀번호를 검증하고 Access 토큰을 받는다.")
     // ⚠️ 메서드에 @ApiResponse를 하나라도 선언하면 springdoc이 자동 생성하던 성공 응답을 덮는다.
     //    성공 응답도 함께 적어야 계약에서 200이 사라지지 않는다(실제로 사라져서 발견했다).
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -62,6 +62,7 @@ public class AuthController {
     }
 
     @Operation(
+            operationId = "refresh",
             summary = "토큰 재발급",
             description = "Refresh 토큰으로 Access·Refresh 토큰을 다시 받는다. 회전 방식이라 이전 Refresh 토큰은 무효가 된다.")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(

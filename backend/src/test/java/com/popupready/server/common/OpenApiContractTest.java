@@ -307,6 +307,47 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("모든 오퍼레이션 → operationId가 명시적으로 부여된다(_1·_2 접미사 없음)")
+    void apiDocs_operationIdsAreExplicit() throws Exception {
+        // springdoc은 메서드 이름이 겹치면 _1·_2를 붙이는데 그 번호는 컨트롤러 스캔 순서에
+        // 달려 있다. 무관한 컨트롤러가 같은 이름의 메서드를 추가하는 것만으로 남의 operationId가
+        // 밀린다 — 실제로 예약 단건 조회를 detail()로 두었을 때 /contracts/{id}가 detail_1에서
+        // detail_2로 조용히 바뀌었다. 그래서 접미사가 하나라도 생기면 여기서 실패시킨다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$..operationId")
+                        .value(org.hamcrest.Matchers.everyItem(
+                                org.hamcrest.Matchers.not(org.hamcrest.Matchers.matchesPattern(".*_\\d+$")))));
+    }
+
+    @Test
+    @DisplayName("계약 목록 → 18개 오퍼레이션의 operationId가 고정된다")
+    void apiDocs_operationIdsArePinned() throws Exception {
+        // 이 목록이 곧 계약이다. 오퍼레이션을 추가·개명하면 여기가 먼저 깨져야 한다 —
+        // 소비자(웹·모바일)의 생성 타입이 조용히 바뀌는 것보다 낫다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$..operationId")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "signup",
+                                "login",
+                                "refresh",
+                                "searchSpaces",
+                                "getSpace",
+                                "getFixtureAvailability",
+                                "listFixtures",
+                                "createReservationRequest",
+                                "getReservationRequest",
+                                "createContract",
+                                "getContractByReservation",
+                                "getContract",
+                                "signContract",
+                                "preparePayment",
+                                "confirmPayment",
+                                "listSettlements",
+                                "openDoor",
+                                "ackDoorEvent")));
+    }
+
+    @Test
     @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
     void apiDocs_carriesSprint2ErrorCodes() throws Exception {
         // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로

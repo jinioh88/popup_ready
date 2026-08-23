@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SettlementController {
 
     @Operation(
+            operationId = "listSettlements",
             summary = "분할 정산 내역 조회",
             description = "결제 1건이 만든 분할 정산 Row를 모두 돌려준다. " + "보증금 Row는 ESCROW_HELD 상태이며 정산이 아니라 반환 대상이다.")
     @ResponseStatus(HttpStatus.OK)

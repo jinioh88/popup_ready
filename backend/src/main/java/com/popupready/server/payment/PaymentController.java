@@ -39,6 +39,7 @@ public class PaymentController {
     private static final String ERROR_ENVELOPE_REF = "#/components/schemas/ApiErrorResponse";
 
     @Operation(
+            operationId = "preparePayment",
             summary = "결제 준비",
             description = "토스 결제 위젯에 넘길 주문 정보를 발급한다. 락을 잡지 않으며 자리를 선점하지 않는다. " + "orderId는 호출마다 새로 발급되고 재사용하지 않는다.")
     @ResponseStatus(HttpStatus.CREATED)
@@ -50,6 +51,7 @@ public class PaymentController {
     }
 
     @Operation(
+            operationId = "confirmPayment",
             summary = "결제 승인",
             description = "분산 락 안에서 예약 상태·기간 겹침·집기 가용량·전력 한도·금액을 재확인한 뒤 PG 승인을 호출하고, "
                     + "예약을 PAID로 확정하며 분할 정산 Row를 만든다. 요청 금액은 승인 금액이 아니라 대조 대상이다.")
