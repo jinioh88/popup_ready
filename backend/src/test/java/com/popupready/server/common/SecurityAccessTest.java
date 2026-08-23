@@ -142,4 +142,55 @@ class SecurityAccessTest {
         mockMvc.perform(get("/api/v1/contracts/1").header(HttpHeaders.AUTHORIZATION, "Basic abcdef"))
                 .andExpect(status().isUnauthorized());
     }
+
+    // ── Sprint 2 신규 경로 (T0-8) ────────────────────────────────────────────
+    // Sprint 1의 교훈: 인증 테스트가 업무 경로를 탐침으로 쓰면 스텁이 실물이 되는 순간 조용히
+    // 깨진다(200이 404가 된다). 여기서 보는 것은 응답 본문이 아니라 "필터에 막히는가" 하나다.
+
+    @Test
+    @DisplayName("토큰 없이 결제 승인 → 401")
+    void paymentConfirm_withoutToken_returnsUnauthorized() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/reservation-requests/1/payment/confirm")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                {"paymentKey": "k", "orderId": "o", "amount": 1000}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    @DisplayName("토큰 없이 정산 내역 조회 → 401")
+    void settlements_withoutToken_returnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/settlements?reservationId=1")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("토큰 없이 도어 오픈 → 401")
+    void doorOpen_withoutToken_returnsUnauthorized() throws Exception {
+        mockMvc.perform(post("/api/v1/reservation-requests/1/door-open")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("토큰 없이 집기 가용성 조회 → 401 (탐색과 달리 공개가 아니다)")
+    void fixtureAvailability_withoutToken_returnsUnauthorized() throws Exception {
+        // 공간·집기 목록은 공개지만 가용 수량은 예약 밀도를 드러내므로 로그인 뒤에만 준다.
+        mockMvc.perform(get("/api/v1/spaces/1/fixture-availability?startDate=2026-09-01&endDate=2026-09-14"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("refresh → 인증 없이 열려 있다(토큰을 얻는 경로다)")
+    void refresh_isPublic() throws Exception {
+        mockMvc.perform(
+                        post("/api/v1/auth/refresh")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                {"refreshToken": "some-token"}
+                                """))
+                .andExpect(status().isOk());
+    }
 }

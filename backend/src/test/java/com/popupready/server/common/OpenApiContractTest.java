@@ -250,6 +250,63 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → 결제·정산·도어 5종이 계약에 담긴다")
+    void apiDocs_containsPaymentSettlementDoorOperations() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/prepare'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/confirm'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/settlements'].get").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/door-open'].post")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/door-events/{eventId}/ack'].post")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("결제·정산·도어 오퍼레이션 → 인증을 요구하고 당사자 403을 문서화한다")
+    void apiDocs_sprint2OperationsRequireAuthAndDocumentForbidden() throws Exception {
+        // 어느 것도 공개 경로가 아니다. 그리고 전부 역할이 아니라 당사자로 갈리므로
+        // Security는 인증까지만 보고 판정은 서비스가 한다 — 그래도 403이 난다는 사실은 문서에 있어야 한다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(
+                        jsonPath("$.paths['/api/v1/settlements'].get.security").isArray())
+                .andExpect(jsonPath("$.paths['/api/v1/settlements'].get.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/payment/confirm'].post.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}/door-open'].post.responses.403")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/door-events/{eventId}/ack'].post.responses.403")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("결제 승인 응답 → 정산 Row 요약을 함께 담는다")
+    void apiDocs_paymentConfirmCarriesSettlements() throws Exception {
+        // 별도 조회를 강제하면 "결제는 됐는데 내역은 아직"인 중간 상태가 화면에 생긴다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.PaymentConfirmResponse.required")
+                        .value(org.hamcrest.Matchers.hasItem("settlements")))
+                .andExpect(jsonPath("$.components.schemas.SettlementResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "type", "payeeId", "grossAmount", "feeAmount", "netAmount", "status")));
+    }
+
+    @Test
+    @DisplayName("도어 오픈 응답 → 서버가 조립한 토픽·페이로드를 담는다")
+    void apiDocs_doorOpenCarriesTopicAndPayload() throws Exception {
+        // 클라이언트가 토픽을 조립하면 훼손된 채 발행될 수 있다(§2.3).
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.DoorOpenResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("eventId", "topic", "payload", "status")))
+                .andExpect(jsonPath("$.components.schemas.DoorCommandPayload.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "eventId", "reservationId", "action", "issuedAt")));
+    }
+
+    @Test
     @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
     void apiDocs_carriesSprint2ErrorCodes() throws Exception {
         // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로

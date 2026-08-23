@@ -39,7 +39,16 @@ public final class RestrictedEndpoints {
             "/api/v1/contracts/{id}/sign",
             "/api/v1/reservation-requests/{id}/contract",
             // Sprint 2 — 예약 단건 조회도 브랜드와 건물주 양쪽이 보므로 역할로 가를 수 없다.
-            "/api/v1/reservation-requests/{id}");
+            "/api/v1/reservation-requests/{id}",
+            // 결제는 브랜드 본인만 하지만 BRAND 역할이면 누구나가 아니라 '그 예약의' 브랜드여야 한다.
+            // 역할 규칙으로는 남의 예약을 결제하는 것을 막을 수 없으므로 서비스가 판정한다.
+            "/api/v1/reservation-requests/{id}/payment/prepare",
+            "/api/v1/reservation-requests/{id}/payment/confirm",
+            // 정산 내역은 브랜드·건물주·해당 공급사 셋이 본다 — 역할 하나로 좁힐 수 없다.
+            "/api/v1/settlements",
+            // 도어 오픈은 그 예약의 당사자만. 시간창 판정도 여기서 403으로 나간다.
+            "/api/v1/reservation-requests/{id}/door-open",
+            "/api/v1/door-events/{eventId}/ack");
 
     /** 이 오퍼레이션이 403을 낼 수 있는가. OpenAPI 문서가 이 판정으로 403을 붙인다. */
     public static boolean canReturnForbidden(String pathTemplate, String httpMethod) {
