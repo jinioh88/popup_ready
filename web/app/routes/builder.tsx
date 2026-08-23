@@ -69,6 +69,16 @@ export default function BuilderRoute() {
     return <StatusMessage tone="error">도면 정보를 불러오지 못했습니다.</StatusMessage>;
   }
 
+  // 서버는 INACTIVE 공간의 예약을 400으로 물린다(sprint1.md §2.2, 2026-08-23).
+  // 배치를 다 끝낸 뒤 제출 시점에 거절당하지 않도록 진입 자체를 막는다.
+  if (space.status !== "ACTIVE") {
+    return (
+      <StatusMessage tone="error">
+        현재 예약을 받지 않는 상가입니다. 다른 상가를 선택해 주세요.
+      </StatusMessage>
+    );
+  }
+
   return (
     <main className="flex flex-col gap-4 px-6 py-6">
       <header>

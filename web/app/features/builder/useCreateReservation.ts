@@ -1,16 +1,22 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 
 import { ApiRequestError } from "../../lib/api/client";
 import { createReservationRequest } from "../../lib/api/reservations";
 import type { ReservationPeriod } from "../../lib/schemas/reservation";
 import { useBuilderStore } from "../../stores/builder";
+import { spaceDetailQueryKey } from "./queries";
 
 /**
  * 빌더에서 만든 레이아웃으로 예약 요청을 만든다.
  *
  * 레이아웃 검증의 원장은 서버다 — 웹이 통과시킨 배치라도 400이 올 수 있고(계산식 불일치·재고 부족),
  * 그때는 **조용히 넘기지 않고** 사유를 그대로 보여준다. 이 경로가 계약 불일치를 드러내는 창구다.
+ *
+ * `VALIDATION_FAILED`는 서버가 요청 자체를 물린 경우다. 그중 하나가 **낡은 그리드**로,
+ * 요청 레이아웃의 gridCols·gridRows·cellSizeMm가 `GET /spaces/{id}`의 현재 값과 다르면 400이다
+ * (sprint1.md §2.2, 2026-08-23). 이때 필요한 건 재시도가 아니라 **상세 재조회**이므로
+ * 공간 상세 쿼리를 무효화해 다음 렌더에서 그리드가 다시 맞춰지게 한다.
  */
 
 function messageOf(error: unknown): string {
@@ -29,6 +35,9 @@ function messageOf(error: unknown): string {
       return "상가 정보를 찾을 수 없습니다.";
     case "FIXTURE_NOT_FOUND":
       return "집기 정보를 찾을 수 없습니다. 목록을 새로고침해 주세요.";
+    case "VALIDATION_FAILED":
+      // 서버 메시지가 어긋난 값을 짚어 준다("공간: 20×12, 셀 500mm"). 임의 문구로 덮지 않는다.
+      return `${error.message} 도면 정보를 다시 불러왔습니다 — 배치를 확인한 뒤 다시 시도해 주세요.`;
     default:
       return error.message;
   }
@@ -36,6 +45,7 @@ function messageOf(error: unknown): string {
 
 export function useCreateReservation(spaceId: number) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const mutation = useMutation({
     mutationFn: (period: ReservationPeriod) =>
@@ -47,6 +57,11 @@ export function useCreateReservation(spaceId: number) {
       }),
     onSuccess: (reservation) => {
       void navigate(`/reservations/${reservation.id}/contract`);
+    },
+    onError: (error) => {
+      if (error instanceof ApiRequestError && error.code === "VALIDATION_FAILED") {
+        void queryClient.invalidateQueries({ queryKey: spaceDetailQueryKey(spaceId) });
+      }
     },
   });
 
