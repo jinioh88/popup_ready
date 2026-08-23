@@ -71,3 +71,35 @@
     line-height: var(--text-body--line-height);
   }
 }
+
+/*
+ * US-103 한도 게이지의 1회 펄스 (스타일가이드 §8.A).
+ *
+ * **플래시 애니메이션이 아니다.** 광과민성 발작 위험 때문에 WCAG 2.3.1은 깜빡임을 초당 3회
+ * 이하로 제한하는데, 한도 초과는 사용자가 집기를 넣고 뺄 때마다 반복되는 상태라 깜빡이게 두면
+ * 그 경계를 쉽게 넘는다. 그래서 **상태가 초과로 바뀌는 순간 딱 한 번** 펄스하고, 초과인 동안은
+ * 움직이지 않는 지속 테두리로 알린다. `animation-iteration-count`는 1로 고정한다.
+ *
+ * 모션을 줄이도록 설정한 사용자에게는 펄스도 띄우지 않는다 — 지속 테두리와 수치 텍스트만으로
+ * 정보가 온전히 전달되므로 잃는 것이 없다.
+ */
+@keyframes limit-pulse {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-error) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 12px color-mix(in srgb, var(--color-error) 0%, transparent);
+  }
+}
+
+@layer components {
+  .limit-pulse {
+    animation: limit-pulse 500ms ease-out 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .limit-pulse {
+      animation: none;
+    }
+  }
+}

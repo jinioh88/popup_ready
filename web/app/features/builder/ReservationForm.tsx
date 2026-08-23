@@ -36,6 +36,13 @@ type ReservationFormProps = {
   onSubmit: (period: ReservationPeriod) => void;
   isPending?: boolean;
   errorMessage?: string;
+  /**
+   * 전력 초과로 제출을 막아야 하는가 (US-103).
+   *
+   * **면적은 여기 들어오지 않는다** — 면적은 잠기지 않는 밀도 표시다(sprint2.md §2.2-F).
+   * 그리고 이 잠금은 UX이지 게이트가 아니다 — 최종 판정은 서버의 400이다(§2.2-D).
+   */
+  isOverPowerLimit?: boolean;
 };
 
 export function ReservationForm({
@@ -44,6 +51,7 @@ export function ReservationForm({
   onSubmit,
   isPending,
   errorMessage,
+  isOverPowerLimit = false,
 }: ReservationFormProps) {
   const items = useBuilderStore((state) => state.items);
 
@@ -143,7 +151,17 @@ export function ReservationForm({
         </p>
       ) : null}
 
-      <Button type="submit" disabled={isPending}>
+      {/*
+        사유 없는 disabled는 "왜 안 되는지"를 사용자에게 떠넘긴다. 어느 축이 막고 있는지
+        버튼 옆에서 바로 읽히게 한다 — 수치 자체는 LimitGauge가 말한다.
+      */}
+      {isOverPowerLimit ? (
+        <p className="text-caption text-error">
+          허용 전력을 초과해 예약을 요청할 수 없습니다. 집기를 빼면 다시 요청할 수 있습니다.
+        </p>
+      ) : null}
+
+      <Button type="submit" disabled={isPending || isOverPowerLimit}>
         {isPending ? "예약 요청 중…" : "예약 요청하기"}
       </Button>
     </Card>
