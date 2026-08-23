@@ -1758,6 +1758,7 @@
               "LAYOUT_OVERLAP",
               "FIXTURE_STOCK_EXCEEDED",
               "FIXTURE_UNAVAILABLE",
+              "SPACE_ALREADY_BOOKED",
               "POWER_LIMIT_EXCEEDED",
               "CONTRACT_NOT_FOUND",
               "NOT_CONTRACT_PARTY",
@@ -1766,9 +1767,12 @@
               "CONTRACT_INTEGRITY_VIOLATION",
               "REFRESH_TOKEN_INVALID",
               "PAYMENT_ALREADY_COMPLETED",
+              "PAYMENT_RESULT_UNKNOWN",
+              "PAYMENT_DECLINED",
               "PAYMENT_AMOUNT_MISMATCH",
               "LOCK_ACQUISITION_FAILED",
               "DOOR_NOT_YET_OPENABLE",
+              "RESERVATION_NOT_PAID",
               "DOOR_EVENT_ALREADY_ACKED"
             ],
             "example": "VALIDATION_FAILED"

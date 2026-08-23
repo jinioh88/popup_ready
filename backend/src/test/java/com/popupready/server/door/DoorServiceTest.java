@@ -96,15 +96,19 @@ class DoorServiceTest {
     }
 
     @Test
-    @DisplayName("🚨 403 갈래 ② 결제되지 않은 예약 → DOOR_NOT_YET_OPENABLE")
+    @DisplayName("🚨 403 갈래 ② 결제되지 않은 예약 → RESERVATION_NOT_PAID(시간창과 다른 코드)")
     void open_unpaidReservation_isRejected() {
         // 클라이언트는 이 판정을 하지 않는다 — 여기서 막지 않으면 어디에서도 막히지 않는다.
+        //
+        // 시간창 밖과 코드를 나눈 이유: 같은 코드로 내보내면 클라이언트가 "조금만 기다리면
+        // 열린다"고 안내하는데, 미결제는 기다려도 열리지 않아 화면이 거짓을 말한다.
+        // 게이트가 서버라는 규칙은 판정뿐 아니라 사유에도 적용된다(모바일 제기, 2026-08-23).
         reservation(ReservationStatus.CONTRACT_SIGNED);
 
         assertThatThrownBy(() -> service().open(BRAND, 45L))
                 .isInstanceOf(ApiException.class)
                 .extracting(e -> ((ApiException) e).getErrorCode())
-                .isEqualTo(ErrorCode.DOOR_NOT_YET_OPENABLE);
+                .isEqualTo(ErrorCode.RESERVATION_NOT_PAID);
         verify(doorEventRepository, never()).save(any());
     }
 

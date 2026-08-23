@@ -34,6 +34,10 @@ public enum ErrorCode {
     // 그 날짜에 이미 다른 PAID 예약이 잡아갔다 — "지금은 없다". 위와 달리 기간을 옮기면 해소된다.
     // 웹이 두 상황에 다른 안내를 해야 하므로 코드를 가른다(Sprint 2 §2.2).
     FIXTURE_UNAVAILABLE(HttpStatus.CONFLICT),
+    // 같은 공간·겹치는 기간에 이미 결제된 예약이 있다. 집기 부족과 코드를 나누는 이유는
+    // 사용자가 할 일이 다르기 때문이다 — 이쪽은 기간을 옮겨야 하고, 집기 부족은 배치를 줄여도 된다.
+    // 같은 코드로 뭉개면 "집기를 빼보세요"라는 안내가 나가는데 그래도 해소되지 않는다.
+    SPACE_ALREADY_BOOKED(HttpStatus.CONFLICT),
     // 하드 게이트는 전력 하나다. 면적 한도(AREA_LIMIT_EXCEEDED)는 §2.2-F로 철회됐다 —
     // 그리드 전체 면적이 floorAreaM2보다 작아 그리드 경계 판정을 통과한 배치는 넘을 수 없다.
     POWER_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST),
@@ -58,6 +62,11 @@ public enum ErrorCode {
 
     // payment (US-201)
     PAYMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT),
+    // PG 호출이 타임아웃돼 승인 여부를 모른다. 사용자 잘못이 아니고 재시도로 낫지도 않으므로
+    // 실패(4xx)가 아니라 503으로 알린다 — 수동 확인이 필요한 상태다.
+    PAYMENT_RESULT_UNKNOWN(HttpStatus.SERVICE_UNAVAILABLE),
+    // PG가 거절했다. 카드사 사유는 rawResponse에 남고 클라이언트는 재시도를 안내한다.
+    PAYMENT_DECLINED(HttpStatus.PAYMENT_REQUIRED),
     // 클라이언트가 보낸 금액이 견적 스냅샷과 다르다. 프론트 신뢰를 끊는 지점이다 —
     // 보낸 금액을 그대로 승인하지 않고 대조 대상으로만 쓴다(§2.2-C 2-5).
     PAYMENT_AMOUNT_MISMATCH(HttpStatus.BAD_REQUEST),
@@ -66,7 +75,13 @@ public enum ErrorCode {
 
     // door (US-301)
     // 시간창 밖이다. 판정 권위는 서버이며 클라이언트 시계를 보지 않는다(§2.3).
+    //
+    // ⚠️ 미결제와 코드를 공유하지 않는다. 둘을 같은 코드로 내보내면 클라이언트가 "조금만 기다리면
+    //    열린다"고 안내하는데, 미결제는 기다려도 열리지 않아 화면이 거짓을 말한다. 사유가 갈리면
+    //    문구도 갈릴 수 있다 — 게이트가 서버라는 규칙은 판정뿐 아니라 사유에도 적용된다.
     DOOR_NOT_YET_OPENABLE(HttpStatus.FORBIDDEN),
+    // 결제되지 않은 예약이다. 시간이 지나도 해소되지 않으므로 위와 다른 코드여야 한다.
+    RESERVATION_NOT_PAID(HttpStatus.FORBIDDEN),
     // 이미 마감된 도어 이벤트를 다시 ack했다. 더블 서브밋 같은 클라이언트 실수이므로 409다 —
     // 500으로 알리면 클라이언트가 서버 장애로 읽고 재시도하는데, 재시도로 낫는 상황이 아니다.
     DOOR_EVENT_ALREADY_ACKED(HttpStatus.CONFLICT);

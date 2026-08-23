@@ -14,6 +14,31 @@ public interface ReservationRequestRepository extends JpaRepository<ReservationR
     List<ReservationRequest> findByBrandUserIdAndStatusOrderByIdDesc(long brandUserId, ReservationStatus status);
 
     /**
+     * 같은 공간에서 기간이 겹치는 <b>결제 완료</b> 예약이 있는가(§2.2-C 2-2).
+     *
+     * <p>이중 예약의 마지막 관문이다. 맞닿기만 하는 기간(9/05 종료 ↔ 9/06 시작)은 겹침이 아니다 —
+     * 겹친다고 보면 연속 예약이 막힌다.
+     *
+     * <p>{@code PAID}만 센다. 결제 전 예약이 자리를 잡으면 결제하지 않은 요청이 남의 예약을 막는다.
+     *
+     * @param excludeId 자기 자신. 제외하지 않으면 재확인 로직이 스스로 때문에 항상 거절된다
+     */
+    @Query(
+            """
+            select count(r) > 0 from ReservationRequest r
+            where r.spaceId = :spaceId
+              and r.status = com.popupready.server.reservation.ReservationStatus.PAID
+              and r.id <> :excludeId
+              and r.startDate <= :endDate
+              and r.endDate >= :startDate
+            """)
+    boolean existsPaidOverlapping(
+            @Param("spaceId") Long spaceId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("excludeId") Long excludeId);
+
+    /**
      * 질의 기간 안에서 집기별로 <b>가장 많이 잡힌 날</b>의 수량(T1-2, §2.2-A).
      *
      * <p>왜 최댓값인가 — 기간 합계로 세면 날짜가 어긋난 예약들까지 더해져 멀쩡한 집기가 품절로

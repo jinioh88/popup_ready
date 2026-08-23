@@ -159,6 +159,25 @@ public class ReservationRequestService {
         require(reservationRequestId).markContractSigned();
     }
 
+    /**
+     * 결제 경로가 예약을 들여다보는 창구(US-201). 인가·판정은 하지 않고 저장된 사실만 넘긴다 —
+     * 판정을 여기 두면 예약 서비스가 결제 정책까지 떠안는다.
+     */
+    @Transactional(readOnly = true)
+    public ReservationRequestResponse snapshot(Long reservationRequestId) {
+        return toResponse(require(reservationRequestId));
+    }
+
+    /** 결제 준비가 끝났다(US-201). 잘못된 전이는 엔티티가 막는다. */
+    public void markPaymentPending(Long reservationRequestId) {
+        require(reservationRequestId).markPaymentPending();
+    }
+
+    /** 결제가 승인됐다(US-201). 이 시점부터 공간·집기를 실제로 점유한다. */
+    public void markPaid(Long reservationRequestId) {
+        require(reservationRequestId).markPaid();
+    }
+
     private ReservationRequest require(Long reservationRequestId) {
         return reservationRequestRepository
                 .findById(reservationRequestId)
