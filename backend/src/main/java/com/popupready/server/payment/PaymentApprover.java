@@ -58,6 +58,10 @@ public class PaymentApprover {
                 .findByOrderId(request.orderId())
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND, "결제 준비 정보를 찾을 수 없습니다"));
         requireSameReservation(payment, reservationRequestId);
+        // ⚠️ 이 확인은 PG 호출보다 반드시 앞에 있어야 한다. 뒤에 두면 소진된 주문으로도 PG를
+        //    먼저 부른 다음 엔티티가 거절하게 되는데, 그건 500이 나기 전에 **재청구를 시도한
+        //    것**이다. 웹은 500만 봤지만 실제 문제는 그쪽이었다(2026-08-23).
+        requireFreshAttempt(payment);
 
         ReservationRequestResponse reservation = reservationRequestService.snapshot(reservationRequestId);
         requireBrand(reservation, userId);
@@ -138,6 +142,18 @@ public class PaymentApprover {
                     ErrorCode.PAYMENT_AMOUNT_MISMATCH,
                     "결제 금액이 견적과 다릅니다 (요청 %d원, 준비 %d원, 견적 %d원)"
                             .formatted(request.amount(), payment.getAmount(), expected));
+        }
+    }
+
+    /**
+     * 아직 쓰이지 않은 주문인가. 실패·타임아웃·승인 등으로 한 번 결론이 난 시도는 다시 쓸 수 없다 —
+     * 재시도는 {@code prepare}부터 새 orderId로 한다.
+     */
+    private static void requireFreshAttempt(Payment payment) {
+        if (payment.getStatus() != PaymentStatus.READY) {
+            throw new ApiException(
+                    ErrorCode.ORDER_ID_ALREADY_USED,
+                    "이미 처리된 주문입니다. 결제를 다시 준비해 주세요 (주문 상태: %s)".formatted(payment.getStatus()));
         }
     }
 

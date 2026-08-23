@@ -93,14 +93,27 @@ public class PaymentService {
         }
     }
 
-    /** 계약 서명이 끝나야 결제할 수 있다. 준비를 다시 눌러도 되도록 PAYMENT_PENDING도 허용한다. */
+    /**
+     * 결제할 수 있는 상태인가. <b>사유별로 다른 코드와 문구를 낸다</b>(웹 J-0 제기, 2026-08-23).
+     *
+     * <p>전에는 CONTRACT_SIGNED가 아니면 전부 "계약 서명이 끝난 예약만 결제할 수 있습니다"였다.
+     * 그러면 <b>이미 결제한 예약에서 그 문구가 나가</b> 결제를 마치고 돌아온 사용자가 서명이
+     * 실패한 줄 알고 계약을 다시 서명하려 한다 — 문구가 직접 거짓을 말한 것이다.
+     *
+     * <p>준비를 다시 눌러도 되도록 PAYMENT_PENDING은 허용한다 — 위젯을 닫았다 돌아오는 것은
+     * 정상 흐름이고, 새 orderId가 발급된다.
+     */
     private static void requirePayable(ReservationRequestResponse reservation) {
-        boolean payable = reservation.status() == ReservationStatus.CONTRACT_SIGNED
-                || reservation.status() == ReservationStatus.PAYMENT_PENDING;
-        if (!payable) {
-            throw new ApiException(
-                    ErrorCode.VALIDATION_FAILED,
-                    "계약 서명이 끝난 예약만 결제할 수 있습니다 (현재 상태: %s)".formatted(reservation.status()));
+        switch (reservation.status()) {
+            case CONTRACT_SIGNED, PAYMENT_PENDING -> {
+                /* 결제 가능 */
+            }
+            case PAID -> throw new ApiException(ErrorCode.PAYMENT_ALREADY_COMPLETED, "이미 결제가 완료된 예약입니다");
+            case CANCELLED -> throw new ApiException(ErrorCode.VALIDATION_FAILED, "취소된 예약은 결제할 수 없습니다");
+            case DRAFT, CONTRACT_PENDING ->
+                throw new ApiException(
+                        ErrorCode.VALIDATION_FAILED,
+                        "계약 서명이 끝나야 결제할 수 있습니다 (현재 상태: %s)".formatted(reservation.status()));
         }
     }
 

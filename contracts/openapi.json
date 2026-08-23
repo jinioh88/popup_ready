@@ -1767,6 +1767,7 @@
               "CONTRACT_INTEGRITY_VIOLATION",
               "REFRESH_TOKEN_INVALID",
               "PAYMENT_ALREADY_COMPLETED",
+              "ORDER_ID_ALREADY_USED",
               "PAYMENT_RESULT_UNKNOWN",
               "PAYMENT_DECLINED",
               "PAYMENT_AMOUNT_MISMATCH",

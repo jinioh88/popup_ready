@@ -62,6 +62,9 @@ public enum ErrorCode {
 
     // payment (US-201)
     PAYMENT_ALREADY_COMPLETED(HttpStatus.CONFLICT),
+    // 이미 처리된 주문으로 다시 승인을 시도했다. 재시도는 prepare부터 새 orderId로 해야 한다.
+    // 500으로 알리면 클라이언트가 서버 장애로 읽고 같은 주문을 계속 재시도한다.
+    ORDER_ID_ALREADY_USED(HttpStatus.CONFLICT),
     // PG 호출이 타임아웃돼 승인 여부를 모른다. 사용자 잘못이 아니고 재시도로 낫지도 않으므로
     // 실패(4xx)가 아니라 503으로 알린다 — 수동 확인이 필요한 상태다.
     PAYMENT_RESULT_UNKNOWN(HttpStatus.SERVICE_UNAVAILABLE),
