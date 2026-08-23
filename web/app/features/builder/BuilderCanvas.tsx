@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 
+import { readDraggedFixtureId } from "../../lib/builder/dragTransfer";
 import { resolveDrop } from "../../lib/builder/drop";
 import { toPlacement } from "../../lib/builder/occupancy";
 import { cellToPixel, snapToCell } from "../../lib/builder/snap";
 import type { Placement } from "../../lib/builder/types";
 import type { GridSpec, LayoutItem } from "../../lib/schemas/layout";
 import { useBuilderStore } from "../../stores/builder";
-import { CANVAS_COLORS, CELL_PX, FIXTURE_DRAG_TYPE } from "./constants";
+import { CANVAS_COLORS, CELL_PX } from "./constants";
 import { placementRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 
@@ -69,11 +70,12 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
     });
   }
 
+  /**
+   * 끌고 있는 집기 id. **`getData()`가 아니라 `types`에서 읽는다** — dragover 단계의
+   * dataTransfer는 protected mode라 값이 가려진다(`app/lib/builder/dragTransfer` 참고).
+   */
   function readFixtureId(event: React.DragEvent<HTMLDivElement>): number | null {
-    const raw = event.dataTransfer.getData(FIXTURE_DRAG_TYPE);
-    const id = Number(raw);
-
-    return raw && Number.isFinite(id) ? id : null;
+    return readDraggedFixtureId(event.dataTransfer.types);
   }
 
   return (
@@ -86,15 +88,25 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
           return;
         }
 
-        // 기본 동작을 막아야 드롭이 허용된다.
+        // 기본 동작을 막아야 드롭이 허용된다 — 이걸 못 부르면 drop 이벤트 자체가 오지 않는다.
         event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
 
         // dragover는 초당 수십 번 발생한다. 대상 셀이 그대로면 리렌더하지 않는다.
         const resolved = resolveAt(event, fixtureId);
         const next = resolved.ok ? { placement: resolved.placement, valid: resolved.valid } : null;
         setPreview((current) => (isSamePreview(current, next) ? current : next));
       }}
-      onDragLeave={() => setPreview(null)}
+      onDragLeave={(event) => {
+        // dragleave는 자식으로 옮겨갈 때도 올라온다 — 그때 지우면 미리보기가 깜빡인다.
+        const next = event.relatedTarget;
+
+        if (next instanceof Node && event.currentTarget.contains(next)) {
+          return;
+        }
+
+        setPreview(null);
+      }}
       onDrop={(event) => {
         event.preventDefault();
         const fixtureId = readFixtureId(event);

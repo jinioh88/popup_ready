@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { Schemas } from "../api/client";
-import { maxEndDate, reservationPeriodSchema, type ReservationPeriod } from "./reservation";
+import {
+  MAX_RESERVATION_DAYS,
+  maxEndDate,
+  minStartDate,
+  reservationPeriodSchema,
+  type ReservationPeriod,
+} from "./reservation";
 
 /** 기간 입력이 계약 요청 DTO의 날짜 필드와 어긋나지 않는지 컴파일 타임에 고정한다. */
 type Assert<T extends true> = T;
@@ -120,5 +126,51 @@ describe("maxEndDate", () => {
 
   it("날짜가 아니면 상한을 만들지 않는다", () => {
     expect(maxEndDate("")).toBeUndefined();
+  });
+});
+
+/**
+ * 달력 제약은 **양방향**이어야 한다. 시작일에만 상한을 걸었더니 종료일을 먼저 찍고 시작일을
+ * 앞으로 당기는 순서로 30일 캡이 뚫렸다(2026-08-23 사용자 인수 테스트).
+ */
+describe("minStartDate", () => {
+  it("종료일 기준 가장 이른 시작일은 29일 전이다 — 양끝 포함 30일", () => {
+    expect(minStartDate("2026-09-30")).toBe("2026-09-01");
+  });
+
+  it("maxEndDate와 서로의 역이다", () => {
+    const start = "2026-09-01";
+    const end = maxEndDate(start);
+
+    expect(end).toBeDefined();
+    expect(minStartDate(end!)).toBe(start);
+  });
+
+  it("그 경계가 스키마 판정과 같다 — 화면 제약과 검증이 갈라지면 안 된다", () => {
+    const endDate = "2026-09-30";
+    const earliest = minStartDate(endDate)!;
+
+    expect(reservationPeriodSchema.safeParse({ startDate: earliest, endDate }).success).toBe(true);
+
+    // 하루만 더 앞이면 31일이라 거부돼야 한다.
+    const tooEarly = minStartDate("2026-09-29")!;
+    expect(reservationPeriodSchema.safeParse({ startDate: tooEarly, endDate }).success).toBe(false);
+  });
+
+  it("달 경계를 넘어가도 어긋나지 않는다", () => {
+    expect(minStartDate("2027-01-02")).toBe("2026-12-04");
+  });
+
+  it("날짜로 못 읽으면 undefined다 — 빈 입력이면 제약을 걸지 않는다", () => {
+    expect(minStartDate("")).toBeUndefined();
+    expect(minStartDate("어제")).toBeUndefined();
+  });
+
+  it("상한 상수와 실제 간격이 일치한다", () => {
+    const start = minStartDate("2026-09-30")!;
+    const days =
+      (Date.parse("2026-09-30T00:00:00Z") - Date.parse(`${start}T00:00:00Z`)) / 86_400_000 + 1;
+
+    expect(days).toBe(MAX_RESERVATION_DAYS);
   });
 });

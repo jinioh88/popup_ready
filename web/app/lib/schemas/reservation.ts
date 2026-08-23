@@ -54,12 +54,28 @@ export type ReservationPeriod = z.infer<typeof reservationPeriodSchema>;
  * 상한이 30일이므로 마지막 날은 시작일 + 29일이다(양끝 포함).
  */
 export function maxEndDate(startDate: string): string | undefined {
-  const start = Date.parse(`${startDate}T00:00:00Z`);
+  return shiftDate(startDate, MAX_RESERVATION_DAYS - 1);
+}
 
-  if (Number.isNaN(start)) {
+/**
+ * 종료일이 먼저 정해졌을 때 고를 수 있는 **가장 이른 시작일**(`yyyy-MM-dd`).
+ *
+ * `maxEndDate`의 짝이다. 한쪽 방향만 막으면 **선택 순서로 상한이 뚫린다** —
+ * 종료일을 먼저 찍고 시작일을 한참 앞으로 잡으면 달력이 30일을 넘겨도 그대로 통과했다
+ * (2026-08-23 사용자 인수 테스트에서 발견). 양쪽 `min`/`max`를 모두 걸어야 순서와 무관하게
+ * 막힌다. 판정의 원장은 여전히 위 스키마이고 최종 판정은 서버다.
+ */
+export function minStartDate(endDate: string): string | undefined {
+  return shiftDate(endDate, -(MAX_RESERVATION_DAYS - 1));
+}
+
+/** `yyyy-MM-dd`를 일 단위로 옮긴다. 날짜로 못 읽으면 undefined. */
+function shiftDate(date: string, days: number): string | undefined {
+  const base = Date.parse(`${date}T00:00:00Z`);
+
+  if (Number.isNaN(base)) {
     return undefined;
   }
 
-  const last = new Date(start + (MAX_RESERVATION_DAYS - 1) * 24 * 60 * 60 * 1000);
-  return last.toISOString().slice(0, 10);
+  return new Date(base + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }

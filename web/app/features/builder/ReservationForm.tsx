@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -5,6 +6,7 @@ import { estimateReservation } from "../../lib/builder/estimate";
 import {
   MAX_RESERVATION_DAYS,
   maxEndDate,
+  minStartDate,
   reservationPeriodSchema,
   type ReservationPeriod,
 } from "../../lib/schemas/reservation";
@@ -18,7 +20,11 @@ import type { FixtureCatalog } from "./queries";
  * 두 값이 다르면 계산식이 어긋난 것이므로 통합 단계에서 잡아야 한다.
  *
  * 사용 기간 상한(30일)은 **법률 세이프가드**다(일시사용 임대차 요건). 달력에서 아예 고를 수 없게
- * `max`로 막고, 직접 입력·붙여넣기로 넘어오는 경로는 Zod 스키마가 잡는다 — 최종 판정은 서버다.
+ * 막고, 직접 입력·붙여넣기로 넘어오는 경로는 Zod 스키마가 잡는다 — 최종 판정은 서버다.
+ *
+ * 달력 제약은 **양방향**이다. 시작일에만 `max`를 걸면 종료일을 먼저 찍고 시작일을 앞으로
+ * 당기는 순서로 상한이 뚫린다(2026-08-23 사용자 인수 테스트에서 발견). 두 필드가 서로의
+ * `min`/`max`가 되어야 선택 순서와 무관하게 막힌다.
  */
 
 type ReservationFormProps = {
@@ -42,7 +48,8 @@ export function ReservationForm({
     register,
     handleSubmit,
     watch,
-    formState: { errors },
+    trigger,
+    formState: { errors, isSubmitted },
   } = useForm<ReservationPeriod>({
     resolver: zodResolver(reservationPeriodSchema),
     defaultValues: { startDate: "", endDate: "" },
@@ -50,6 +57,14 @@ export function ReservationForm({
 
   const startDate = watch("startDate");
   const endDate = watch("endDate");
+
+  // 달력 제약을 우회해 들어온 조합(직접 입력·붙여넣기)은 한쪽을 고치는 순간 다시 판정한다 —
+  // 제출 버튼을 눌러야 알게 되면 이미 다 채운 뒤다. 첫 제출 전에는 조용히 둔다.
+  useEffect(() => {
+    if (isSubmitted && startDate && endDate) {
+      void trigger("endDate");
+    }
+  }, [startDate, endDate, isSubmitted, trigger]);
 
   const placedFixtures = items.flatMap((item) => {
     const fixture = fixtures[item.fixtureId];
@@ -84,6 +99,8 @@ export function ReservationForm({
           id="reservation-start"
           label="시작일"
           error={errors.startDate?.message}
+          min={endDate ? minStartDate(endDate) : undefined}
+          max={endDate || undefined}
           {...register("startDate")}
         />
         <DateField
@@ -149,8 +166,10 @@ function DateField({
   id,
   ...inputProps
 }: React.ComponentPropsWithRef<"input"> & { label: string; error?: string }) {
+  // `min-w-0`이 없으면 flex 항목이 date 입력의 고유 폭(약 160px) 아래로 줄지 않아
+  // 두 칸이 카드 밖으로 삐져나온다(2026-08-23 사용자 인수 테스트).
   return (
-    <div className="flex flex-1 flex-col gap-2">
+    <div className="flex min-w-0 flex-1 flex-col gap-2">
       <label htmlFor={id} className="text-caption text-text-muted">
         {label}
       </label>
@@ -158,7 +177,7 @@ function DateField({
         id={id}
         type="date"
         aria-invalid={error ? true : undefined}
-        className={`h-10 rounded-lg border bg-surface px-3 text-body ${
+        className={`h-10 w-full rounded-lg border bg-surface px-3 text-body ${
           error ? "border-error" : "border-border"
         }`}
         {...inputProps}

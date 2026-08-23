@@ -47,6 +47,37 @@ describe("toSearchParams", () => {
   });
 });
 
+/**
+ * 검색 조건 변경 감지는 **값** 기준이어야 한다(`useSpaceSearch`의 디바운스가 이 직렬화에
+ * 의존한다). 참조 기준이면 같은 값을 되돌려 넣는 경로가 디바운스를 계속 되감아 필터가
+ * 쿼리에 닿지 않는다 — 2026-08-23 인수 테스트의 "필터 되돌림 미동작" 조사에서 드러난 구멍이다.
+ */
+describe("toSearchParams 직렬화", () => {
+  it("값이 같으면 객체가 달라도 같은 문자열이 된다", () => {
+    const a = toSearchParams({ ...DEFAULT_SEARCH, minArea: 80 });
+    const b = toSearchParams({ ...DEFAULT_SEARCH, minArea: 80 });
+
+    expect(a).not.toBe(b);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+  });
+
+  it("필터를 넣었다 지우면 처음과 같은 문자열로 돌아온다", () => {
+    const before = JSON.stringify(toSearchParams(DEFAULT_SEARCH));
+    const filtered = JSON.stringify(toSearchParams({ ...DEFAULT_SEARCH, maxRent: 300_000 }));
+    const reverted = JSON.stringify(toSearchParams({ ...DEFAULT_SEARCH, maxRent: undefined }));
+
+    expect(filtered).not.toBe(before);
+    expect(reverted).toBe(before);
+  });
+
+  it("값이 하나라도 다르면 문자열도 달라진다", () => {
+    const base = JSON.stringify(toSearchParams(DEFAULT_SEARCH));
+
+    expect(JSON.stringify(toSearchParams({ ...DEFAULT_SEARCH, radius: 5000 }))).not.toBe(base);
+    expect(JSON.stringify(toSearchParams({ ...DEFAULT_SEARCH, minArea: 80 }))).not.toBe(base);
+  });
+});
+
 describe("AREA_PRESETS", () => {
   it("서로 다른 좌표를 가진다 — 프리셋 판별이 좌표 일치로 이뤄지기 때문", () => {
     const coords = AREA_PRESETS.map((preset) => `${preset.lat},${preset.lng}`);

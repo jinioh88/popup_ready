@@ -1,12 +1,15 @@
 import { useState } from "react";
 
 import type { Fixture, FixtureCategory } from "../../lib/schemas/api";
-import { CATEGORY_LABELS, CATEGORY_ORDER, FIXTURE_DRAG_TYPE } from "./constants";
+import { fixtureDragType } from "../../lib/builder/dragTransfer";
+import { CATEGORY_LABELS, CATEGORY_ORDER } from "./constants";
 
 /**
  * 집기 라이브러리 패널 — 카테고리 탭 + 캔버스로 끌어다 놓는 항목 목록.
  *
  * 드래그는 HTML5 dragstart로 fixtureId만 실어 보낸다. 좌표 환산·충돌 판정은 캔버스가 한다.
+ * id를 **타입 이름에 싣는** 이유는 `app/lib/builder/dragTransfer`에 있다(dragover에서는
+ * 값을 읽을 수 없다).
  */
 
 type FixturePanelProps = {
@@ -44,7 +47,7 @@ export function FixturePanel({ fixtures, isLoading }: FixturePanelProps) {
               <div
                 draggable
                 onDragStart={(event) => {
-                  event.dataTransfer.setData(FIXTURE_DRAG_TYPE, String(fixture.id));
+                  event.dataTransfer.setData(fixtureDragType(fixture.id), String(fixture.id));
                   event.dataTransfer.effectAllowed = "copy";
                 }}
                 className="cursor-grab rounded-lg border border-border bg-surface p-3 active:cursor-grabbing"
