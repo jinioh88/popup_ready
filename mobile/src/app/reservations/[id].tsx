@@ -1,56 +1,85 @@
+import { useQuery } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import { useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { useDoorLock } from "../../hooks/useDoorLock";
+import { SmartLockActionSheet } from "../../components/SmartLockActionSheet";
+import { useDoorOpen } from "../../hooks/useDoorOpen";
+import { resolveApiBaseUrl } from "../../lib/api/config";
+import { fetchReservation, parseReservationId } from "../../lib/api/reservations";
 import { colors, radius, spacing, typography } from "../../lib/theme";
 
-const STATUS_LABEL = {
-  idle: "대기",
-  connecting: "브로커 연결 중…",
-  connected: "연결됨",
-  error: "연결 실패",
-} as const;
-
-/** 예약 상세 — 도어락 체크인(US-301). 실제 BLE가 아니라 MQTT 모킹이다. */
+/**
+ * 예약 상세 — 무인 스마트락 체크인(US-301).
+ *
+ * 실제 하드웨어가 아니라 MQTT 모킹이지만, **화면 문구는 전송 방식을 말하지 않는다**
+ * (스타일가이드 §8.C). 문구는 전부 `lib/doorlock/status.ts`가 만든다.
+ */
 export default function ReservationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { status, brokerUrl, topic, lastEcho, error, unlock } = useDoorLock(id);
+  const reservationId = parseReservationId(id);
+
+  if (reservationId === null) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.error}>예약 번호가 올바르지 않다: {id}</Text>
+      </View>
+    );
+  }
+
+  return <ReservationDetail reservationId={reservationId} />;
+}
+
+function ReservationDetail({ reservationId }: { reservationId: number }) {
+  const baseUrl = resolveApiBaseUrl(Constants.expoConfig?.hostUri, process.env.EXPO_PUBLIC_API_URL);
+  const doorLock = useDoorOpen(reservationId);
+
+  const { data: reservation } = useQuery({
+    queryKey: ["reservation", baseUrl, reservationId],
+    queryFn: () => fetchReservation(baseUrl!, reservationId),
+    enabled: Boolean(baseUrl),
+  });
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>예약 ID</Text>
-      <Text style={styles.value}>{id}</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>도어락 (MQTT 모킹)</Text>
-        <Text style={styles.meta}>브로커 {brokerUrl ?? "미확인"}</Text>
-        <Text style={styles.meta}>토픽 {topic}</Text>
-        <Text style={styles.meta}>상태 {STATUS_LABEL[status]}</Text>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-      </View>
-
-      <Pressable
-        style={[styles.button, status !== "connected" && styles.buttonDisabled]}
-        disabled={status !== "connected"}
-        onPress={unlock}
-      >
-        <Text style={[styles.buttonLabel, status !== "connected" && styles.buttonLabelDisabled]}>
-          도어락 열기
+    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+      <Text style={styles.label}>예약</Text>
+      <Text style={styles.value}>#{reservationId}</Text>
+      {reservation ? (
+        <Text style={styles.meta}>
+          {reservation.startDate} ~ {reservation.endDate}
         </Text>
-      </Pressable>
+      ) : null}
 
-      {/* 발행한 신호를 같은 토픽 구독으로 되받아 브로커 왕복을 눈으로 확인한다. */}
-      <Text style={styles.label}>브로커 응답</Text>
-      <Text style={styles.echo}>{lastEcho ?? "아직 없음"}</Text>
-    </View>
+      <SmartLockActionSheet
+        headline={doorLock.headline}
+        detail={doorLock.detail}
+        tone={doorLock.tone}
+        canSlide={doorLock.canSlide}
+        error={doorLock.error}
+        retryInSeconds={doorLock.retryInSeconds}
+        onOpen={doorLock.open}
+        onReconnect={doorLock.reconnectNow}
+      />
+
+      {/* 브로커가 상태 토픽으로 되돌려준 값. 개방의 필요조건이 아니라 확인용이다. */}
+      {doorLock.lastStatusMessage ? (
+        <View style={styles.echoBox}>
+          <Text style={styles.label}>도어락 상태 수신</Text>
+          <Text style={styles.echo}>{doorLock.lastStatusMessage.payload}</Text>
+        </View>
+      ) : null}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.bg, flex: 1, gap: spacing.sm, padding: spacing.lg },
+  screen: { backgroundColor: colors.bg, flex: 1 },
+  container: { gap: spacing.sm, padding: spacing.lg },
   label: { ...typography.caption, color: colors.textMuted, marginTop: spacing.sm },
-  value: { ...typography.bodyStrong, color: colors.text },
-  card: {
+  value: { ...typography.title, color: colors.text },
+  meta: { ...typography.body, color: colors.textMuted, marginBottom: spacing.lg },
+  error: { ...typography.body, color: colors.error },
+  echoBox: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radius.card,
@@ -59,21 +88,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     padding: spacing.lg,
   },
-  cardTitle: { ...typography.heading, color: colors.text, marginBottom: spacing.xs },
-  meta: { ...typography.caption, color: colors.textMuted },
-  error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
-  // 주 버튼: primary 배경 + 흰 텍스트, 높이 48(모바일), radius 8 — 가이드 §4.
-  button: {
-    alignItems: "center",
-    backgroundColor: colors.primary,
-    borderRadius: radius.input,
-    height: 48,
-    justifyContent: "center",
-    marginTop: spacing.lg,
-  },
-  // 가이드에 disabled 토큰이 없어 뉴트럴 토큰(border/textMuted)으로 표현한다.
-  buttonDisabled: { backgroundColor: colors.border },
-  buttonLabel: { ...typography.bodyStrong, color: colors.surface },
-  buttonLabelDisabled: { color: colors.textMuted },
   echo: { ...typography.caption, color: colors.text, fontFamily: "Courier" },
 });

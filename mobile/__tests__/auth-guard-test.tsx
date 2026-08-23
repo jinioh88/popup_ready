@@ -29,6 +29,14 @@ jest.mock("expo-constants", () => ({
   default: { expoConfig: { hostUri: "192.168.0.10:8081" } },
 }));
 
+// 예약 화면이 렌더되면 서버를 부른다. 가드 테스트가 실 네트워크를 타지 않게 막는다.
+jest.mock("../src/lib/api/reservations", () => ({
+  ...jest.requireActual("../src/lib/api/reservations"),
+  fetchMyReservations: () => Promise.resolve([]),
+  fetchReservation: () =>
+    Promise.resolve({ id: 42, startDate: "2026-09-01", endDate: "2026-09-14" }),
+}));
+
 // 예약 상세가 렌더되면 MQTT 연결이 뜬다. 가드가 새면 이 mock이 호출되는 것으로 드러난다.
 const mockConnect = jest.fn(() => ({
   on: jest.fn(),
@@ -71,7 +79,7 @@ describe("T0 인증 가드", () => {
     await settleToken(null);
 
     await waitFor(() => expect(screen.getByPlaceholderText("이메일")).toBeTruthy());
-    expect(screen.queryByText("도어락 (MQTT 모킹)")).toBeNull();
+    expect(screen.queryByText("#42")).toBeNull();
     // 화면이 스쳐 지나가지도 않았음을 부작용으로 확인한다.
     expect(mockConnect).not.toHaveBeenCalled();
   });
@@ -86,7 +94,7 @@ describe("T0 인증 가드", () => {
     await settleToken(null);
 
     await waitFor(() => expect(screen.getByPlaceholderText("이메일")).toBeTruthy());
-    expect(screen.queryByText("도어락 (MQTT 모킹)")).toBeNull();
+    expect(screen.queryByText("#42")).toBeNull();
     expect(mockConnect).not.toHaveBeenCalled();
   });
 
@@ -94,8 +102,7 @@ describe("T0 인증 가드", () => {
     await renderRouter(APP_DIR, { initialUrl: DEEP_LINK_PATH });
     await settleToken("jwt-abc");
 
-    await waitFor(() => expect(screen.getByText("도어락 (MQTT 모킹)")).toBeTruthy());
-    expect(screen.getByText("42")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("#42")).toBeTruthy());
   });
 
   it("G3 — 토큰을 읽는 중에는 보호 화면도 로그인 화면도 렌더하지 않는다", async () => {
@@ -103,7 +110,7 @@ describe("T0 인증 가드", () => {
 
     // 아직 resolve하지 않았다 — 이 시점이 "렌더 시점 1회 판정"이 틀리는 순간이다.
     expect(screen.getByText("로그인 상태를 확인하는 중")).toBeTruthy();
-    expect(screen.queryByText("도어락 (MQTT 모킹)")).toBeNull();
+    expect(screen.queryByText("#42")).toBeNull();
     expect(screen.queryByPlaceholderText("이메일")).toBeNull();
 
     await settleToken(null);
@@ -115,7 +122,7 @@ describe("T0 인증 가드", () => {
 
     await settleToken("jwt-abc");
 
-    await waitFor(() => expect(screen.getByText("도어락 (MQTT 모킹)")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("#42")).toBeTruthy());
     expect(screen.queryByPlaceholderText("이메일")).toBeNull();
   });
 

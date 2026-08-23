@@ -1,29 +1,101 @@
+import { useQuery } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import { Link } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing, typography } from "../../lib/theme";
+import { resolveApiBaseUrl } from "../../lib/api/config";
+import { fetchMyReservations, type ReservationSummary } from "../../lib/api/reservations";
+import { colors, radius, spacing, typography } from "../../lib/theme";
 
 /**
- * 예약 목록 화면.
+ * 예약 목록 — `GET /reservation-requests`. 서버가 **내가 만든 예약만** 최근 순으로 준다.
  *
- * TODO(US-3xx): `GET /reservations` 연동(TanStack Query).
- * 목록 아이템 타입은 contracts/openapi.json 생성 타입을 쓴다 — 손으로 정의하지 않는다.
+ * 남의 예약을 볼 경로가 없으므로 403 분기를 두지 않는다(계약 §2.2-A).
  */
 export default function ReservationListScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.empty}>예약 데이터는 API 연동 후 표시된다.</Text>
+  const baseUrl = resolveApiBaseUrl(Constants.expoConfig?.hostUri, process.env.EXPO_PUBLIC_API_URL);
 
-      {/* 골격 확인용 임시 링크 — 목록 연동 시 제거한다. */}
-      <Link href="/reservations/demo" style={styles.link}>
-        예약 상세 화면으로 이동 (골격 확인용)
-      </Link>
+  const { data, isPending, error } = useQuery({
+    queryKey: ["reservations", baseUrl],
+    queryFn: () => fetchMyReservations(baseUrl!),
+    enabled: Boolean(baseUrl),
+  });
+
+  if (!baseUrl) {
+    return <Centered>API 주소를 확인할 수 없다. EXPO_PUBLIC_API_URL을 지정하라.</Centered>;
+  }
+  if (isPending) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+  if (error) return <Centered>예약을 불러오지 못했다: {error.message}</Centered>;
+  if (!data?.length) return <Centered>아직 예약이 없다.</Centered>;
+
+  return (
+    <FlatList
+      style={styles.list}
+      contentContainerStyle={styles.listContent}
+      data={data}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={({ item }) => <ReservationRow reservation={item} />}
+    />
+  );
+}
+
+function ReservationRow({ reservation }: { reservation: ReservationSummary }) {
+  return (
+    <Link href={`/reservations/${reservation.id}`} style={styles.card}>
+      <View style={styles.cardBody}>
+        <Text style={styles.cardTitle}>예약 #{reservation.id}</Text>
+        <Text style={styles.cardMeta}>
+          {reservation.startDate} ~ {reservation.endDate}
+        </Text>
+        <Text style={styles.cardStatus}>
+          {STATUS_LABEL[reservation.status] ?? reservation.status}
+        </Text>
+      </View>
+    </Link>
+  );
+}
+
+/** 계약 enum을 화면 문구로. 계약에 새 상태가 늘면 원문을 그대로 보여준다. */
+const STATUS_LABEL: Record<string, string> = {
+  DRAFT: "작성 중",
+  CONTRACT_PENDING: "계약 대기",
+  CONTRACT_SIGNED: "계약 완료",
+};
+
+function Centered({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.centered}>
+      <Text style={styles.empty}>{children}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { backgroundColor: colors.bg, flex: 1, gap: spacing.lg, padding: spacing.lg },
-  empty: { ...typography.body, color: colors.textMuted },
-  link: { ...typography.body, color: colors.primary },
+  list: { backgroundColor: colors.bg, flex: 1 },
+  listContent: { gap: spacing.md, padding: spacing.lg },
+  centered: {
+    alignItems: "center",
+    backgroundColor: colors.bg,
+    flex: 1,
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  empty: { ...typography.body, color: colors.textMuted, textAlign: "center" },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    padding: spacing.lg,
+  },
+  cardBody: { gap: spacing.xs },
+  cardTitle: { ...typography.heading, color: colors.text },
+  cardMeta: { ...typography.caption, color: colors.textMuted },
+  cardStatus: { ...typography.caption, color: colors.primary },
 });

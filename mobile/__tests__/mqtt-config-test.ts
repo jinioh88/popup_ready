@@ -1,5 +1,5 @@
 import { resolveBrokerUrl } from "../src/lib/mqtt/config";
-import { buildUnlockCommand, doorLockTopic } from "../src/lib/mqtt/topics";
+import { isCommandTopic, isStatusTopic } from "../src/lib/mqtt/topics";
 
 describe("resolveBrokerUrl", () => {
   it("hostUri의 호스트를 9001 포트 ws URL로 바꾼다", () => {
@@ -20,18 +20,35 @@ describe("resolveBrokerUrl", () => {
   });
 });
 
-describe("도어락 토픽·페이로드", () => {
-  it("예약별 토픽을 만든다", () => {
-    expect(doorLockTopic("r-42")).toBe("popupready/reservations/r-42/door");
+// 토픽은 서버가 내려준 것을 그대로 쓴다(§2.3 "발행 토픽은 어떤 경우에도 조립하지 않는다").
+// 여기서 확인하는 것은 "만들기"가 아니라 "받은 값이 규약대로인가"다 — 훼손된 토픽을 그대로
+// 발행하면 엉뚱한 공간의 도어락에 열림 신호가 간다.
+describe("도어락 토픽 규약", () => {
+  it("규약대로인 발행 토픽을 받아들인다", () => {
+    expect(isCommandTopic("popupready/locks/1/command")).toBe(true);
+    expect(isCommandTopic("popupready/locks/space-7/command")).toBe(true);
   });
 
-  it("열림 명령에 예약 ID와 요청 시각을 담는다", () => {
-    const command = buildUnlockCommand("r-42", new Date("2026-08-22T09:00:00.000Z"));
+  it("규약대로인 상태 토픽을 받아들인다", () => {
+    expect(isStatusTopic("popupready/locks/1/status")).toBe(true);
+  });
 
-    expect(command).toEqual({
-      action: "unlock",
-      reservationId: "r-42",
-      requestedAt: "2026-08-22T09:00:00.000Z",
-    });
+  it("접두사·꼬리가 다른 토픽을 거른다", () => {
+    expect(isCommandTopic("popupready/locks/1/status")).toBe(false);
+    expect(isCommandTopic("other/locks/1/command")).toBe(false);
+    expect(isCommandTopic("popupready/locks/1/command/extra")).toBe(false);
+    expect(isCommandTopic("popupready/locks//command")).toBe(false);
+  });
+
+  it("공간 자리에 경로 구분자가 끼어든 토픽을 거른다", () => {
+    expect(isCommandTopic("popupready/locks/1/2/command")).toBe(false);
+  });
+
+  it("와일드카드를 거른다", () => {
+    // `+`가 통과하면 "여러 도어락에 한 번에" 같은 값이 흘러든다. 상태 구독도 남의 공간까지 받는다.
+    expect(isCommandTopic("popupready/locks/+/command")).toBe(false);
+    expect(isCommandTopic("popupready/locks/#/command")).toBe(false);
+    expect(isStatusTopic("popupready/locks/+/status")).toBe(false);
+    expect(isStatusTopic("popupready/locks/#/status")).toBe(false);
   });
 });
