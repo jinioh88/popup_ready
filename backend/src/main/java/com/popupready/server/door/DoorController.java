@@ -61,7 +61,14 @@ public class DoorController {
     @Operation(
             operationId = "ackDoorEvent",
             summary = "MQTT 발행 결과 보고",
-            description = "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. " + "이 단계가 있어야 승인 기록이 전송 기록이 된다.")
+            description = "모바일이 실제로 발행했는지를 보고해 이벤트를 DELIVERED 또는 FAILED로 마감한다. "
+                    + "이 단계가 있어야 승인 기록이 전송 기록이 된다. 개방을 요청한 본인만 마감할 수 있다.")
+    // 인가가 door-open과 같은 강도라는 것을 계약에도 드러낸다 — 남의 이벤트를 뒤집을 수 있으면
+    // 전송 기록을 위조하는 경로가 된다.
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "이 도어 이벤트의 요청자가 아님",
+            content = @Content(schema = @Schema(ref = ERROR_ENVELOPE_REF)))
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/api/v1/door-events/{eventId}/ack")
     public ApiResponse<DoorAckResponse> ack(

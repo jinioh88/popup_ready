@@ -131,6 +131,24 @@ public class ReservationRequestService {
         }
     }
 
+    /**
+     * 도어 개방 판정용 읽기 모델(US-301). {@code door}가 예약을 들여다보는 유일한 창구다.
+     *
+     * <p>판정(당사자·상태·시간창)은 {@code door}가 한다 — 여기서 하면 예약 서비스가 도어 정책까지
+     * 떠안는다. 이 메서드가 하는 일은 판정에 필요한 사실을 그대로 넘기는 것뿐이다.
+     */
+    @Transactional(readOnly = true)
+    public ReservationAccess findForDoorAccess(Long reservationRequestId) {
+        ReservationRequest request = require(reservationRequestId);
+        return new ReservationAccess(
+                request.getId(),
+                request.getSpaceId(),
+                request.getBrandUserId(),
+                request.getStartDate(),
+                request.getEndDate(),
+                request.getStatus());
+    }
+
     /** 계약서가 만들어졌다(US-202). 잘못된 전이는 엔티티가 막는다. */
     public void markContractPending(Long reservationRequestId) {
         require(reservationRequestId).markContractPending();

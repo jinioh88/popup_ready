@@ -128,6 +128,27 @@ public class ReservationRequest {
         this.status = ReservationStatus.CONTRACT_SIGNED;
     }
 
+    /**
+     * 결제 준비가 끝났다(주문 발급). <b>아직 자리를 잡은 것이 아니다</b> — 가용량·겹침 판정은
+     * {@code PAID}만 센다.
+     */
+    public void markPaymentPending() {
+        requireStatus(ReservationStatus.CONTRACT_SIGNED, ReservationStatus.PAYMENT_PENDING);
+        this.status = ReservationStatus.PAYMENT_PENDING;
+    }
+
+    /**
+     * 결제가 승인됐다. 이 시점부터 공간·집기를 실제로 점유한다.
+     *
+     * <p>결제 준비를 건너뛴 전이는 허용하지 않는다 — orderId 없이 자리를 잡은 예약은 분쟁 시
+     * 대조할 것이 없다. 이미 {@code PAID}인 것을 다시 전이시키는 것도 막는다: "예약당 PAID는
+     * 최대 1건"이라는 실질 제약의 마지막 방어선이다.
+     */
+    public void markPaid() {
+        requireStatus(ReservationStatus.PAYMENT_PENDING, ReservationStatus.PAID);
+        this.status = ReservationStatus.PAID;
+    }
+
     private void requireStatus(ReservationStatus expected, ReservationStatus target) {
         if (this.status != expected) {
             throw new IllegalStateException(
