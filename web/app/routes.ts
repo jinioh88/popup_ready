@@ -16,5 +16,6 @@ export default [
     route("spaces", "routes/spaces.tsx"),
     route("spaces/:spaceId/builder", "routes/builder.tsx"),
     route("reservations/:reservationId/contract", "routes/contract.tsx"),
+    route("reservations/:reservationId/payment", "routes/payment.tsx"),
   ]),
 ] satisfies RouteConfig;
