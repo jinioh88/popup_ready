@@ -1,3 +1,5 @@
+import { Link } from "react-router";
+
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { formatSignedAt } from "../../lib/datetime";
@@ -15,12 +17,20 @@ import type { Contract } from "../../lib/schemas/contract";
 
 type SignaturePanelProps = {
   contract: Contract;
+  /** 결제 화면으로 넘어갈 때 쓰는 예약 id. 계약 id와 다르다. */
+  reservationId: number;
   onSign: () => void;
   isPending?: boolean;
   errorMessage?: string;
 };
 
-export function SignaturePanel({ contract, onSign, isPending, errorMessage }: SignaturePanelProps) {
+export function SignaturePanel({
+  contract,
+  reservationId,
+  onSign,
+  isPending,
+  errorMessage,
+}: SignaturePanelProps) {
   const isSigned = contract.status === "SIGNED";
 
   return (
@@ -33,9 +43,19 @@ export function SignaturePanel({ contract, onSign, isPending, errorMessage }: Si
       </dl>
 
       {isSigned ? (
-        <p className="rounded-lg bg-bg p-3 text-caption text-text-muted">
-          양 당사자의 서명이 완료된 계약입니다.
-        </p>
+        <>
+          <p className="rounded-lg bg-bg p-3 text-caption text-text-muted">
+            양 당사자의 서명이 완료된 계약입니다.
+          </p>
+          {/*
+            **서명이 끝나면 다음 걸음은 결제다.** 이 링크가 없으면 사용자는 결제 화면으로 갈
+            방법이 없다 — 라우트는 있었지만 어디서도 가리키지 않아 URL을 직접 쳐야 했다.
+            서버도 이 시점(CONTRACT_SIGNED)부터 결제를 받는다.
+          */}
+          <Button as={Link} to={`/reservations/${reservationId}/payment`}>
+            결제하기
+          </Button>
+        </>
       ) : (
         <>
           <p className="text-caption text-text-muted">

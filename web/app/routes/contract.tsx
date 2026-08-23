@@ -54,6 +54,7 @@ export default function ContractRoute() {
         </div>
         <SignaturePanel
           contract={contract}
+          reservationId={numericId}
           onSign={() => sign.mutate(contract.id)}
           isPending={sign.isPending}
           errorMessage={sign.isError ? signMessage(sign.error) : undefined}
