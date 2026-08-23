@@ -34,7 +34,11 @@ public class ReservationRequestController {
     @Operation(summary = "예약 요청 단건 조회", description = "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.")
     @ResponseStatus(HttpStatus.OK)
     @GetMapping("/{id}")
-    public ApiResponse<ReservationRequestResponse> detail(
+    // ⚠️ 메서드 이름이 곧 operationId다. springdoc은 이름이 겹치면 _1·_2 접미사를 붙이는데,
+    //    그 번호는 컨트롤러 스캔 순서에 달려 있어 <b>무관한 컨트롤러가 같은 이름의 메서드를
+    //    추가하는 것만으로 남의 operationId가 밀린다.</b> 실제로 이 메서드를 detail로 두었더니
+    //    /contracts/{id}가 detail_1에서 detail_2로 바뀌었다. 겹치지 않는 이름을 쓴다.
+    public ApiResponse<ReservationRequestResponse> findById(
             @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal,
             @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id) {
         return ApiResponse.ok(reservationRequestService.detail(principal.userId(), id));
