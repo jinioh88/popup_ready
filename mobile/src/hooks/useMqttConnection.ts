@@ -4,12 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { nextDelayMs } from "../lib/mqtt/backoff";
 import { resolveBrokerUrl } from "../lib/mqtt/config";
+import type { MqttConnectionStatus } from "../lib/mqtt/connection-status";
 
-/**
- * `unavailable`은 재시도로 풀리지 않는 상태다(브로커 주소를 못 구함) — `disconnected`와 달리
- * 기다려도 나아지지 않으므로 화면에서 다르게 말해야 한다.
- */
-export type MqttConnectionStatus = "connecting" | "connected" | "disconnected" | "unavailable";
+export type { MqttConnectionStatus };
 
 export type MqttMessage = { topic: string; payload: string };
 
@@ -76,7 +73,16 @@ export function useMqttConnection() {
       if (disposed) return;
 
       // 이전 클라이언트를 확실히 닫는다. 남겨두면 소켓과 리스너가 겹쳐 쌓인다.
-      clientRef.current?.end(true);
+      //
+      // **리스너를 먼저 뗀다.** mqtt.js의 end()는 스트림을 부수며 "close"를 발행하는데,
+      // 옛 클라이언트의 close 핸들러가 살아 있으면 그것이 dropTo→scheduleRetry를 타서
+      // 재연결을 한 번 더 예약한다 — attempt가 두 배로 올라 백오프 수열이 설계와 달라지고
+      // 상태가 잠깐 "연결 끊김"으로 튄다.
+      const previous = clientRef.current;
+      if (previous) {
+        previous.removeAllListeners();
+        previous.end(true);
+      }
 
       setStatus((prev) => (prev === "connected" ? prev : "connecting"));
       setRetryAt(null);

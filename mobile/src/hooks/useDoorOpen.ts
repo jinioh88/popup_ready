@@ -34,6 +34,10 @@ const NO_BASE_URL_MESSAGE = "API 주소를 확인할 수 없다. EXPO_PUBLIC_API
  */
 export function useDoorOpen(reservationId: number) {
   const connection = useMqttConnection();
+  // 훅이 매 렌더 새 객체를 돌려주므로 `connection`을 통째로 의존하면 `open`의 정체성이
+  // 매 렌더 바뀐다. 그러면 슬라이드의 PanResponder가 제스처 도중에 다시 만들어져
+  // 응답자가 끊길 수 있다. 안정적인(useCallback[]) 함수만 집어 쓴다.
+  const { publish, subscribe } = connection;
   const [flow, setFlow] = useState<DoorFlowState>("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +67,7 @@ export function useDoorOpen(reservationId: number) {
     }
 
     // 상태 구독은 UI 편의다 — 실패해도 개방 흐름을 막지 않는다(계약 §2.3).
-    connection.subscribe(authorized.statusTopic);
+    subscribe(authorized.statusTopic);
 
     // ② 받은 값을 그대로 발행한다.
     setFlow("publishing");
@@ -71,7 +75,7 @@ export function useDoorOpen(reservationId: number) {
     let publishFailure: string | null = null;
     try {
       await withTimeout(
-        connection.publish(authorized.topic, JSON.stringify(authorized.payload)),
+        publish(authorized.topic, JSON.stringify(authorized.payload)),
         PUBLISH_TIMEOUT_MS,
       );
       published = true;
@@ -99,7 +103,7 @@ export function useDoorOpen(reservationId: number) {
       setFlow(published ? "unrecorded" : "failed");
       setError(publishFailure ?? messageOf(ackError));
     }
-  }, [baseUrl, connection, reservationId]);
+  }, [baseUrl, publish, subscribe, reservationId]);
 
   const view = describeDoorLock(connection.status, flow, connection.retryInSeconds);
 

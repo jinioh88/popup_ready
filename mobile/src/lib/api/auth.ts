@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-import { apiRequest, ApiRequestError, type ApiRequestOptions } from "./client";
+import { apiRequest, type ApiRequestOptions } from "./client";
+import { parseOrThrow } from "./parse";
 import type { components } from "./schema";
 
 /**
@@ -78,21 +79,4 @@ export async function refreshTokens(
   });
 
   return parseOrThrow(tokenPairSchema, data, "재발급 응답");
-}
-
-/**
- * 계약 위반을 조용히 넘기지 않는다.
- *
- * 생성 타입만으로는 응답을 믿을 수 없고(springdoc이 채우지 않는 부분이 있다), 토큰이 없는데
- * 성공으로 처리하면 이후 모든 요청이 조용히 401로 죽는다 — 경계에서 끊는 편이 싸다.
- */
-function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown, label: string): T {
-  const parsed = schema.safeParse(data);
-  if (parsed.success) return parsed.data;
-
-  throw new ApiRequestError(
-    "INTERNAL_ERROR",
-    `${label}이 계약과 다르다: ${parsed.error.issues.map((i) => i.path.join(".")).join(", ")}`,
-    null,
-  );
 }

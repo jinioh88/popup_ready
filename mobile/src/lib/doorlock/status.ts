@@ -1,4 +1,4 @@
-import type { MqttConnectionStatus } from "../../hooks/useMqttConnection";
+import type { MqttConnectionStatus } from "../mqtt/connection-status";
 
 /**
  * 도어락 상태 → 화면 문구 (스타일가이드 §8.C — 인수 조건).

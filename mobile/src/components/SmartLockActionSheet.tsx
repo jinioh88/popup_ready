@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { isSlideCommitted, slideOffset, SLIDE_THRESHOLD_RATIO } from "../lib/doorlock/slide";
+import { isSlideCommitted, slideOffset } from "../lib/doorlock/slide";
 import type { DoorLockView } from "../lib/doorlock/status";
 import { colors, radius, spacing, typography } from "../lib/theme";
 
@@ -151,5 +151,3 @@ const styles = StyleSheet.create({
   reconnect: { alignItems: "center", marginTop: spacing.xs, padding: spacing.sm },
   reconnectLabel: { ...typography.bodyStrong, color: colors.primary },
 });
-
-export { SLIDE_THRESHOLD_RATIO };

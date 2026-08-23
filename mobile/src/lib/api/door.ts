@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { authedRequest } from "./authed-client";
-import { ApiRequestError } from "./client";
+import { parseOrThrow } from "./parse";
 import type { components } from "./schema";
 import { COMMAND_TOPIC_PATTERN, STATUS_TOPIC_PATTERN } from "../mqtt/topics";
 
@@ -86,15 +86,4 @@ export async function ackDoorEvent(
   });
 
   return parseOrThrow(doorAckResponseSchema, data, "도어 마감 응답");
-}
-
-function parseOrThrow<T>(schema: z.ZodType<T>, data: unknown, label: string): T {
-  const parsed = schema.safeParse(data);
-  if (parsed.success) return parsed.data;
-
-  throw new ApiRequestError(
-    "INTERNAL_ERROR",
-    `${label}이 계약과 다르다: ${parsed.error.issues.map((i) => i.path.join(".")).join(", ")}`,
-    null,
-  );
 }

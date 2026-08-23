@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { Link } from "expo-router";
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { resolveApiBaseUrl } from "../../lib/api/config";
 import {
@@ -51,14 +51,17 @@ export default function ReservationListScreen() {
 
 function ReservationRow({ reservation }: { reservation: ReservationSummary }) {
   return (
-    <Link href={`/reservations/${reservation.id}`} style={styles.card}>
-      <View style={styles.cardBody}>
+    // `asChild`가 없으면 Link가 children을 <Text>로 감싼다 — 그 안의 <View>는
+    // Text 안의 View가 되어 안드로이드에서 레이아웃이 무너진다. 테스트는 통과하고
+    // 기기에서만 깨지는 자리라 구조로 막는다.
+    <Link href={`/reservations/${reservation.id}`} asChild>
+      <Pressable style={styles.card}>
         <Text style={styles.cardTitle}>예약 #{reservation.id}</Text>
         <Text style={styles.cardMeta}>
           {reservation.startDate} ~ {reservation.endDate}
         </Text>
         <Text style={styles.cardStatus}>{reservationStatusLabel(reservation.status)}</Text>
-      </View>
+      </Pressable>
     </Link>
   );
 }
@@ -87,9 +90,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.card,
     borderWidth: 1,
+    gap: spacing.xs,
     padding: spacing.lg,
   },
-  cardBody: { gap: spacing.xs },
   cardTitle: { ...typography.heading, color: colors.text },
   cardMeta: { ...typography.caption, color: colors.textMuted },
   cardStatus: { ...typography.caption, color: colors.primary },
