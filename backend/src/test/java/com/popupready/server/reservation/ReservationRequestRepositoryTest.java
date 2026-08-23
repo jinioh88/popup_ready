@@ -20,8 +20,8 @@ class ReservationRequestRepositoryTest {
 
     private ReservationRequest sampleRequest() {
         LayoutDto layout = new LayoutDto(20, 12, 500, List.of(new LayoutItemDto(3L, 4, 2, 90)));
-        return ReservationRequest.create(
-                1L, 1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 14), layout, 7_350_000L);
+        EstimateResponse estimate = new EstimateResponse(14, 6_300_000L, 420_000L, 630_000L, 7_350_000L);
+        return ReservationRequest.create(1L, 1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 14), layout, estimate);
     }
 
     @Test
@@ -34,6 +34,17 @@ class ReservationRequestRepositoryTest {
             assertThat(found.getSpaceId()).isEqualTo(1L);
             assertThat(found.getTotalEstimate()).isEqualTo(7_350_000L);
         });
+    }
+
+    @Test
+    @DisplayName("견적 내역 저장 → 보증금·소계까지 그대로 왕복된다")
+    void save_roundTripsEstimateBreakdown() {
+        ReservationRequest saved = reservationRequestRepository.save(sampleRequest());
+
+        assertThat(reservationRequestRepository.findById(saved.getId()))
+                .get()
+                .extracting(ReservationRequest::getEstimate)
+                .isEqualTo(new EstimateResponse(14, 6_300_000L, 420_000L, 630_000L, 7_350_000L));
     }
 
     @Test

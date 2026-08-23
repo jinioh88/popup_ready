@@ -51,6 +51,24 @@ public class ReservationRequest {
     @Column(nullable = false, columnDefinition = "jsonb")
     private LayoutDto layout;
 
+    // 견적 내역을 통째로 보존한다. 합계만 남기면 계약 바인딩·조회 시 다시 계산해야 하는데,
+    // 그 사이 공간 단가나 집기 렌털료가 바뀌었으면 계약서 금액과 예약 금액이 갈라진다.
+    // 견적은 "그때 그 값"이어야 하므로 파생값이 아니라 사실로 저장한다.
+    //
+    // ⚠️ ddl-auto=update가 기존 행이 있는 테이블에 NOT NULL 컬럼을 그냥 붙이지 못해 default 0을
+    //    함께 준다. Flyway 베이스라인에서는 이 default를 빼고 NOT NULL만 남긴다.
+    private static final String MONEY_COLUMN = "bigint default 0";
+
+    @Column(nullable = false, columnDefinition = MONEY_COLUMN)
+    private long spaceRentTotal;
+
+    @Column(nullable = false, columnDefinition = MONEY_COLUMN)
+    private long fixtureRentalTotal;
+
+    /** 보증금(원). 일시사용 요건상 하향 설계되며 기준은 공간 대여료뿐이다(§2.2). */
+    @Column(nullable = false, columnDefinition = MONEY_COLUMN)
+    private long deposit;
+
     /** 견적 합계(원). 산출 근거는 §2.2 "견적 계산 규약"이며 보증금까지 포함한 금액이다. */
     @Column(nullable = false)
     private long totalEstimate;
@@ -65,13 +83,16 @@ public class ReservationRequest {
             LocalDate startDate,
             LocalDate endDate,
             LayoutDto layout,
-            long totalEstimate) {
+            EstimateResponse estimate) {
         this.spaceId = spaceId;
         this.brandUserId = brandUserId;
         this.startDate = startDate;
         this.endDate = endDate;
         this.layout = layout;
-        this.totalEstimate = totalEstimate;
+        this.spaceRentTotal = estimate.spaceRentTotal();
+        this.fixtureRentalTotal = estimate.fixtureRentalTotal();
+        this.deposit = estimate.deposit();
+        this.totalEstimate = estimate.totalAmount();
         this.status = ReservationStatus.DRAFT;
     }
 
@@ -81,8 +102,18 @@ public class ReservationRequest {
             LocalDate startDate,
             LocalDate endDate,
             LayoutDto layout,
-            long totalEstimate) {
-        return new ReservationRequest(spaceId, brandUserId, startDate, endDate, layout, totalEstimate);
+            EstimateResponse estimate) {
+        return new ReservationRequest(spaceId, brandUserId, startDate, endDate, layout, estimate);
+    }
+
+    /** 저장된 그대로의 견적. 일수만 날짜에서 다시 세며, 금액은 어느 것도 재계산하지 않는다. */
+    public EstimateResponse getEstimate() {
+        return new EstimateResponse(getPeriod().days(), spaceRentTotal, fixtureRentalTotal, deposit, totalEstimate);
+    }
+
+    /** 사용 기간. 저장된 값이므로 이미 유효하다. */
+    public ReservationPeriod getPeriod() {
+        return ReservationPeriod.of(startDate, endDate);
     }
 
     /** 계약서가 만들어졌다. DRAFT에서만 가능하다. */

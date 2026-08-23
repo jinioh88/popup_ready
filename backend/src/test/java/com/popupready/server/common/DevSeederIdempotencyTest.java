@@ -73,10 +73,26 @@ class DevSeederIdempotencyTest {
     }
 
     @Test
-    @DisplayName("시드 완료 → 계정 4종·상가 9건·집기 15종이 들어 있다")
+    @DisplayName("시드 완료 → 계정 4종·상가 10건·집기 15종이 들어 있다")
     void seeders_populateExpectedCounts() {
         assertThat(userRepository.count()).isGreaterThanOrEqualTo(4);
-        assertThat(spaceRepository.count()).isGreaterThanOrEqualTo(9);
+        assertThat(spaceRepository.count()).isGreaterThanOrEqualTo(10);
         assertThat(fixtureRepository.count()).isGreaterThanOrEqualTo(15);
+    }
+
+    @Test
+    @DisplayName("시드에 INACTIVE 상가가 1건 있다 → 예약 거부 경로를 실서버에서 밟을 수 있다")
+    void spaceSeed_containsInactiveSpace() {
+        // 전부 ACTIVE면 웹이 "비활성 공간 예약 400" 경로를 실검증할 수 없다(웹 요청, 2026-08-23).
+        assertThat(spaceRepository.findAll())
+                .anyMatch(space -> space.getStatus() == com.popupready.server.space.SpaceStatus.INACTIVE);
+    }
+
+    @Test
+    @DisplayName("INACTIVE 상가 → 반경 검색 결과에 나오지 않는다")
+    void inactiveSpace_isExcludedFromSearch() {
+        // 검색은 ACTIVE만 돌려준다. 이 시드가 그 규칙을 깨지 않는지 함께 확인한다.
+        assertThat(spaceRepository.searchWithin(37.5445, 127.0557, 50_000, null, null, null))
+                .allMatch(space -> space.getStatus() == com.popupready.server.space.SpaceStatus.ACTIVE);
     }
 }

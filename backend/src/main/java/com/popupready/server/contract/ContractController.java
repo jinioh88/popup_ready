@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -18,8 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * ⚠️ Phase 0 계약 스텁 — 고정 샘플을 돌려준다(US-202).
  *
- * <p>실구현(T5-1~T5-3)에서 템플릿 치환·SHA-256 해시·당사자 검증이 들어온다. 조항 샘플은
- * 웹이 열람 화면을 먼저 만들 수 있도록 실제 필수 조항의 형태를 그대로 흉내낸 것이다.
+ * <p>T5-1에서 템플릿·치환이 실물로 들어왔다 — 샘플 조항은 이제 흉내가 아니라 <b>실제
+ * {@code contract/template-v1.json}을 고정 예시 값으로 바인딩한 결과</b>다. 남은 스텁은 저장·조회·
+ * 당사자 검증(T5-2·T5-3)이다.
  *
  * <p><b>법률 세이프가드</b>: 계약 명칭은 "단기 공간사용 제휴계약"으로 고정한다. 상가임대차보호법상
  * 일시사용 임대차 요건을 벗어나면 계약갱신요구권 배제가 무너지므로, 명칭과 필수 조항은 임의로
@@ -29,11 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "contract", description = "일시사용 표준 계약(US-202)")
 @RequestMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 public class ContractController {
-
-    /** 임의 변경 금지. T5-1에서 템플릿 리소스로 옮기되 값은 그대로 유지한다. */
-    public static final String CONTRACT_TITLE = "단기 공간사용 제휴계약";
-
-    private static final String TEMPLATE_VERSION = "v1";
 
     private static final String STUB_CONTENT_HASH = "3f2b7c1d9a4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8";
 
@@ -49,8 +46,8 @@ public class ContractController {
         return ApiResponse.ok(new ContractResponse(
                 STUB_CONTRACT_ID,
                 id,
-                CONTRACT_TITLE,
-                TEMPLATE_VERSION,
+                ContractTemplate.TITLE,
+                ContractTemplate.CURRENT_VERSION,
                 sampleClauses(),
                 STUB_CONTENT_HASH,
                 null,
@@ -79,8 +76,8 @@ public class ContractController {
         return new ContractResponse(
                 id,
                 1L,
-                CONTRACT_TITLE,
-                TEMPLATE_VERSION,
+                ContractTemplate.TITLE,
+                ContractTemplate.CURRENT_VERSION,
                 sampleClauses(),
                 STUB_CONTENT_HASH,
                 Instant.parse("2026-08-22T05:12:31Z"),
@@ -89,16 +86,22 @@ public class ContractController {
     }
 
     /**
-     * 필수 조항 4종의 형태 샘플. 실제 문구는 T5-1의 템플릿 리소스가 원본이 되며, 여기 문구를
-     * 계약 원문으로 인용하면 안 된다.
+     * ⚠️ 남은 스텁 응답용 샘플. <b>실제 문구의 원본은 {@code contract/template-v1.json}</b>이며,
+     * 여기서는 그 템플릿을 고정 예시 값으로 바인딩해 형태만 보여준다. T5-3에서 이 메서드가 사라진다.
      */
     private List<ClauseDto> sampleClauses() {
-        return List.of(
-                new ClauseDto("제1조 (목적)", "본 계약은 팝업스토어의 단기 운영을 목적으로 하는 일시사용에 관한 것으로, 통상의 상가 임대차와 그 성질을 달리한다."),
-                new ClauseDto("제2조 (사용 기간)", "사용 기간은 2026-09-01부터 2026-09-14까지 14일간으로 하며, 기간 만료로 본 계약은 당연히 종료된다."),
-                new ClauseDto(
-                        "제3조 (계약갱신요구권 불행사)", "사용자는 본 계약이 상가건물 임대차보호법상 일시사용을 위한 것임을 확인하고, 동법에 따른 계약갱신요구권을 행사하지 아니한다."),
-                new ClauseDto("제4조 (보증금 및 정산)", "보증금은 공간 사용료 대비 소액으로 정하며, 사용료는 정액 일시불로 정산한다."),
-                new ClauseDto("제5조 (원상 유지)", "사용자는 시공·못질 등 구조를 변경하는 행위를 하지 아니하며, 반입 물품은 모듈러 집기로 한정한다."));
+        return ClauseBinder.bind(
+                ContractTemplate.v1().clauses(),
+                new ContractBinding(
+                        "성수 연무장길 팝업 1층",
+                        "서울 성동구 연무장길 45",
+                        "김브랜드",
+                        "박건물주",
+                        LocalDate.of(2026, 9, 1),
+                        LocalDate.of(2026, 9, 14),
+                        14,
+                        6_300_000L,
+                        630_000L,
+                        7_350_000L));
     }
 }
