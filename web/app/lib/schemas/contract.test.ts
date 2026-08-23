@@ -44,7 +44,10 @@ describe("contractSchema", () => {
 
   it("오프셋 표기 타임스탬프도 받는다", () => {
     // 규약은 Z 표기지만, 같은 시각의 다른 표기 때문에 화면이 잠기면 안 된다.
-    const parsed = contractSchema.safeParse({ ...VALID, brandSignedAt: "2026-08-22T14:12:31+09:00" });
+    const parsed = contractSchema.safeParse({
+      ...VALID,
+      brandSignedAt: "2026-08-22T14:12:31+09:00",
+    });
     expect(parsed.success).toBe(true);
   });
 
