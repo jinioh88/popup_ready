@@ -8,6 +8,7 @@ import { ReservationForm } from "../features/builder/ReservationForm";
 import { SelectionToolbar } from "../features/builder/SelectionToolbar";
 import { toFixtureCatalog, useFixtures, useSpaceDetail } from "../features/builder/queries";
 import { useCreateReservation } from "../features/builder/useCreateReservation";
+import { useKeyboardPlacement } from "../features/builder/useKeyboardPlacement";
 import { useLoadSummary } from "../features/builder/useLoadSummary";
 import { useRotationShortcut } from "../features/builder/useRotationShortcut";
 import { useBuilderStore } from "../stores/builder";
@@ -62,6 +63,7 @@ export default function BuilderRoute() {
   });
 
   useRotationShortcut(catalog, onRejected);
+  useKeyboardPlacement(catalog, onRejected);
 
   // 거부 안내는 잠깐만 띄운다.
   useEffect(() => {

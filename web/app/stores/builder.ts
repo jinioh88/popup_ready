@@ -17,12 +17,33 @@ import type { FixtureLookup, Placement } from "../lib/builder/types";
 
 const DEFAULT_GRID: GridSpec = { gridCols: 0, gridRows: 0, cellSizeMm: 0 };
 
+/**
+ * 키보드로 배치 중인 집기 (I-1).
+ *
+ * 확정 전의 임시 상태다 — `items`에 들어가기 전이라 예약 요청에 실리지 않는다.
+ * 픽셀이 아니라 **셀 좌표**로 보관하는 것은 `items`와 같은 이유다.
+ */
+export type PlacementDraft = {
+  fixtureId: number;
+  col: number;
+  row: number;
+  rotation: Rotation;
+};
+
 export type BuilderState = {
   /** 이 배치가 어느 상가의 도면인지. 다른 상가로 넘어가면 배치를 이어받지 않는다. */
   spaceId: number | null;
   grid: GridSpec;
   items: LayoutItem[];
   selectedIndex: number | null;
+
+  /**
+   * 키보드 배치 중인 집기. `null`이면 배치 모드가 아니다.
+   *
+   * **드래그 경로에는 이 상태가 없다** — HTML5 드래그는 브라우저가 끌리는 것을 들고 있고
+   * 미리보기는 `BuilderCanvas`의 지역 상태다. 키보드는 들고 있어 줄 주체가 없어서 여기 둔다.
+   */
+  draft: PlacementDraft | null;
 
   /**
    * `GET /spaces/{id}`의 grid 정보로 캔버스를 초기화한다.
@@ -39,6 +60,17 @@ export type BuilderState = {
   removeItem: (index: number) => void;
   reset: () => void;
 
+  /** 팔레트에서 Enter/Space — 배치 모드로 들어간다. 시작 자리는 좌상단(0,0)이다. */
+  startDraft: (fixtureId: number) => void;
+  /** 방향키 — 셀 단위로 옮긴다. 범위 밖으로는 나가지 않는다(거부가 아니라 멈춤). */
+  moveDraft: (colDelta: number, rowDelta: number) => void;
+  /** R — 확정 전에 돌린다. 회전은 겹침과 무관하게 항상 허용된다(확정 시 판정). */
+  rotateDraft: () => void;
+  /** Enter — 확정. 충돌하면 상태를 바꾸지 않고 사유를 돌려준다. */
+  commitDraft: (fixtures: FixtureLookup) => PlacementCheck;
+  /** Esc — 취소. */
+  cancelDraft: () => void;
+
   /** 예약 요청(`POST /reservation-requests`)에 실어 보낼 §2.3 레이아웃 JSON. */
   toLayout: () => Layout;
 };
@@ -48,6 +80,10 @@ const UNKNOWN_FIXTURE: PlacementCheck = {
   reason: "UNKNOWN_FIXTURE",
   collidingIndexes: [],
 };
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
 
 /** rotation을 시계 방향으로 한 단계(90도) 돌린다. */
 export function nextRotation(rotation: Rotation): Rotation {
@@ -89,12 +125,13 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   grid: DEFAULT_GRID,
   items: [],
   selectedIndex: null,
+  draft: null,
 
   initGrid: (spaceId, grid) =>
     set((state) =>
       state.spaceId === spaceId && isSameGrid(state.grid, grid)
         ? state
-        : { spaceId, grid, items: [], selectedIndex: null },
+        : { spaceId, grid, items: [], selectedIndex: null, draft: null },
     ),
 
   selectItem: (index) => set({ selectedIndex: index }),
@@ -180,7 +217,56 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
       selectedIndex: state.selectedIndex === index ? null : state.selectedIndex,
     })),
 
-  reset: () => set({ spaceId: null, grid: DEFAULT_GRID, items: [], selectedIndex: null }),
+  reset: () =>
+    set({ spaceId: null, grid: DEFAULT_GRID, items: [], selectedIndex: null, draft: null }),
+
+  startDraft: (fixtureId) => set({ draft: { fixtureId, col: 0, row: 0, rotation: 0 } }),
+
+  moveDraft: (colDelta, rowDelta) =>
+    set((state) => {
+      if (!state.draft) {
+        return state;
+      }
+
+      // 범위 밖으로는 나가지 않는다. 방향키를 계속 눌렀을 때 화면 밖에서 길을 잃는 것보다
+      // 가장자리에 붙어 멈추는 편이 낫다 — 확정 시 판정은 그대로 `resolveDropAtCell`이 한다.
+      const col = clamp(state.draft.col + colDelta, 0, Math.max(state.grid.gridCols - 1, 0));
+      const row = clamp(state.draft.row + rowDelta, 0, Math.max(state.grid.gridRows - 1, 0));
+
+      return col === state.draft.col && row === state.draft.row
+        ? state
+        : { draft: { ...state.draft, col, row } };
+    }),
+
+  rotateDraft: () =>
+    set((state) =>
+      state.draft
+        ? { draft: { ...state.draft, rotation: nextRotation(state.draft.rotation) } }
+        : state,
+    ),
+
+  commitDraft: (fixtures) => {
+    const { draft } = get();
+
+    if (!draft) {
+      return UNKNOWN_FIXTURE;
+    }
+
+    // **배치 판정은 `placeItem`이 한다** — 드래그 드롭과 같은 경로다. 여기서 따로 판정하면
+    // 두 입력이 갈라진다.
+    const check = get().placeItem(
+      { fixtureId: draft.fixtureId, col: draft.col, row: draft.row, rotation: draft.rotation },
+      fixtures,
+    );
+
+    if (check.ok) {
+      set({ draft: null });
+    }
+
+    return check;
+  },
+
+  cancelDraft: () => set({ draft: null }),
 
   toLayout: () => {
     const { grid, items } = get();
