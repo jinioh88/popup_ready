@@ -25,17 +25,11 @@ public class AuthService {
      */
     private static final String DUMMY_PASSWORD_HASH = "$2a$10$ABCDEFGHIJKLMNOPQRSTUOxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
 
-    /**
-     * ⚠️ <b>Phase 0 스텁 값이다. T1-1(Refresh 토큰 회전)에서 반드시 사라져야 한다.</b>
-     *
-     * <p>값을 눈에 띄게 적어 둔 것은 의도다 — 그럴듯한 임의 문자열을 내보내면 웹이 실제 토큰으로
-     * 오인해 저장하고, T1-1 이후 조용히 401을 맞는다. 이 값은 보는 즉시 스텁임이 드러난다.
-     */
-    private static final String STUB_TOKEN = "STUB-NOT-A-REAL-TOKEN";
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtProvider jwtProvider;
+
+    private final RefreshTokenStore refreshTokenStore;
 
     /**
      * 존재하지 않는 계정으로 로그인을 시도할 때 비교 대상으로 쓰는 더미 해시.
@@ -46,10 +40,15 @@ public class AuthService {
      */
     private final String dummyPasswordHash;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtProvider jwtProvider) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JwtProvider jwtProvider,
+            RefreshTokenStore refreshTokenStore) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtProvider = jwtProvider;
+        this.refreshTokenStore = refreshTokenStore;
         this.dummyPasswordHash = passwordEncoder.encode(UUID.randomUUID().toString());
     }
 
@@ -81,18 +80,34 @@ public class AuthService {
     }
 
     /**
-     * 토큰 재발급(§2.2-A). <b>Phase 0 스텁이다</b> — 경로·필드명·상태 코드를 확정해 웹·모바일의
-     * 블로킹을 푸는 것이 목적이고, 실제 회전·저장·재사용 감지는 T1-1에서 채운다.
+     * 토큰 재발급(§2.2-A). 회전 방식이며 판정과 유출 감지는 {@link RefreshTokenStore}가 한다.
+     *
+     * <p>만료·위조·재사용을 구분해 알려주지 않고 전부 같은 코드로 돌려준다 — 구분되면
+     * 공격자가 "이 토큰은 존재했다"를 알아낼 수 있다({@link JwtProvider#parse}와 같은 이유).
      */
     public TokenPairResponse refresh(RefreshRequest request) {
-        return new TokenPairResponse(STUB_TOKEN, STUB_TOKEN);
+        RefreshTokenStore.Rotation rotation = refreshTokenStore.rotate(request.refreshToken());
+        if (rotation == null) {
+            throw new ApiException(ErrorCode.REFRESH_TOKEN_INVALID, "다시 로그인해 주세요");
+        }
+        User user = userRepository.findById(rotation.userId()).orElseThrow(() -> {
+            // 회전은 성공했는데 사용자가 없다 — 탈퇴 등으로 계정이 사라진 경우다.
+            // 남은 세션을 끊지 않으면 없는 사용자의 토큰이 계속 재발급된다.
+            refreshTokenStore.revokeFamilyOf(rotation.refreshToken());
+            return new ApiException(ErrorCode.REFRESH_TOKEN_INVALID, "다시 로그인해 주세요");
+        });
+        // 역할은 토큰이 아니라 저장된 사용자에서 다시 읽는다. Redis에 넣어두면 역할이 바뀐 뒤에도
+        // 낡은 권한이 재발급마다 되살아난다.
+        return new TokenPairResponse(jwtProvider.issue(user.getId(), user.getRole()), rotation.refreshToken());
     }
 
+    /** 로그인·가입은 새 세션(패밀리)을 연다 — 기기마다 갈려야 한쪽의 유출 판정이 다른 쪽을 끊지 않는다. */
     private AuthResponse toResponse(User user) {
         String accessToken = jwtProvider.issue(user.getId(), user.getRole());
+        String refreshToken = refreshTokenStore.issue(user.getId());
         return new AuthResponse(
                 accessToken,
-                STUB_TOKEN,
+                refreshToken,
                 new UserSummary(user.getId(), user.getEmail(), user.getName(), user.getRole()));
     }
 }

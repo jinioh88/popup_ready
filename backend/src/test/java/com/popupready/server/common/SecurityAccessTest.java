@@ -184,13 +184,16 @@ class SecurityAccessTest {
     @Test
     @DisplayName("refresh → 인증 없이 열려 있다(토큰을 얻는 경로다)")
     void refresh_isPublic() throws Exception {
+        // 상태 코드만 보면 필터의 401과 핸들러의 401을 구분할 수 없다. 에러 코드로 가른다 —
+        // REFRESH_TOKEN_INVALID가 왔다는 것은 요청이 필터를 지나 핸들러까지 갔다는 뜻이다.
+        // (Sprint 1 교훈: 인증 테스트가 업무 결과를 탐침으로 쓰면 구현이 바뀔 때 조용히 깨진다.)
         mockMvc.perform(
                         post("/api/v1/auth/refresh")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(
                                         """
-                                {"refreshToken": "some-token"}
+                                {"refreshToken": "never-issued"}
                                 """))
-                .andExpect(status().isOk());
+                .andExpect(jsonPath("$.error.code").value("REFRESH_TOKEN_INVALID"));
     }
 }

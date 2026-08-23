@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * 협력자가 셋(저장소·해시·토큰)이라 CLAUDE.md의 "스텁 3개 = 설계 신호"에 걸린다. 검토했으나
@@ -36,11 +37,20 @@ class AuthServiceTest {
     @Mock
     private JwtProvider jwtProvider;
 
+    // 회전·유출 감지는 Redis의 실제 동작에 달려 있어 RefreshTokenStoreTest가 로컬 Redis 대상으로
+    // 잠근다. 여기서는 "가입·로그인이 세션을 연다"는 흐름만 보므로 스텁으로 충분하다.
+    @Mock
+    private RefreshTokenStore refreshTokenStore;
+
     @InjectMocks
     private AuthService authService;
 
     private User savedUser() {
-        return User.create("brand@popupready.com", "hashed", "김브랜드", UserRole.BRAND);
+        User user = User.create("brand@popupready.com", "hashed", "김브랜드", UserRole.BRAND);
+        // 저장소가 돌려주는 엔티티에는 언제나 id가 있다. 여기서 비워두면 세션 발급이 그 null을
+        // 그대로 받아 NPE가 나는데, 그건 실제로 일어날 수 없는 상황을 테스트가 만든 것이다.
+        ReflectionTestUtils.setField(user, "id", 1L);
+        return user;
     }
 
     @Test
