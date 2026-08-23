@@ -5,7 +5,8 @@ import { PaymentFailureCard } from "../features/payment/PaymentFailureCard";
 import { PaymentSummary } from "../features/payment/PaymentSummary";
 import { PaymentMethodPanel } from "../features/payment/PaymentMethodPanel";
 import { allowsAnotherAttempt, paymentFailure } from "../features/payment/failureMessage";
-import { usePayReservation, useReservation } from "../features/payment/queries";
+import { SettlementBreakdown } from "../features/settlement/SettlementBreakdown";
+import { usePayReservation, useReservation, useSettlements } from "../features/payment/queries";
 
 export function meta() {
   return [{ title: "결제 · PopupReady" }];
@@ -26,6 +27,11 @@ export default function PaymentRoute() {
 
   const reservationQuery = useReservation(numericId);
   const payment = usePayReservation(numericId);
+
+  // 훅은 조기 return 위에 모아 둔다 — 아래 로딩·오류 분기가 호출 순서를 바꾸면 안 된다.
+  // 정산 내역은 결제가 끝난 예약에만 있다. 방금 결제한 경우엔 승인 응답이 캐시에 심어 둔다.
+  const isPaid = reservationQuery.data?.status === "PAID" || payment.isSuccess;
+  const settlementsQuery = useSettlements(numericId, isPaid);
 
   if (reservationQuery.isPending) {
     return <Notice>예약 정보를 불러오는 중…</Notice>;
@@ -67,6 +73,17 @@ export default function PaymentRoute() {
       ) : null}
 
       {payment.isSuccess ? <PaymentResult confirm={payment.data} /> : null}
+
+      {/*
+        US-203 확인 수단. 결제 직후와 재진입 모두 같은 컴포넌트로 그린다 —
+        두 경로가 다른 화면을 그리면 "방금 본 것과 다르다"가 된다.
+      */}
+      {isPaid && settlementsQuery.data ? (
+        <SettlementBreakdown
+          settlements={settlementsQuery.data}
+          paidAmount={reservation.estimate.totalAmount}
+        />
+      ) : null}
 
       {canPayHere ? (
         <PaymentMethodPanel

@@ -86,13 +86,13 @@ export function ReservationForm({
   }, [startDate, endDate, isSubmitted, trigger]);
 
   // 두 칸이 다 채워지고 순서가 맞을 때만 알린다 — 입력 중간 상태로 조회하면 헛돈다.
-  const validPeriod =
-    startDate && endDate && startDate <= endDate ? { startDate, endDate } : null;
+  const isValidPeriod = Boolean(startDate && endDate && startDate <= endDate);
 
   useEffect(() => {
-    onPeriodChange?.(validPeriod ? { ...validPeriod } : null);
-    // 객체를 새로 만들면 매 렌더 알림이 되므로 값으로 비교한다.
-  }, [validPeriod?.startDate, validPeriod?.endDate, onPeriodChange]);
+    // **객체는 effect 안에서 만든다.** 렌더 중에 만들면 매 렌더 새 참조가 되어
+    // 의존성이 늘 바뀌고, 그러면 기간이 그대로인데도 가용 수량을 계속 다시 조회한다.
+    onPeriodChange?.(isValidPeriod ? { startDate, endDate } : null);
+  }, [isValidPeriod, startDate, endDate, onPeriodChange]);
 
   const placedFixtures = items.flatMap((item) => {
     const fixture = fixtures[item.fixtureId];

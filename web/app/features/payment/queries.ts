@@ -1,12 +1,35 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { confirmPayment, preparePayment, type PaymentConfirm } from "../../lib/api/payments";
+import {
+  confirmPayment,
+  listSettlements,
+  preparePayment,
+  type PaymentConfirm,
+} from "../../lib/api/payments";
 import { getReservationRequest } from "../../lib/api/reservations";
 
 /** 결제 화면의 서버 상태. */
 
 export function reservationQueryKey(reservationId: number) {
   return ["reservation-requests", reservationId] as const;
+}
+
+export function settlementsQueryKey(reservationId: number) {
+  return ["settlements", reservationId] as const;
+}
+
+/**
+ * 분할 정산 내역 (US-203). **결제가 끝난 예약에만 존재한다.**
+ *
+ * 결제 승인 응답도 같은 내역을 들고 오므로, 방금 결제한 경우에는 그 값을 캐시에 심어
+ * 왕복을 아낀다(`usePayReservation`). 이 쿼리는 **재진입 경로**를 위한 것이다.
+ */
+export function useSettlements(reservationId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: settlementsQueryKey(reservationId),
+    queryFn: () => listSettlements(reservationId),
+    enabled: Number.isFinite(reservationId) && enabled,
+  });
 }
 
 /**
@@ -48,6 +71,10 @@ export function usePayReservation(reservationId: number) {
         // 프론트를 검증하는 꼴이 되어 의미를 잃는다(§2.2-C 2-5).
         amount: prepared.amount,
       });
+    },
+    onSuccess: (confirmed) => {
+      // 승인 응답이 이미 정산 내역을 들고 있다 — 같은 것을 다시 받지 않는다.
+      queryClient.setQueryData(settlementsQueryKey(reservationId), confirmed.settlements);
     },
     onSettled: () => {
       // 성공이든 실패든 예약 상태가 바뀌었을 수 있다(PAYMENT_PENDING·PAID).

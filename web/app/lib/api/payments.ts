@@ -39,3 +39,15 @@ export function confirmPayment(
     body,
   });
 }
+
+/**
+ * 분할 정산 내역 (`GET /settlements?reservationId=`, US-203).
+ *
+ * 결제 승인 응답도 같은 내역을 들고 오지만, **재진입한 사용자**(결제를 마치고 나갔다가
+ * 돌아온 경우)에게는 이 경로가 유일하다.
+ */
+export function listSettlements(reservationId: number): Promise<Schemas["SettlementResponse"][]> {
+  return apiRequest<Schemas["SettlementResponse"][]>("/settlements", {
+    query: { reservationId },
+  });
+}
