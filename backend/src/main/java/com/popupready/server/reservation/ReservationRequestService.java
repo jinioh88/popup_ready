@@ -62,9 +62,9 @@ public class ReservationRequestService {
                 period, space.dailyRent(), space.depositRate(), placedFixtures(layout, catalog));
 
         ReservationRequest saved = reservationRequestRepository.save(ReservationRequest.create(
-                space.id(), brandUserId, period.startDate(), period.endDate(), layout, estimate.totalAmount()));
+                space.id(), brandUserId, period.startDate(), period.endDate(), layout, estimate));
 
-        return toResponse(saved, estimate);
+        return toResponse(saved);
     }
 
     /** 판정 기준이 되는 도면은 요청이 아니라 공간이 가진 값이다. */
@@ -107,7 +107,7 @@ public class ReservationRequestService {
                 fixture.id(), fixture.widthMm(), fixture.depthMm(), fixture.dailyRentalFee(), fixture.stockQty());
     }
 
-    private static ReservationRequestResponse toResponse(ReservationRequest request, EstimateResponse estimate) {
+    private static ReservationRequestResponse toResponse(ReservationRequest request) {
         return new ReservationRequestResponse(
                 request.getId(),
                 request.getSpaceId(),
@@ -115,7 +115,7 @@ public class ReservationRequestService {
                 request.getStartDate(),
                 request.getEndDate(),
                 request.getLayout(),
-                estimate,
+                request.getEstimate(),
                 request.getStatus());
     }
 }

@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 성수·명동·홍대 일대 상가 시드(스프린트 문서 §4의 5번).
+ * 성수·명동·홍대 일대 상가 시드(스프린트 문서 §4의 5번). ACTIVE 9건 + INACTIVE 1건.
  *
  * <p>좌표를 코드에서 만들기 때문에 WKT 문자열을 손으로 적지 않아도 되고, SRID가 어긋날 여지가 없다.
  * 건물주 계정은 {@link UserService}를 통해 찾는다 — {@code auth}의 리포지토리를 직접 보지 않는다.
@@ -68,7 +68,21 @@ public class SpaceDevSeeder implements ApplicationRunner {
                 // 홍대 — 젊은 상권. 지하·복층이 많다.
                 space("홍대 걷고싶은거리 팝업존", "서울 마포구 양화로 152", 37.5551, 126.9236, 520_000L, 73.0, 5_000, 18, 12, ownerId),
                 space("홍대 연남동 골목", "서울 마포구 성미산로 161", 37.5626, 126.9256, 340_000L, 48.0, 3_500, 14, 9, ownerId),
-                space("홍대 상수동 리버뷰", "서울 마포구 와우산로 21", 37.5478, 126.9223, 410_000L, 66.0, 4_500, 16, 11, ownerId));
+                space("홍대 상수동 리버뷰", "서울 마포구 와우산로 21", 37.5478, 126.9223, 410_000L, 66.0, 4_500, 16, 11, ownerId),
+                // 운영이 끝난 공간 1건. 시드가 전부 ACTIVE면 "비활성 공간 예약 거부(400)" 경로를
+                // 실서버에서 밟을 수 없다(웹 요청, 2026-08-23). 검색에는 나오지 않지만 상세 조회는
+                // 공개라 ID만 알면 부를 수 있는 — 바로 그 거부 규칙이 필요한 상태다.
+                inactive(space(
+                        "성수 뚝섬역 구 팝업 (운영 종료)",
+                        "서울 성동구 아차산로 5",
+                        37.5474,
+                        127.0475,
+                        360_000L,
+                        58.0,
+                        4_000,
+                        16,
+                        10,
+                        ownerId)));
         List<Space> missing = seeds.stream()
                 .filter(seed -> !spaceRepository.existsByName(seed.getName()))
                 .toList();
@@ -76,6 +90,12 @@ public class SpaceDevSeeder implements ApplicationRunner {
             spaceRepository.saveAll(missing);
             log.info("상가 시드 {}건을 넣었다", missing.size());
         }
+    }
+
+    /** 시드 단계에서만 쓰는 상태 조정. 엔티티의 상태 전이 메서드를 통해서만 바꾼다. */
+    private Space inactive(Space space) {
+        space.deactivate();
+        return space;
     }
 
     private Space space(

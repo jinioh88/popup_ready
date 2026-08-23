@@ -14,10 +14,12 @@ import org.junit.jupiter.api.Test;
  */
 class ReservationRequestTest {
 
+    private static final EstimateResponse ESTIMATE =
+            new EstimateResponse(14, 6_300_000L, 420_000L, 630_000L, 7_350_000L);
+
     private ReservationRequest sampleRequest() {
         LayoutDto layout = new LayoutDto(20, 12, 500, List.of(new LayoutItemDto(3L, 4, 2, 90)));
-        return ReservationRequest.create(
-                1L, 1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 14), layout, 7_350_000L);
+        return ReservationRequest.create(1L, 1L, LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 14), layout, ESTIMATE);
     }
 
     @Test
@@ -60,5 +62,18 @@ class ReservationRequestTest {
         request.markContractSigned();
 
         assertThat(request.getStatus()).isEqualTo(ReservationStatus.CONTRACT_SIGNED);
+    }
+
+    @Test
+    @DisplayName("견적 내역이 통째로 보존된다 → 계약서가 나중에 재계산하지 않아도 된다")
+    void estimate_isPersistedAsWhole() {
+        // 계약 바인딩 시점에 단가가 바뀌었을 수 있다. 재계산하면 계약서 금액과 예약 금액이 갈라진다.
+        assertThat(sampleRequest().getEstimate()).isEqualTo(ESTIMATE);
+    }
+
+    @Test
+    @DisplayName("견적의 일수 → 저장된 날짜에서 다시 세어도 같다")
+    void estimate_daysDerivedFromStoredDates() {
+        assertThat(sampleRequest().getPeriod().days()).isEqualTo(ESTIMATE.days());
     }
 }

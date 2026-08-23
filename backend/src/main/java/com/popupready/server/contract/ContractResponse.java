@@ -21,7 +21,7 @@ public record ContractResponse(
         @Schema(description = "대상 예약 요청 ID", example = "1", requiredMode = REQUIRED) Long reservationRequestId,
         @Schema(
                         description = "계약 명칭. 일시사용 임대차 요건 보존을 위해 고정된 값이다",
-                        example = ContractController.CONTRACT_TITLE,
+                        example = ContractTemplate.TITLE,
                         requiredMode = REQUIRED)
                 String title,
         @Schema(description = "템플릿 버전", example = "v1", requiredMode = REQUIRED) String templateVersion,
