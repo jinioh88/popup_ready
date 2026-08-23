@@ -1,8 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { Button } from "../../components/ui/Button";
+import { Field } from "../../components/ui/Field";
 import { ROLE_LABELS, SIGNUP_ROLES, signupSchema, type SignupInput } from "../../lib/schemas/auth";
-import { TextField } from "./TextField";
 
 type SignupFormProps = {
   onSubmit: (values: SignupInput) => Promise<unknown> | void;
@@ -23,61 +24,53 @@ export function SignupForm({ onSubmit, isPending, errorMessage }: SignupFormProp
 
   return (
     <form className="flex flex-col gap-4" onSubmit={handleSubmit((values) => onSubmit(values))}>
-      <TextField
-        id="signup-name"
-        label="이름"
-        autoComplete="name"
-        error={errors.name?.message}
-        {...register("name")}
-      />
-      <TextField
-        id="signup-email"
-        label="이메일"
-        type="email"
-        autoComplete="email"
-        placeholder="brand@popupready.kr"
-        error={errors.email?.message}
-        {...register("email")}
-      />
-      <TextField
-        id="signup-password"
-        label="비밀번호"
-        type="password"
-        autoComplete="new-password"
-        placeholder="8자 이상"
-        error={errors.password?.message}
-        {...register("password")}
-      />
+      <Field label="이름" error={errors.name?.message}>
+        {(control) => <input {...control} autoComplete="name" {...register("name")} />}
+      </Field>
+      <Field label="이메일" error={errors.email?.message}>
+        {(control) => (
+          <input
+            {...control}
+            type="email"
+            autoComplete="email"
+            placeholder="brand@popupready.kr"
+            {...register("email")}
+          />
+        )}
+      </Field>
+      <Field label="비밀번호" error={errors.password?.message}>
+        {(control) => (
+          <input
+            {...control}
+            type="password"
+            autoComplete="new-password"
+            placeholder="8자 이상"
+            {...register("password")}
+          />
+        )}
+      </Field>
 
-      <div className="flex flex-col gap-2">
-        <label htmlFor="signup-role" className="text-caption text-text-muted">
-          역할
-        </label>
-        <select
-          id="signup-role"
-          className="h-10 rounded-lg border border-border bg-surface px-3 text-body text-text outline-none focus:border-primary"
-          {...register("role")}
-        >
-          {SIGNUP_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {ROLE_LABELS[role]}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* select도 같은 Field를 쓴다 — 인풋 전용으로 만들었으면 여기가 복제본이 됐을 자리다. */}
+      <Field label="역할" error={errors.role?.message}>
+        {(control) => (
+          <select {...control} {...register("role")}>
+            {SIGNUP_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {ROLE_LABELS[role]}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
 
       {errorMessage ? (
         <p role="alert" className="text-caption text-error">
           {errorMessage}
         </p>
       ) : null}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="mt-2 h-10 rounded-lg bg-primary text-body-strong text-white hover:bg-primary-dark disabled:opacity-60"
-      >
+      <Button type="submit" disabled={isPending} className="mt-2">
         {isPending ? "가입 중…" : "가입하기"}
-      </button>
+      </Button>
     </form>
   );
 }

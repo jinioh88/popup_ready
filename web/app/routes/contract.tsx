@@ -1,5 +1,6 @@
 import { useParams } from "react-router";
 
+import { Button } from "../components/ui/Button";
 import { ContractDocument } from "../features/contract/ContractDocument";
 import { SignaturePanel } from "../features/contract/SignaturePanel";
 import { contractLoadMessage, signMessage } from "../features/contract/messages";
@@ -77,13 +78,9 @@ function StatusMessage({
         {children}
       </p>
       {onRetry ? (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-4 h-10 rounded-lg bg-primary px-4 text-body-strong text-white hover:bg-primary-dark"
-        >
+        <Button onClick={onRetry} className="mt-4">
           다시 시도
-        </button>
+        </Button>
       ) : null}
     </main>
   );

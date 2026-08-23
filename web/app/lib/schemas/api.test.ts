@@ -35,6 +35,34 @@ export type ReservationRequestMatchesContract = Assert<
   ReservationRequest extends Schemas["ReservationRequestResponse"] ? true : false
 >;
 
+/**
+ * **상태만은 양방향으로 잠근다.**
+ *
+ * 위의 객체 단언은 한 방향(웹 ⊆ 계약)이라 **계약이 넓어지는 것을 못 잡는다** — 웹이 3종만
+ * 알고 계약이 6종이어도 3종은 여전히 6종에 대입되므로 `tsc`가 통과한다. 실제로 2026-08-23
+ * `PAYMENT_PENDING`·`PAID`·`CANCELLED`가 추가됐을 때 컴파일이 깨지지 않았다.
+ *
+ * 그런데 이 목록은 `z.enum`으로 **런타임 파서**가 된다. 모르는 상태가 오면 폴백이 아니라
+ * `parse` 실패이고, 결제를 마친 사용자의 화면이 통째로 깨진다 — 조용한 오표시보다 나쁘다.
+ *
+ * 그래서 rotation 때문에 좁게 잡아야 하는 객체 전체 대신 **status 필드만** 양방향으로 건다.
+ * 백엔드가 상태를 늘리면 여기서 컴파일이 멈춘다.
+ *
+ * `MutuallyAssignable`을 쓰지 않고 튜플로 감싸는 이유: 조건부 타입은 유니온에 **분배**되므로
+ * `"A"|"B" extends X`가 각 멤버마다 판정돼 결과가 `boolean`이 된다. 그러면 목록이 맞든 틀리든
+ * 늘 실패해 단언이 무의미해진다. 대괄호로 감싸면 분배가 멈춘다 — `error-codes.ts`가 에러 코드
+ * 유니온에 쓰는 것과 같은 방식이다.
+ */
+type ContractStatus = Schemas["ReservationRequestResponse"]["status"];
+
+export type ReservationStatusMatchesContract = Assert<
+  [ReservationRequest["status"]] extends [ContractStatus]
+    ? [ContractStatus] extends [ReservationRequest["status"]]
+      ? true
+      : false
+    : false
+>;
+
 const SPACE: SpaceSummary = {
   id: 1,
   name: "성수 연무장길 팝업 공간",
@@ -129,8 +157,16 @@ describe("reservationRequestSchema", () => {
   });
 
   it("계약에 없는 상태값은 거부한다", () => {
-    expect(reservationRequestSchema.safeParse({ ...RESERVATION, status: "PAID" }).success).toBe(
-      false,
-    );
+    // 예시값을 계약의 실제 상태로 쓰면 계약이 넓어질 때 이 테스트가 거짓으로 깨진다 —
+    // Sprint 1에는 "PAID"를 썼고 Sprint 2에서 그 값이 계약에 들어오면서 실제로 깨졌다.
+    expect(
+      reservationRequestSchema.safeParse({ ...RESERVATION, status: "NOT_A_REAL_STATUS" }).success,
+    ).toBe(false);
+  });
+
+  it("Sprint 2에서 추가된 결제 단계 상태를 받는다", () => {
+    for (const status of ["PAYMENT_PENDING", "PAID", "CANCELLED"]) {
+      expect(reservationRequestSchema.safeParse({ ...RESERVATION, status }).success).toBe(true);
+    }
   });
 });

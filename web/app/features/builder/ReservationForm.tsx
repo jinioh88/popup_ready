@@ -2,6 +2,9 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Field } from "../../components/ui/Field";
 import { estimateReservation } from "../../lib/builder/estimate";
 import {
   MAX_RESERVATION_DAYS,
@@ -33,6 +36,13 @@ type ReservationFormProps = {
   onSubmit: (period: ReservationPeriod) => void;
   isPending?: boolean;
   errorMessage?: string;
+  /**
+   * 전력 초과로 제출을 막아야 하는가 (US-103).
+   *
+   * **면적은 여기 들어오지 않는다** — 면적은 잠기지 않는 밀도 표시다(sprint2.md §2.2-F).
+   * 그리고 이 잠금은 UX이지 게이트가 아니다 — 최종 판정은 서버의 400이다(§2.2-D).
+   */
+  isOverPowerLimit?: boolean;
 };
 
 export function ReservationForm({
@@ -41,6 +51,7 @@ export function ReservationForm({
   onSubmit,
   isPending,
   errorMessage,
+  isOverPowerLimit = false,
 }: ReservationFormProps) {
   const items = useBuilderStore((state) => state.items);
 
@@ -83,10 +94,7 @@ export function ReservationForm({
       : null;
 
   return (
-    <form
-      className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4"
-      onSubmit={handleSubmit(onSubmit)}
-    >
+    <Card as="form" className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
       <div>
         <h2 className="text-heading">예약 기간</h2>
         <p className="mt-1 text-caption text-text-muted">
@@ -96,7 +104,6 @@ export function ReservationForm({
 
       <div className="flex gap-3">
         <DateField
-          id="reservation-start"
           label="시작일"
           error={errors.startDate?.message}
           min={endDate ? minStartDate(endDate) : undefined}
@@ -104,7 +111,6 @@ export function ReservationForm({
           {...register("startDate")}
         />
         <DateField
-          id="reservation-end"
           label="종료일"
           error={errors.endDate?.message}
           min={startDate || undefined}
@@ -113,7 +119,12 @@ export function ReservationForm({
         />
       </div>
 
-      <dl className="flex flex-col gap-1 text-caption">
+      {/*
+        `tabular-nums` — 배치를 바꿀 때마다 금액 자릿수가 바뀌는데, Pretendard 기본 숫자는
+        비례폭이라 같은 자릿수여도 폭이 최대 21.97px 흔들린다(T0-3 실측, sprint2-web.md §8.2).
+        숫자가 제자리에서 바뀌지 않으면 사용자는 값이 아니라 레이아웃 흔들림을 먼저 본다.
+      */}
+      <dl className="flex flex-col gap-1 text-caption tabular-nums">
         <Row label="배치 집기" value={`${items.length}개`} />
         {estimate ? (
           <>
@@ -140,14 +151,20 @@ export function ReservationForm({
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="h-10 rounded-lg bg-primary text-body-strong text-white hover:bg-primary-dark disabled:opacity-60"
-      >
+      {/*
+        사유 없는 disabled는 "왜 안 되는지"를 사용자에게 떠넘긴다. 어느 축이 막고 있는지
+        버튼 옆에서 바로 읽히게 한다 — 수치 자체는 LimitGauge가 말한다.
+      */}
+      {isOverPowerLimit ? (
+        <p className="text-caption text-error">
+          허용 전력을 초과해 예약을 요청할 수 없습니다. 집기를 빼면 다시 요청할 수 있습니다.
+        </p>
+      ) : null}
+
+      <Button type="submit" disabled={isPending || isOverPowerLimit}>
         {isPending ? "예약 요청 중…" : "예약 요청하기"}
-      </button>
-    </form>
+      </Button>
+    </Card>
   );
 }
 
@@ -163,31 +180,15 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 function DateField({
   label,
   error,
-  id,
   ...inputProps
 }: React.ComponentPropsWithRef<"input"> & { label: string; error?: string }) {
   // `min-w-0`이 없으면 flex 항목이 date 입력의 고유 폭(약 160px) 아래로 줄지 않아
   // 두 칸이 카드 밖으로 삐져나온다(2026-08-23 사용자 인수 테스트).
+  // `w-full`도 같은 버그의 짝이다 — 둘 다 레이아웃이라 Field의 시각 규격이 아니라 여기서 준다.
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-2">
-      <label htmlFor={id} className="text-caption text-text-muted">
-        {label}
-      </label>
-      <input
-        id={id}
-        type="date"
-        aria-invalid={error ? true : undefined}
-        className={`h-10 w-full rounded-lg border bg-surface px-3 text-body ${
-          error ? "border-error" : "border-border"
-        }`}
-        {...inputProps}
-      />
-      {error ? (
-        <p role="alert" className="text-caption text-error">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <Field label={label} error={error} className="min-w-0 flex-1" controlClassName="w-full">
+      {(control) => <input {...control} type="date" {...inputProps} />}
+    </Field>
   );
 }
 

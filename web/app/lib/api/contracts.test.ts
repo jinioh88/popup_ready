@@ -114,10 +114,7 @@ describe("ensureContract", () => {
   });
 
   it("같은 409라도 사유가 다르면 폴백하지 않는다", async () => {
-    const calls = stubFetch(
-      fail(404, "CONTRACT_NOT_FOUND"),
-      fail(409, "CONTRACT_ALREADY_SIGNED"),
-    );
+    const calls = stubFetch(fail(404, "CONTRACT_NOT_FOUND"), fail(409, "CONTRACT_ALREADY_SIGNED"));
 
     await expect(ensureContract(7)).rejects.toBeInstanceOf(ApiRequestError);
     expect(calls.map((c) => c.method)).toEqual(["GET", "POST"]);

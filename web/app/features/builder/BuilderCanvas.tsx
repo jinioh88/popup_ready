@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Group, Layer, Line, Rect, Stage, Text } from "react-konva";
 
 import { readDraggedFixtureId } from "../../lib/builder/dragTransfer";
-import { resolveDrop } from "../../lib/builder/drop";
+import { resolveDrop, resolveDropAtCell } from "../../lib/builder/drop";
 import { toPlacement } from "../../lib/builder/occupancy";
 import { cellToPixel, snapToCell } from "../../lib/builder/snap";
 import type { Placement } from "../../lib/builder/types";
@@ -39,6 +39,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
   const moveItem = useBuilderStore((state) => state.moveItem);
 
   const [preview, setPreview] = useState<DropPreview | null>(null);
+  const draft = useBuilderStore((state) => state.draft);
 
   const width = grid.gridCols * CELL_PX;
   const height = grid.gridRows * CELL_PX;
@@ -53,6 +54,31 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
       }),
     [items, fixtures, grid.cellSizeMm],
   );
+
+  /**
+   * 키보드 배치 초안의 자리. **드래그 미리보기와 같은 판정 함수를 쓴다**(I-1) —
+   * 픽셀 경로가 `snapToCell` 뒤에 부르는 것과 정확히 같은 함수다.
+   */
+  const draftPreview = useMemo((): DropPreview | null => {
+    if (!draft) {
+      return null;
+    }
+
+    const known = placements.filter((item): item is Placement => item !== null);
+    const resolved = resolveDropAtCell({
+      fixtureId: draft.fixtureId,
+      fixtures,
+      cell: { col: draft.col, row: draft.row },
+      rotation: draft.rotation,
+      grid,
+      existing: known,
+    });
+
+    return resolved.ok ? { placement: resolved.placement, valid: resolved.valid } : null;
+  }, [draft, fixtures, grid, placements]);
+
+  // 드래그 중에는 드래그가 우선이다 — 둘이 동시에 뜨면 어느 쪽이 놓일 자리인지 알 수 없다.
+  const shown = preview ?? draftPreview;
 
   /** 패널에서 끌어온 집기의 드롭 지점을 해석한다. 판정 로직은 app/lib에 있다. */
   function resolveAt(event: React.DragEvent<HTMLDivElement>, fixtureId: number) {
@@ -80,7 +106,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
 
   return (
     <div
-      className="inline-block rounded-xl border border-border bg-surface p-2"
+      className="inline-block rounded-xl border border-border bg-canvas p-2"
       onDragOver={(event) => {
         const fixtureId = readFixtureId(event);
 
@@ -150,7 +176,7 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
       >
         {/* 그리드는 바뀌지 않으므로 이벤트를 받지 않는 별도 레이어에 둔다. */}
         <Layer listening={false}>
-          <Rect x={0} y={0} width={width} height={height} fill={CANVAS_COLORS.surface} />
+          <Rect x={0} y={0} width={width} height={height} fill={CANVAS_COLORS.background} />
           {gridLines.map((points, index) => (
             <Line key={index} points={points} stroke={CANVAS_COLORS.grid} strokeWidth={1} />
           ))}
@@ -216,22 +242,38 @@ export function BuilderCanvas({ grid, fixtures, onRejected }: BuilderCanvasProps
           })}
         </Layer>
 
-        {/* 드롭 미리보기 — 겹치거나 범위를 벗어나면 빨간 하이라이트. */}
+        {/* 배치 미리보기 — 드래그와 키보드가 같은 표현을 쓴다. 겹치거나 범위를 벗어나면 빨간색. */}
         <Layer listening={false}>
-          {preview ? (
+          {shown ? (
             <Rect
-              {...cellToPixel(preview.placement, CELL_PX)}
-              width={preview.placement.cols * CELL_PX}
-              height={preview.placement.rows * CELL_PX}
-              fill={preview.valid ? CANVAS_COLORS.fixture : CANVAS_COLORS.invalid}
-              opacity={preview.valid ? 0.7 : 0.35}
-              stroke={preview.valid ? CANVAS_COLORS.fixtureBorder : CANVAS_COLORS.invalid}
+              {...cellToPixel(shown.placement, CELL_PX)}
+              width={shown.placement.cols * CELL_PX}
+              height={shown.placement.rows * CELL_PX}
+              fill={shown.valid ? CANVAS_COLORS.fixture : CANVAS_COLORS.invalid}
+              opacity={shown.valid ? 0.7 : 0.35}
+              stroke={shown.valid ? CANVAS_COLORS.fixtureBorder : CANVAS_COLORS.invalid}
               strokeWidth={2}
               cornerRadius={4}
+              dash={draftPreview && !preview ? [6, 4] : undefined}
             />
           ) : null}
         </Layer>
       </Stage>
+
+      {/*
+        Konva 캔버스는 스크린리더에 아무것도 노출하지 않는다. 키보드로 배치하는 사용자에게는
+        "지금 어디에 있고 놓을 수 있는지"가 유일한 피드백이므로 텍스트로 알린다.
+        `polite`인 것은 방향키를 연타할 때 낭독이 서로를 끊지 않게 하기 위한 것이다.
+      */}
+      <p aria-live="polite" className="sr-only">
+        {draft && draftPreview
+          ? // 셀 좌표는 0-base지만 **읽어줄 때는 1부터 센다** — 사람은 첫 칸을 1열이라고 부른다.
+            // 저장·계약은 그대로 0-base다(§2.3). 표시 단위만 여기서 바꾼다.
+            `${draft.col + 1}열 ${draft.row + 1}행, ${draft.rotation}도. ${
+              draftPreview.valid ? "배치할 수 있습니다." : "여기에는 놓을 수 없습니다."
+            }`
+          : ""}
+      </p>
     </div>
   );
 }

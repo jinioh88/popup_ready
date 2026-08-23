@@ -1,3 +1,5 @@
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
 import { formatSignedAt } from "../../lib/datetime";
 import type { Contract } from "../../lib/schemas/contract";
 
@@ -22,7 +24,7 @@ export function SignaturePanel({ contract, onSign, isPending, errorMessage }: Si
   const isSigned = contract.status === "SIGNED";
 
   return (
-    <aside className="flex w-80 shrink-0 flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+    <Card as="aside" className="flex w-80 shrink-0 flex-col gap-4">
       <h2 className="text-heading">서명 현황</h2>
 
       <dl className="flex flex-col gap-3">
@@ -39,14 +41,9 @@ export function SignaturePanel({ contract, onSign, isPending, errorMessage }: Si
           <p className="text-caption text-text-muted">
             조항 전문을 확인한 뒤 서명해 주세요. 서명은 당사자별 1회이며 되돌릴 수 없습니다.
           </p>
-          <button
-            type="button"
-            onClick={onSign}
-            disabled={isPending}
-            className="h-10 rounded-lg bg-primary text-body-strong text-white hover:bg-primary-dark disabled:opacity-60"
-          >
+          <Button onClick={onSign} disabled={isPending}>
             {isPending ? "서명 중…" : "동의하고 서명하기"}
-          </button>
+          </Button>
         </>
       )}
 
@@ -55,7 +52,7 @@ export function SignaturePanel({ contract, onSign, isPending, errorMessage }: Si
           {errorMessage}
         </p>
       ) : null}
-    </aside>
+    </Card>
   );
 }
 

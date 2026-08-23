@@ -31,7 +31,25 @@ export const FIXTURE_CATEGORIES = [
   "ETC",
 ] as const;
 
-export const RESERVATION_STATUSES = ["DRAFT", "CONTRACT_PENDING", "CONTRACT_SIGNED"] as const;
+/**
+ * 예약 요청 상태 (계약 `ReservationRequestResponse.status`).
+ *
+ * 이 목록은 `z.enum`으로 **런타임 파서**가 된다 — 모르는 상태가 오면 폴백이 아니라 `parse`
+ * 실패이고, 결제를 마친 사용자의 화면이 통째로 깨진다. 계약과 **양방향 단언**으로 묶여 있어
+ * (`api.test.ts`의 `ReservationStatusMatchesContract`) 백엔드가 상태를 늘리면 컴파일이 멈춘다.
+ *
+ * PAYMENT_PENDING·PAID·CANCELLED는 Sprint 2에서 추가됐다(2026-08-23, 계약 `3976aae`).
+ */
+export const RESERVATION_STATUSES = [
+  "DRAFT",
+  "CONTRACT_PENDING",
+  "CONTRACT_SIGNED",
+  "PAYMENT_PENDING",
+  "PAID",
+  "CANCELLED",
+] as const;
+
+export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
 /** `GET /spaces` — 지도 마커용 요약 */
 export const spaceSummarySchema = z.object({

@@ -1,13 +1,17 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams } from "react-router";
 
 import { BuilderCanvas } from "../features/builder/BuilderCanvas";
+import { CanvasController } from "../features/builder/CanvasController";
 import { FixturePanel } from "../features/builder/FixturePanel";
+import { LimitGauge } from "../features/builder/LimitGauge";
 import { ReservationForm } from "../features/builder/ReservationForm";
-import { SelectionToolbar } from "../features/builder/SelectionToolbar";
 import { toFixtureCatalog, useFixtures, useSpaceDetail } from "../features/builder/queries";
 import { useCreateReservation } from "../features/builder/useCreateReservation";
+import { useKeyboardPlacement } from "../features/builder/useKeyboardPlacement";
+import { useLoadSummary } from "../features/builder/useLoadSummary";
 import { useRotationShortcut } from "../features/builder/useRotationShortcut";
+import { useTransientMessage } from "../features/builder/useTransientMessage";
 import { useBuilderStore } from "../stores/builder";
 
 export function meta() {
@@ -23,8 +27,7 @@ export default function BuilderRoute() {
   const fixturesQuery = useFixtures();
   const initGrid = useBuilderStore((state) => state.initGrid);
 
-  const [rejection, setRejection] = useState<string | null>(null);
-  const onRejected = useCallback((message: string) => setRejection(message), []);
+  const { message: rejection, show: onRejected } = useTransientMessage();
 
   const catalog = useMemo(() => toFixtureCatalog(fixturesQuery.data), [fixturesQuery.data]);
   const space = spaceQuery.data;
@@ -49,17 +52,18 @@ export default function BuilderRoute() {
     }
   }, [numericSpaceId, grid, initGrid]);
 
+  // 훅은 조기 return 위에 모아 둔다. 도면을 못 불러온 동안에는 빈 그리드로 합산되고,
+  // 그 결과는 아래 로딩·오류 분기에서 렌더되지 않는다.
+  const items = useBuilderStore((state) => state.items);
+  const load = useLoadSummary({
+    items,
+    fixtures: catalog,
+    grid: grid ?? EMPTY_GRID,
+    maxPowerWatt: space?.maxPowerWatt ?? 0,
+  });
+
   useRotationShortcut(catalog, onRejected);
-
-  // 거부 안내는 잠깐만 띄운다.
-  useEffect(() => {
-    if (!rejection) {
-      return;
-    }
-
-    const timer = setTimeout(() => setRejection(null), 2500);
-    return () => clearTimeout(timer);
-  }, [rejection]);
+  useKeyboardPlacement(catalog, onRejected);
 
   if (spaceQuery.isPending) {
     return <StatusMessage>도면 정보를 불러오는 중…</StatusMessage>;
@@ -83,20 +87,16 @@ export default function BuilderRoute() {
     <main className="flex flex-col gap-4 px-6 py-6">
       <header>
         <h1 className="text-display">{space.name}</h1>
-        <p className="mt-2 text-caption text-text-muted">
+        <p className="mt-2 text-caption text-text-muted tabular-nums">
           {space.address} · 그리드 {grid.gridCols}×{grid.gridRows}칸 (한 칸 {grid.cellSizeMm}mm) ·
           허용 전력 {space.maxPowerWatt.toLocaleString("ko-KR")}W
         </p>
       </header>
 
-      <div className="flex items-center gap-4">
-        <SelectionToolbar fixtures={catalog} onRejected={onRejected} />
-        {rejection ? (
-          <p role="alert" className="text-caption text-error">
-            {rejection}
-          </p>
-        ) : null}
-      </div>
+      {/* 도면 상단 고정 — 배치를 바꾸면 여기가 먼저 반응한다 (US-103). */}
+      <LimitGauge load={load} />
+
+      <CanvasController fixtures={catalog} onRejected={onRejected} rejection={rejection} />
 
       <div className="flex gap-6">
         <FixturePanel fixtures={fixturesQuery.data ?? []} isLoading={fixturesQuery.isPending} />
@@ -111,12 +111,16 @@ export default function BuilderRoute() {
             onSubmit={reservation.submit}
             isPending={reservation.isPending}
             errorMessage={reservation.errorMessage}
+            isOverPowerLimit={load.blocksSubmit}
           />
         </div>
       </div>
     </main>
   );
 }
+
+/** 도면을 아직 못 불러온 동안 합산에 넘길 자리표시 그리드. */
+const EMPTY_GRID = { gridCols: 0, gridRows: 0, cellSizeMm: 0 };
 
 function StatusMessage({ children, tone }: { children: React.ReactNode; tone?: "error" }) {
   return (

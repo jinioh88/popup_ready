@@ -1,15 +1,15 @@
 import { useState } from "react";
 
 import type { Fixture, FixtureCategory } from "../../lib/schemas/api";
-import { fixtureDragType } from "../../lib/builder/dragTransfer";
+import { useBuilderStore } from "../../stores/builder";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "./constants";
+import { ModularItemCard } from "./ModularItemCard";
 
 /**
- * 집기 라이브러리 패널 — 카테고리 탭 + 캔버스로 끌어다 놓는 항목 목록.
+ * 집기 라이브러리 패널 — 카테고리 필터 + 항목 목록.
  *
- * 드래그는 HTML5 dragstart로 fixtureId만 실어 보낸다. 좌표 환산·충돌 판정은 캔버스가 한다.
- * id를 **타입 이름에 싣는** 이유는 `app/lib/builder/dragTransfer`에 있다(dragover에서는
- * 값을 읽을 수 없다).
+ * **이 컴포넌트는 목록과 필터만 맡는다.** 항목 하나의 표현과 두 입력 경로(드래그·키보드)는
+ * `ModularItemCard`가 갖는다 — 팔레트가 커질수록 필터 로직과 항목 렌더가 한 파일에서 엉킨다.
  */
 
 type FixturePanelProps = {
@@ -19,12 +19,22 @@ type FixturePanelProps = {
 
 export function FixturePanel({ fixtures, isLoading }: FixturePanelProps) {
   const [category, setCategory] = useState<FixtureCategory | "ALL">("ALL");
+  const draft = useBuilderStore((state) => state.draft);
+  const startDraft = useBuilderStore((state) => state.startDraft);
 
   const visible = category === "ALL" ? fixtures : fixtures.filter((f) => f.category === category);
 
   return (
     <aside className="flex w-72 shrink-0 flex-col gap-4">
       <h2 className="text-heading">집기 라이브러리</h2>
+
+      {/*
+        조작 안내를 화면에 둔다. 키보드 경로는 발견 가능성이 낮아서, 적어두지 않으면
+        "탭으로 갈 수는 있는데 그다음 뭘 눌러야 하는지" 알 길이 없다.
+      */}
+      <p className="text-caption text-text-muted">
+        끌어다 놓거나, 항목을 고른 뒤 방향키로 옮기고 Enter로 배치합니다. (회전 R · 취소 Esc)
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <CategoryTab label="전체" active={category === "ALL"} onClick={() => setCategory("ALL")} />
@@ -44,20 +54,11 @@ export function FixturePanel({ fixtures, isLoading }: FixturePanelProps) {
         <ul className="flex flex-col gap-2">
           {visible.map((fixture) => (
             <li key={fixture.id}>
-              <div
-                draggable
-                onDragStart={(event) => {
-                  event.dataTransfer.setData(fixtureDragType(fixture.id), String(fixture.id));
-                  event.dataTransfer.effectAllowed = "copy";
-                }}
-                className="cursor-grab rounded-lg border border-border bg-surface p-3 active:cursor-grabbing"
-              >
-                <p className="text-body-strong">{fixture.name}</p>
-                <p className="mt-1 text-caption text-text-muted">
-                  {fixture.widthMm}×{fixture.depthMm}mm · {fixture.powerWatt}W ·{" "}
-                  {fixture.dailyRentalFee.toLocaleString("ko-KR")}원/일
-                </p>
-              </div>
+              <ModularItemCard
+                fixture={fixture}
+                isDrafting={draft?.fixtureId === fixture.id}
+                onActivate={startDraft}
+              />
             </li>
           ))}
           {visible.length === 0 ? (
