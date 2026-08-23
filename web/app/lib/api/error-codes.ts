@@ -50,6 +50,7 @@ export const ERROR_CODES = [
   "LOCK_ACQUISITION_FAILED",
   // door (모바일 구간이지만 enum은 파트 공용이라 목록을 함께 맞춘다)
   "DOOR_NOT_YET_OPENABLE",
+  "DOOR_EVENT_ALREADY_ACKED",
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
