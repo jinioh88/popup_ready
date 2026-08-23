@@ -3,15 +3,14 @@ import { z } from "zod";
 import { layoutSchema } from "./layout";
 
 /**
- * API 경계 런타임 파싱 — **핵심 응답 3종만** (sprint1.md §2.2 파이프라인 규칙).
+ * API 경계 런타임 파싱 — **핵심 4종** (sprint1.md §2.2 파이프라인 규칙 + PM 승인 예외).
  *
  *   `GET /spaces` · `GET /fixtures` · `POST /reservation-requests`
+ *   + 계약 응답(`schemas/contract.ts` — 2026-08-23 PM 승인 예외, 4종째)
  *
  * 생성 타입(`app/lib/api/schema.d.ts`)은 컴파일 타임 보증만 준다. 예상과 다른 null이나
- * 날짜 포맷 같은 런타임 불일치는 못 잡으므로 이 세 곳만 Zod로 막는다. **전면 도입은 하지 않는다.**
- *
- * 목업(MSW) 데이터도 이 스키마에서 파생시켜 필드명 불일치가 통합 시점이 아니라
- * 목업 작성 시점에 드러나게 한다.
+ * 날짜 포맷 같은 런타임 불일치는 못 잡으므로 **골라서** Zod로 막는다. 전면 도입은 하지 않는다.
+ * 대상 추가는 '치명도'(조용한 훼손이 사용자 피해로 직결되는가) 기준이며 PM 승인 사항이다.
  */
 
 /** 위경도(WGS84) */
