@@ -1,103 +1,111 @@
 # PopupReady
 
-팝업스토어 공간 예약·운영 플랫폼 모노레포. 백엔드/웹/모바일 앱을 하나의 GitHub 저장소에서 관리합니다.
+> 오프라인 매장 오픈의 진입 장벽을 허물고, 단기 유휴 공간을 데이터 기반 무인 기술로
+> 평당 수익이 극대화된 브랜드 쇼룸으로 탈바꿈한다.
+
+**PopupReady**는 단기 팝업스토어의 **공간 예약부터 무인 운영·자동 정산까지**를 하나의 파이프라인으로 연결하는 턴키 플랫폼입니다.
+
+기존 팝업스토어 시장은 파편화된 오프라인 계약, 일회성 인테리어 폐기물, 수기 정산, 현장 상주 인력 배치가 반복되는 고비용·비효율 구조였습니다. PopupReady는 공간 탐색 → 2D 가상 배치 → 전자계약 → 현장 무인 운영 → 퇴실 검수 → 자동 정산을 **끊김 없이 하나의 흐름**으로 만듭니다.
+
+## 해결하는 문제
+
+브랜드와 건물주 양쪽의 리스크를 동시에 제거하는 **양면 시장** 플랫폼입니다.
+
+| | 기존의 고통 | PopupReady의 해결 |
+|---|---|---|
+| **브랜드 운영자** | 일회성 인테리어 시공·철거비 소모, 파편화된 공간·집기·POS 계약, 불투명한 대행 견적의 숨은 비용 | 2D 도면 빌더로 공간과 모듈 집기를 한 번에 매칭, 전력·면적 한도 사전 검증, 예산이 배치 단계에서 확정 |
+| **건물주 / 임대인** | 단기 임차인의 계약갱신요구권 주장으로 명도 거부 우려, 무분별한 실내 공사로 인한 상가 훼손 분쟁 | 상가임대차보호법 제16조 **'일시사용 임대차'** 요건을 갖춘 표준 전자계약, 무훼손 조립식 집기만 배치 승인, 에스크로 분산 정산 |
+
+## 핵심 기능
+
+**1. 지도 기반 공실 탐색**
+성수·명동·홍대 등 핵심 상권의 유휴 상가를 지도 위에 매핑하고, 일일 대여료·면적·전기 용량 한도로 필터링합니다.
+
+**2. 2D 가상 매장 빌더**
+평면 도면 위에 표준 모듈러 집기(POS 데스크, 행거, 쇼케이스, 조명)를 드래그 앤 드롭으로 배치합니다. 그리드 스냅·90도 회전·충돌 감지를 지원하며, **배치할 때마다 소비 전력과 점유 면적을 실시간 합산**해 상가 한도를 넘으면 결제를 차단합니다.
+
+**3. 이중 예약 없는 복합 주문**
+공간 일정과 집기 목록이 결합된 단일 주문을 분산 락으로 직렬화해, 동일 공간·집기의 동시 결제 충돌을 원천 차단합니다.
+
+**4. 표준 전자계약 자동 바인딩**
+예약 확정 시 일시사용 임대차 요건을 충족하는 표준 계약이 자동 생성됩니다. 조항 전문 스냅샷과 무결성 해시를 보존해 분쟁 시 소명 자료가 됩니다. 화면에 보이는 견적 금액이 서버 견적, 계약서 조항까지 동일하게 유지됩니다.
+
+**5. 현장 무인 운영**
+모바일 앱으로 스마트락을 열어 무인 입실하고, 비품 바코드를 스캔해 현장에서 바로 추가 결제합니다. 상주 인력이 필요 없습니다.
+
+**6. 비대면 퇴실 검수와 자동 정산**
+원상복구 사진을 업로드해 퇴실을 인증하면, 승인 건에 대해 보증금 환불과 건물주·가구사·플랫폼 간 다자간 분할 정산이 배치로 실행됩니다.
+
+**7. 성과 정량 대시보드**
+방문객 유입과 관심 구역 체류를 지표로 전환해, 오프라인 활동의 성과를 매출액 합산이 아닌 데이터로 증명합니다.
+
+## 서비스 흐름
+
+```
+[웹] 공간 탐색 ─▶ 2D 빌더 배치 ─▶ 예약·결제 ─▶ 전자계약 서명
+                                                      │
+                                                      ▼
+                              [모바일] 무인 입실 ─▶ 현장 추가 결제
+                                                      │
+                                                      ▼
+                              [모바일] 퇴실 검수 ─▶ [배치] 보증금 환불 · 다자간 정산
+```
+
+## 개발 현황
+
+**Sprint 1 완료** — 위 흐름의 앞단이 실서버에서 끝까지 동작합니다.
+
+- 로그인 → 지도 공실 탐색(Kakao Maps + PostGIS 반경 검색) → 2D 빌더 배치(스냅·회전·충돌) → 예약 요청(서버 레이아웃 재검증·견적 계산) → 일시사용 임대차 표준 계약 자동 생성 → 양측 클릭 서명(SHA-256 무결성 해시)
+- API 계약은 `contracts/openapi.json` 단일 진실 — 백엔드가 springdoc으로 생성·커밋하고, 웹·모바일이 타입을 생성해 소비합니다
+- 모바일은 MQTT 도어락 신호 왕복을 실기기(Expo Go)에서 검증 완료
+
+이후 스프린트: 결제(토스페이먼츠)·이중 예약 방지 분산 락, 전력·면적 부하 게이트, 무인 입실·바코드 결제, 퇴실 검수·정산 배치, 대시보드.
 
 ## 저장소 구조
 
-```
-PopupReady/
-├── backend/     # Spring Boot API 서버 (Java 21, Gradle)
-│                #   JPA · Spring Security(JWT) · Spring Batch(다자간 정산)
-│                #   Redisson(분산 락 - 이중 예약 방지) · PostGIS(위치 기반 검색)
-├── web/         # React + TypeScript 웹 클라이언트 (Vite)
-│                #   React-Konva(2D 가상 빌더) · Zustand · TanStack Query
-│                #   Kakao Maps(공간 탐색) · Tailwind + shadcn/ui(대시보드)
-├── mobile/      # React Native (Expo) 현장 운영 앱
-│                #   expo-camera(바코드 스캔) · mqtt.js(도어락 모킹)
-│                #   Expo Router · Zustand · TanStack Query
-├── infra/       # 로컬 개발 인프라 (docker-compose)
-│                #   PostgreSQL+PostGIS · Redis · Mosquitto(MQTT 브로커)
-├── docs/        # 기획 문서 (PRD, MVP 백로그, 기술스택, 페르소나, 사용자흐름도)
-└── .github/
-    └── workflows/  # CI (backend / web / mobile 별 파이프라인)
-```
+모노레포입니다.
 
-## 각 프로젝트 생성 방법
-
-각 하위 프로젝트는 아래 명령으로 해당 디렉토리에 직접 생성합니다.
-
-### backend — Spring Boot
-
-[start.spring.io](https://start.spring.io)에서 생성 (Gradle, Java 21, 패키지 `com.popupready`)
-의존성: Web, Data JPA, Security, Validation, Batch, Data Redis, PostgreSQL, Flyway, Lombok, Actuator
-> 참고: start.spring.io는 현재 Spring Boot 4.x만 지원합니다(3.x는 지원 종료 수순). 문서의 3.x 스택과 구조는 동일합니다.
-> 추가 수동 의존성: `redisson-spring-boot-starter`, `hibernate-spatial`(PostGIS), `jjwt`(JWT)
-
-### web — React + TypeScript
-
-```bash
-npm create vite@latest web -- --template react-ts   # 린터: ESLint 선택
-cd web
-npm i react-router @tanstack/react-query zustand \
-      konva react-konva react-kakao-maps-sdk \
-      react-hook-form zod @hookform/resolvers recharts \
-      @tosspayments/tosspayments-sdk
-npm i -D tailwindcss @tailwindcss/vite vitest @testing-library/react
-```
-
-| 영역 | 선택 | 용도 |
+| 디렉터리 | 역할 | 스택 |
 |---|---|---|
-| 빌드/기반 | Vite + React + TypeScript | SPA (로그인 기반 빌더·대시보드 중심) |
-| 라우팅 | React Router | 브랜드/건물주/관리자 역할별 라우트 |
-| 서버 상태 | TanStack Query | 공간 목록·예약·정산 API 캐싱/재조회 |
-| 클라이언트 상태 | Zustand | 빌더 캔버스 상태 (집기 배치, 면적·전력 합산) |
-| 2D 캔버스 | React-Konva | 그리드 스냅 빌더, 드래그 앤 드롭, 충돌 감지 |
-| 지도 | Kakao Maps SDK | 공실 상가 반경 검색 (국내 주소/좌표) |
-| UI | Tailwind CSS + shadcn/ui | 대시보드 테이블·모달·폼 |
-| 폼/검증 | React Hook Form + Zod | 입점 신청·계약·정산 계좌 폼 |
-| 차트 | Recharts | 성과 대시보드 (mAsh 목업 데이터) |
-| 결제 | 토스페이먼츠 위젯 SDK | PG 결제창 연동 |
-| 테스트 | Vitest + Testing Library | 계산 로직·컴포넌트 테스트 |
+| [`backend/`](backend/) | API 서버 — 예약 트랜잭션, 계약, 정산 배치 | Spring Boot · PostgreSQL(PostGIS) · Redis · Spring Batch |
+| [`web/`](web/) | 웹 클라이언트 — 공간 탐색, 2D 빌더, 어드민 대시보드 | React · TypeScript · React Router(SPA) · React-Konva |
+| [`mobile/`](mobile/) | 현장 운영 앱 — 무인 입실, 비품 스캔 결제, 퇴실 검수 | React Native (Expo) |
+| [`infra/`](infra/) | 로컬 개발 인프라 | Docker Compose — PostgreSQL+PostGIS · Redis · Mosquitto |
+| `docs/` | 기획 문서 (PRD, MVP 백로그, 페르소나, 사용자 흐름도) — **비공개** | |
 
-> SEO 판단: 공간 탐색 페이지의 검색 유입이 중요해지면 Next.js 고려 대상이나,
-> MVP는 SPA로 시작하고 필요 시 마케팅 페이지만 분리하는 것이 현실적.
+## 로컬 개발 시작
 
-### mobile — React Native (Expo)
-
-저장소 루트에서 실행:
-
-```bash
-npx create-expo-app@latest mobile --template blank-typescript
-cd mobile
-npx expo install expo-router expo-camera expo-secure-store react-native-webview
-npm i @tanstack/react-query zustand mqtt react-hook-form zod @hookform/resolvers \
-      @tosspayments/widget-sdk-react-native
-```
-
-> 네이티브 모듈은 `npm i`가 아닌 `npx expo install`로 설치 (Expo SDK 호환 버전 자동 선택)
-
-| 영역 | 선택 | 용도 |
-|---|---|---|
-| 기반 | Expo + TypeScript | 네이티브 빌드 설정 없이 개발 |
-| 라우팅 | Expo Router | 파일 기반 라우팅 (Expo 표준) |
-| 서버 상태 | TanStack Query | 예약 조회·비품 결제 API (웹과 공유) |
-| 클라이언트 상태 | Zustand | 스캔 장바구니, 도어락 상태 (웹과 공유) |
-| 바코드 스캔 | expo-camera | 비품 스캔 → 추가 결제 |
-| MQTT | mqtt.js (WebSocket :9001) | 도어락 모킹 신호 송출, Expo Go에서 동작 |
-| 결제 | 토스페이먼츠 RN SDK | 현장 추가 결제창 |
-| 토큰 보관 | expo-secure-store | JWT를 Keychain/Keystore에 저장 |
-| 폼/검증 | React Hook Form + Zod | 웹과 공유 |
-| 테스트 | Jest + RN Testing Library | Expo 기본 프리셋 |
-
-> **Expo Go 우선 원칙:** MVP 동안은 Expo Go만으로 개발 가능하게 설계할 것.
-> 도어락을 실제 BLE 대신 MQTT 모킹으로 처리하는 백로그 스코프 덕분에,
-> 위 구성은 네이티브 커스텀 빌드 없이 Expo Go 앱에서 전부 돌아간다(개발 속도 최상).
-> 나중에 실제 BLE 도어락을 붙이는 시점에만 `react-native-ble-plx` +
-> development build(`expo-dev-client`)로 전환하면 된다.
-
-## 로컬 인프라 실행
+모든 파트가 공유하는 인프라를 먼저 띄웁니다. 백엔드·모바일 개발에 선행되어야 합니다.
 
 ```bash
 cd infra && docker compose up -d
-# PostgreSQL+PostGIS :5432 / Redis :6379 / MQTT :1883 (ws :9001)
 ```
+
+| 서비스 | 포트 | 비고 |
+|---|---|---|
+| PostgreSQL + PostGIS | `5432` | DB·계정·비밀번호 모두 `popupready` |
+| Redis | `6379` | 분산 락 |
+| Mosquitto (MQTT) | `1883`, WebSocket `9001` | 스마트락 모킹 |
+
+각 파트 실행:
+
+```bash
+# backend — API 서버 (인프라 선행 필요, 기동 시 개발 시드 자동 주입)
+cd backend && ./gradlew bootRun
+
+# web — 개발 서버 (/api는 백엔드로 프록시)
+cd web && npm install && npm run dev
+
+# mobile — Expo Go로 실행 (실기기는 개발 머신과 같은 Wi-Fi 필요)
+cd mobile && npm install && npm start
+```
+
+웹의 상세 실행·검증 방법은 [`web/README.md`](web/README.md)를 참조하세요.
+
+## MVP 스코프
+
+빠른 검증을 위해 아래는 **의도적으로 범위에서 제외**했습니다.
+
+- **3D 에디터를 만들지 않습니다.** CAD 수준 3D 대신 2D 그리드 빌더로 한정하고, 배치 결과는 좌표 JSON으로만 관리합니다.
+- **실제 IoT 하드웨어를 붙이지 않습니다.** 스마트락은 MQTT 가상 신호로 모킹합니다. 실제 BLE 연동은 검증 이후 단계입니다.
+- **AI 비전을 직접 개발하지 않습니다.** 외부 분석 API 규격에 맞춘 데이터를 시각화하는 데까지만 다룹니다.
