@@ -30,3 +30,6 @@ build
 # Claude Code (개발 지침 — 비공개)
 /CLAUDE.md
 .claude/
+
+# 파트 문서 (비공개)
+/docs/
