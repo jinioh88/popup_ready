@@ -47,7 +47,11 @@ export function LimitGauge({ load }: LimitGaugeProps) {
   }, [power.level]);
 
   return (
-    <Card className="flex flex-col gap-4" aria-label="배치 한도">
+    /*
+     * `section` + 접근 가능한 이름 = region 랜드마크. role 없는 `div`에 aria-label만 붙이면
+     * 대부분의 보조기기가 그 이름을 노출하지 않아 이름이 사라진다.
+     */
+    <Card as="section" className="flex flex-col gap-4" aria-label="배치 한도">
       <div
         key={pulseKey}
         className={`flex flex-col gap-2 rounded-lg ${isOver ? "limit-pulse border border-error p-3" : ""}`}
@@ -167,7 +171,8 @@ function Meter({
   valueText: string;
 }) {
   // 100%를 넘어도 막대는 넘치지 않는다 — 넘친 양은 수치 텍스트가 말한다.
-  const width = Math.min(Math.max(ratio, 0), 1) * 100;
+  const clamped = Math.min(Math.max(ratio, 0), 1);
+  const width = clamped * 100;
 
   return (
     <div
@@ -175,7 +180,12 @@ function Meter({
       aria-label={label}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-valuenow={Math.round(ratio * 100)}
+      /*
+       * `aria-valuenow`는 min~max 범위 안이어야 한다(ARIA). 110을 그대로 넣으면 규격 위반이고
+       * 보조기기가 값을 잘라내거나 이상하게 읽는다. **초과한 진짜 값은 `aria-valuetext`가**
+       * 문장으로 전달하므로 여기서 잘라도 정보는 잃지 않는다.
+       */
+      aria-valuenow={Math.round(clamped * 100)}
       aria-valuetext={valueText}
       className={`w-full overflow-hidden rounded-full bg-border ${thickness}`}
     >

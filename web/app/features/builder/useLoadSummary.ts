@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { summarizeLoad, type LoadInput, type LoadSummary } from "../../lib/builder/load";
+import { isSameLoad, summarizeLoad, type LoadInput, type LoadSummary } from "../../lib/builder/load";
 import { DRAG_THROTTLE_MS, throttle } from "../../lib/throttle";
 
 /**
@@ -19,6 +19,11 @@ import { DRAG_THROTTLE_MS, throttle } from "../../lib/throttle";
  * ② 나중에 "드래그 중 예상 부하"처럼 연속 입력이 붙으면 그때 게이트가 저절로 작동한다 —
  * 그 시점에 스로틀을 새로 끼워 넣는 것보다 안전하다.
  *
+ * **호출 계약: `items`·`fixtures`·`grid`는 값이 바뀔 때만 새 참조여야 한다.** 렌더마다 새 배열을
+ * 넘기면(`items.filter(...)`를 인자 자리에서 만드는 식) 매 렌더 재계산이 예약되고, 스로틀이
+ * 대기 구간을 계속 이어붙여 값이 한 박자씩 밀린다. 현재 호출부는 Zustand 셀렉터와 `useMemo`가
+ * 참조를 안정적으로 유지하므로 이 조건을 만족한다.
+ *
  * 입력을 인자로 넘기는 것은 스로틀 유틸이 **대기 중 마지막 인자**를 보관하기 때문이다.
  * 최신 값을 ref로 들고 다니면 렌더 중 ref 접근이 되어 규칙에도 걸리고, 트레일링 시점에
  * 어떤 값이 쓰이는지도 흐려진다.
@@ -28,8 +33,17 @@ export function useLoadSummary(input: LoadInput): LoadSummary {
 
   const [summary, setSummary] = useState<LoadSummary>(() => summarizeLoad(input));
 
+  /**
+   * **값이 같으면 이전 객체를 유지한다.** `summarizeLoad`는 매번 새 객체를 돌려주므로 그대로
+   * 넣으면 값이 그대로여도 리렌더가 나고, 그 리렌더가 다시 합산을 예약하면(입력 배열 identity가
+   * 매 렌더 바뀌는 호출부에서 실제로 그렇게 된다) 상태가 영영 한 박자 뒤처진 채 맴돈다.
+   */
   const recompute = useMemo(
-    () => throttle((next: LoadInput) => setSummary(summarizeLoad(next)), DRAG_THROTTLE_MS),
+    () =>
+      throttle((next: LoadInput) => {
+        const computed = summarizeLoad(next);
+        setSummary((current) => (isSameLoad(current, computed) ? current : computed));
+      }, DRAG_THROTTLE_MS),
     [],
   );
 

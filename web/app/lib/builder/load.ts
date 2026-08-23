@@ -138,3 +138,28 @@ function powerLevel(ratio: number): PowerLevel {
 
   return ratio >= POWER_NEAR_RATIO ? "near" : "safe";
 }
+
+/**
+ * 두 합산 결과가 같은 값인가.
+ *
+ * `summarizeLoad`는 호출할 때마다 **새 객체**를 돌려주므로, 결과를 그대로 상태에 넣으면 값이
+ * 그대로여도 리렌더가 난다. 그 리렌더가 다시 합산을 예약하면(입력 배열의 identity가 매 렌더
+ * 바뀌는 호출부에서 실제로 그렇게 된다) 상태가 **영영 한 박자 뒤처진 채** 맴돈다.
+ *
+ * 값이 같으면 이전 객체를 그대로 유지해 그 고리를 끊는다 — `BuilderCanvas`가 드롭 미리보기에
+ * 쓰는 `isSamePreview`와 같은 이유, 같은 방식이다.
+ */
+export function isSameLoad(a: LoadSummary, b: LoadSummary): boolean {
+  return (
+    a.blocksSubmit === b.blocksSubmit &&
+    a.hasUnknownFixture === b.hasUnknownFixture &&
+    a.power.watt === b.power.watt &&
+    a.power.limit === b.power.limit &&
+    a.power.ratio === b.power.ratio &&
+    a.power.level === b.power.level &&
+    a.area.m2 === b.area.m2 &&
+    a.area.gridM2 === b.area.gridM2 &&
+    a.area.ratio === b.area.ratio &&
+    a.area.level === b.area.level
+  );
+}

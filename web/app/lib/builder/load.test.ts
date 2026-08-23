@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AREA_CROWDED_RATIO, POWER_NEAR_RATIO, summarizeLoad } from "./load";
+import { AREA_CROWDED_RATIO, isSameLoad, POWER_NEAR_RATIO, summarizeLoad } from "./load";
 import type { FixtureLookup } from "./types";
 import type { GridSpec, LayoutItem } from "../schemas/layout";
 
@@ -171,5 +171,33 @@ describe("summarizeLoad — 미상 집기", () => {
 
     expect(withUnknown.power.watt).toBe(known.power.watt);
     expect(withUnknown.hasUnknownFixture).toBe(true);
+  });
+});
+
+describe("isSameLoad", () => {
+  it("같은 입력의 두 결과는 값이 같다고 본다", () => {
+    // summarizeLoad는 매번 새 객체를 돌려준다 — 그래서 identity 비교로는 안 된다.
+    const a = summarize([at(1), at(3)]);
+    const b = summarize([at(1), at(3)]);
+
+    expect(a).not.toBe(b);
+    expect(isSameLoad(a, b)).toBe(true);
+  });
+
+  it("전력이 달라지면 다르다고 본다", () => {
+    expect(isSameLoad(summarize([at(1)]), summarize([at(3)]))).toBe(false);
+  });
+
+  it("전력이 같아도 면적이 달라지면 다르다고 본다", () => {
+    // 집기 2는 0W다 — 전력은 그대로인데 점유 면적만 늘어나는 경우를 놓치면 안 된다.
+    expect(isSameLoad(summarize([at(1)]), summarize([at(1), at(2)]))).toBe(false);
+  });
+
+  it("한도가 달라지면 다르다고 본다", () => {
+    expect(isSameLoad(summarize([at(1)], 1000), summarize([at(1)], 2000))).toBe(false);
+  });
+
+  it("미상 집기 여부가 달라지면 다르다고 본다", () => {
+    expect(isSameLoad(summarize([at(1)]), summarize([at(1), at(999)]))).toBe(false);
   });
 });

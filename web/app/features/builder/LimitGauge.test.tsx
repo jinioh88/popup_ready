@@ -32,6 +32,15 @@ function meter(label: string): HTMLElement {
   return screen.getByRole("progressbar", { name: label });
 }
 
+describe("LimitGauge — 랜드마크", () => {
+  it("게이지 영역이 이름을 가진 region으로 노출된다", () => {
+    render(<LimitGauge load={OVER} />);
+
+    // role 없는 div에 aria-label만 붙이면 이름이 노출되지 않는다.
+    expect(screen.getByRole("region", { name: "배치 한도" })).toBeTruthy();
+  });
+});
+
 describe("LimitGauge — 색 단독 전달 금지 (스타일가이드 §8 인수 조건)", () => {
   it("전력 상태를 글자로 말한다", () => {
     render(<LimitGauge load={OVER} />);
@@ -119,7 +128,16 @@ describe("LimitGauge — 막대 표현", () => {
 
     // 넘친 양은 수치 텍스트가 말한다. 막대가 컨테이너를 뚫으면 레이아웃이 깨진다.
     expect(fill.style.width).toBe("100%");
-    expect(meter("소비 전력").getAttribute("aria-valuenow")).toBe("110");
+  });
+
+  it("aria-valuenow가 valuemax를 넘지 않고, 초과분은 valuetext가 말한다", () => {
+    render(<LimitGauge load={OVER} />);
+    const bar = meter("소비 전력");
+
+    // ARIA는 valuenow가 min~max 안일 것을 요구한다. 110을 넣으면 규격 위반이다.
+    expect(bar.getAttribute("aria-valuenow")).toBe("100");
+    expect(bar.getAttribute("aria-valuemax")).toBe("100");
+    expect(bar.getAttribute("aria-valuetext")).toContain("110%");
   });
 });
 
