@@ -1,13 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
+import { setSessionExpiredHandler } from "../lib/api/authed-client";
 import { statusFromToken, type AuthStatus } from "../lib/auth/session";
-import { clearAccessToken, readAccessToken, saveAccessToken } from "../lib/auth/token-storage";
+import {
+  clearTokens,
+  readAccessToken,
+  saveTokens,
+  type TokenPair,
+} from "../lib/auth/token-storage";
 
 type AuthSessionValue = {
   status: AuthStatus;
   /** 토큰 저장까지 성공해야 인증으로 넘어간다. 저장 실패는 던진다. */
-  signIn: (accessToken: string) => Promise<void>;
+  signIn: (tokens: TokenPair) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -40,14 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const signIn = useCallback(async (accessToken: string) => {
-    await saveAccessToken(accessToken);
+  const signIn = useCallback(async (tokens: TokenPair) => {
+    await saveTokens(tokens);
     setStatus("authenticated");
   }, []);
 
   const signOut = useCallback(async () => {
-    await clearAccessToken();
+    await clearTokens();
     setStatus("anonymous");
+  }, []);
+
+  // 재발급까지 실패해 세션이 끝나면 가드가 반응해야 한다. 저장소만 비우면 화면은 인증 상태로
+  // 남아 보호 화면을 계속 보여준다.
+  useEffect(() => {
+    setSessionExpiredHandler(() => setStatus("anonymous"));
+    return () => setSessionExpiredHandler(null);
   }, []);
 
   const value = useMemo<AuthSessionValue>(

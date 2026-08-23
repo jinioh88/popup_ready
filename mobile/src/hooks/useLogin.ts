@@ -25,7 +25,7 @@ export function useLogin() {
 
       const result = await login(baseUrl, input);
       // 저장 실패를 삼키면 다음 화면에서 토큰 없이 요청이 나간다. 로그인 실패로 취급한다.
-      await signIn(result.accessToken);
+      await signIn({ accessToken: result.accessToken, refreshToken: result.refreshToken });
       return result;
     },
   });

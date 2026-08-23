@@ -5,11 +5,11 @@ import type { ReactElement } from "react";
 import LoginScreen from "../src/app/index";
 import { AuthProvider } from "../src/hooks/useAuthSession";
 
-const mockSaveAccessToken = jest.fn();
+const mockSaveTokens = jest.fn();
 jest.mock("../src/lib/auth/token-storage", () => ({
-  saveAccessToken: (token: string) => mockSaveAccessToken(token),
+  saveTokens: (tokens: unknown) => mockSaveTokens(tokens),
   readAccessToken: () => Promise.resolve(null),
-  clearAccessToken: jest.fn(),
+  clearTokens: jest.fn(),
 }));
 
 const mockLogin = jest.fn();
@@ -54,15 +54,25 @@ describe("로그인 화면", () => {
 
   // 이동은 화면이 하지 않는다 — 세션이 authenticated로 바뀌면 루트 레이아웃의 가드가
   // 로그인 화면을 등록 해제한다(auth-guard-test). 여기서는 저장까지를 확인한다.
-  it("성공하면 토큰을 저장한다", async () => {
-    mockLogin.mockResolvedValue({ accessToken: "jwt-abc", user: { id: 1 } });
+  it("성공하면 토큰 쌍을 저장한다", async () => {
+    mockLogin.mockResolvedValue({
+      accessToken: "jwt-abc",
+      refreshToken: "refresh-abc",
+      user: { id: 1 },
+    });
     await renderWithQuery(<LoginScreen />);
 
     await fireEvent.changeText(screen.getByPlaceholderText("이메일"), "brand@popupready.com");
     await fireEvent.changeText(screen.getByPlaceholderText("비밀번호"), "password123");
     await fireEvent.press(screen.getByText("로그인"));
 
-    await waitFor(() => expect(mockSaveAccessToken).toHaveBeenCalledWith("jwt-abc"));
+    // 회전 방식이라 access만 저장하면 다음 재발급이 무효 토큰을 보낸다. 쌍으로 저장한다.
+    await waitFor(() =>
+      expect(mockSaveTokens).toHaveBeenCalledWith({
+        accessToken: "jwt-abc",
+        refreshToken: "refresh-abc",
+      }),
+    );
 
     // 공백만 넣고 보내는 실수를 막으려 이메일은 trim해서 보낸다.
     expect(mockLogin).toHaveBeenCalledWith("http://192.168.0.10:8080/api/v1", {
@@ -83,7 +93,7 @@ describe("로그인 화면", () => {
     await waitFor(() =>
       expect(screen.getByText("이메일 또는 비밀번호가 올바르지 않다.")).toBeTruthy(),
     );
-    expect(mockSaveAccessToken).not.toHaveBeenCalled();
+    expect(mockSaveTokens).not.toHaveBeenCalled();
   });
 
   it("입력이 비어 있으면 검증에서 막고 요청을 보내지 않는다", async () => {
