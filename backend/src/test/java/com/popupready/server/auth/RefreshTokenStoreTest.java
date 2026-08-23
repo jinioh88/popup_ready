@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -133,5 +139,43 @@ class RefreshTokenStoreTest {
 
         assertThat(store.rotate(issued)).isNull();
         assertThat(store.rotate(successor)).as("재사용이 감지됐다면 후속 토큰도 함께 죽어 있어야 한다").isNull();
+    }
+
+    @Test
+    @DisplayName("🚨 같은 토큰으로 동시에 회전 → 후속 토큰은 정확히 하나여야 한다")
+    void rotate_concurrentSameToken_producesSingleSuccessor() throws Exception {
+        // 순차 테스트로는 증명되지 않는다. 실서버(:8080)에서 동시 요청 2건이 <b>서로 다른</b>
+        // 후속 토큰을 받는 것이 발견됐다 — 둘 다 ACTIVE를 읽은 뒤 각자 회전한 read-modify-write
+        // 경합이다. 그러면 한 패밀리에 살아 있는 토큰이 둘이 되고, 이정표는 그중 하나만 가리켜
+        // 재사용 감지가 무의미해진다(도둑과 정상 사용자가 나란히 회전해도 아무도 걸리지 않는다).
+        String issued = store.issue(USER_ID);
+        int threads = 8;
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(threads);
+        Set<String> successors = ConcurrentHashMap.newKeySet();
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            for (int i = 0; i < threads; i++) {
+                pool.submit(() -> {
+                    try {
+                        start.await();
+                        RefreshTokenStore.Rotation rotation = store.rotate(issued);
+                        if (rotation != null) {
+                            successors.add(rotation.refreshToken());
+                        }
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    } finally {
+                        done.countDown();
+                    }
+                });
+            }
+            start.countDown();
+            assertThat(done.await(10, TimeUnit.SECONDS)).isTrue();
+        } finally {
+            pool.shutdownNow();
+        }
+
+        assertThat(successors).as("동시 회전이 만든 후속 토큰").hasSize(1);
     }
 }

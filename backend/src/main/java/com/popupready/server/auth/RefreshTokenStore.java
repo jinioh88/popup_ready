@@ -4,10 +4,15 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
+import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.stereotype.Component;
 
 /**
@@ -38,6 +43,16 @@ import org.springframework.stereotype.Component;
  * 끊는다. 도둑이 훔친 토큰을 몇 초 안에 쓰는 경우만 놓치며, 그 대가로 정상 사용자가 경합으로
  * 로그아웃되는 흔한 오탐을 없앤다.
  *
+ * <h2>원자성</h2>
+ *
+ * 회전은 <b>Lua 스크립트 한 번</b>으로 일어난다. Java에서 읽고-판정하고-쓰면 동시 요청이 모두
+ * {@code ACTIVE}를 읽은 뒤 각자 회전해 한 패밀리에 살아 있는 토큰이 여럿 생긴다. 그러면 이정표는
+ * 그중 하나만 가리키고, <b>도둑과 정상 사용자가 나란히 회전해도 아무도 걸리지 않아 감지가
+ * 무의미해진다.</b> 실서버 동시 요청 2건이 서로 다른 후속 토큰을 받는 것으로 실제 확인됐다.
+ *
+ * <p>유예 판정은 Lua가 아니라 여기서 한다 — 시각 비교까지 스크립트에 넣으면 테스트가 시계를 밀어
+ * 두 경로를 재현할 수 없다.
+ *
  * <p><b>이정표는 유예가 아니라 원래 유효기간만큼 남긴다.</b> 유예가 지났다고 지워버리면 되돌아온
  * 옛 토큰이 "재사용"이 아니라 "알 수 없는 토큰"으로 보여 <b>감지 자체가 사라진다</b> — 그러면
  * 도둑이 든 토큰만 조용히 거절되고 패밀리는 살아남는다. 유예 판정은 삭제가 아니라 이정표에
@@ -58,6 +73,18 @@ public class RefreshTokenStore {
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    /** 저장소에 그 토큰이 없다는 Lua의 응답. */
+    private static final String MISSING = "MISSING";
+
+    private static final RedisScript<String> ROTATE_SCRIPT = rotateScript();
+
+    private static RedisScript<String> rotateScript() {
+        DefaultRedisScript<String> script = new DefaultRedisScript<>();
+        script.setScriptSource(new ResourceScriptSource(new ClassPathResource("redis/rotate-refresh-token.lua")));
+        script.setResultType(String.class);
+        return script;
+    }
+
     private final StringRedisTemplate redis;
 
     private final Duration validity;
@@ -65,6 +92,9 @@ public class RefreshTokenStore {
     private final Duration grace;
 
     private final Supplier<Instant> clock;
+
+    /** {@link #candidate()}가 만든 값을 스크립트 인자로 넘기기 위한 자리. 호출 스레드에만 보인다. */
+    private final ThreadLocal<String> candidateHolder = ThreadLocal.withInitial(() -> null);
 
     public RefreshTokenStore(
             StringRedisTemplate redis,
@@ -90,26 +120,35 @@ public class RefreshTokenStore {
      * 그 패밀리를 통째로 끊는다.
      */
     public Rotation rotate(String refreshToken) {
-        String raw = redis.opsForValue().get(TOKEN_KEY + refreshToken);
-        if (raw == null) {
+        // familyId는 토큰마다 불변이라 스크립트 밖에서 읽어도 경합이 없다. 그 사이 항목이 사라지면
+        // 스크립트가 MISSING을 돌려주므로 판정은 어차피 원자적 경로 안에서 끝난다.
+        String current = redis.opsForValue().get(TOKEN_KEY + refreshToken);
+        if (current == null) {
+            return null;
+        }
+        String familyId = Entry.parse(current).familyId();
+
+        // 난수는 Java가 만들고 쓸지 말지는 Lua가 정한다 — 경합에서 진 요청의 후보는 그냥 버려진다.
+        String candidate = randomToken();
+        String raw = redis.execute(
+                ROTATE_SCRIPT,
+                List.of(TOKEN_KEY + refreshToken, TOKEN_KEY + candidate, FAMILY_KEY + familyId),
+                candidate,
+                String.valueOf(clock.get().toEpochMilli()),
+                String.valueOf(validity.toMillis()));
+
+        if (raw == null || MISSING.equals(raw)) {
             return null;
         }
         Entry entry = Entry.parse(raw);
-
-        if (entry.isRotated()) {
-            if (isWithinGrace(entry)) {
-                // 경합으로 늦게 도착한 정상 요청이다. 폐기하지 않고 같은 후속 토큰을 돌려준다.
-                String successor = entry.successor();
-                return redis.hasKey(TOKEN_KEY + successor) ? new Rotation(entry.userId(), successor) : revoke(entry);
-            }
+        if (!isWithinGrace(entry)) {
             // 유예를 넘겨 되돌아온 옛 토큰이다. 도둑과 정상 사용자 중 누가 들고 왔는지 알 수 없으므로
             // 세션 전체를 끊는다 — 후속 토큰만 살려두면 도둑이 계속 회전할 수 있다.
             return revoke(entry);
         }
-
-        String next = issueInto(entry.userId(), randomToken(), entry.familyId());
-        markRotated(refreshToken, entry, next);
-        return new Rotation(entry.userId(), next);
+        // 방금 회전했든, 경합으로 늦게 도착해 남의 회전 결과를 받았든 같은 후속 토큰을 돌려준다.
+        String successor = entry.successor();
+        return redis.hasKey(TOKEN_KEY + successor) ? new Rotation(entry.userId(), successor) : revoke(entry);
     }
 
     /** 로그아웃 등으로 세션 하나를 끝낸다. */
@@ -129,25 +168,13 @@ public class RefreshTokenStore {
         return null;
     }
 
+    /** 새 패밀리를 여는 최초 발급. 이후의 회전은 Lua 스크립트가 저장까지 맡는다. */
     private String issueInto(long userId, String token) {
-        return issueInto(userId, token, randomToken());
-    }
-
-    private String issueInto(long userId, String token, String familyId) {
+        String familyId = randomToken();
         redis.opsForValue().set(TOKEN_KEY + token, new Entry(userId, familyId, ACTIVE).serialize(), validity);
         redis.opsForSet().add(FAMILY_KEY + familyId, token);
         redis.expire(FAMILY_KEY + familyId, validity);
         return token;
-    }
-
-    /** 회전된 토큰을 후속 토큰과 회전 시각을 담은 이정표로 바꾼다. TTL은 유예가 아니라 유효기간이다. */
-    private void markRotated(String rotatedToken, Entry entry, String successor) {
-        String state = ROTATED_PREFIX + successor + ":" + clock.get().toEpochMilli();
-        redis.opsForValue()
-                .set(
-                        TOKEN_KEY + rotatedToken,
-                        new Entry(entry.userId(), entry.familyId(), state).serialize(),
-                        validity);
     }
 
     private boolean isWithinGrace(Entry entry) {
