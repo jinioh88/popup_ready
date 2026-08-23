@@ -27,7 +27,13 @@ export default function ContractRoute() {
   }
 
   if (contractQuery.isError || !contractQuery.data) {
-    return <StatusMessage tone="error">{contractLoadMessage(contractQuery.error)}</StatusMessage>;
+    // 재시도 수단을 반드시 남긴다 — 이 쿼리는 자동 재시도를 끄고 있어서(생성 POST를 품고 있다)
+    // 버튼이 없으면 일시적 실패 한 번에 서명하러 온 사용자가 새로고침 말고는 길이 없다.
+    return (
+      <StatusMessage tone="error" onRetry={() => void contractQuery.refetch()}>
+        {contractLoadMessage(contractQuery.error)}
+      </StatusMessage>
+    );
   }
 
   const contract = contractQuery.data;
@@ -56,12 +62,29 @@ export default function ContractRoute() {
   );
 }
 
-function StatusMessage({ children, tone }: { children: React.ReactNode; tone?: "error" }) {
+function StatusMessage({
+  children,
+  tone,
+  onRetry,
+}: {
+  children: React.ReactNode;
+  tone?: "error";
+  onRetry?: () => void;
+}) {
   return (
     <main className="px-6 py-6">
       <p className={`text-body ${tone === "error" ? "text-error" : "text-text-muted"}`}>
         {children}
       </p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 h-10 rounded-lg bg-primary px-4 text-body-strong text-white hover:bg-primary-dark"
+        >
+          다시 시도
+        </button>
+      ) : null}
     </main>
   );
 }

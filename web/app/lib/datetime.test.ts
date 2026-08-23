@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSignedAt } from "./datetime";
+import { formatSignedAt, rentalDays } from "./datetime";
 
 describe("formatSignedAt", () => {
   it("UTC를 KST로 옮겨 표기한다", () => {
@@ -31,5 +31,31 @@ describe("formatSignedAt", () => {
     // KST는 DST를 쓰지 않는다 — 계절에 따라 표기가 흔들리면 서명 시각을 신뢰할 수 없다.
     expect(formatSignedAt("2026-07-15T00:00:00Z")).toBe("2026-07-15 09:00 (KST)");
     expect(formatSignedAt("2026-12-15T00:00:00Z")).toBe("2026-12-15 09:00 (KST)");
+  });
+});
+
+describe("rentalDays", () => {
+  it("시작일과 종료일이 같으면 1일이다", () => {
+    expect(rentalDays("2026-09-01", "2026-09-01")).toBe(1);
+  });
+
+  it("시작일·종료일을 모두 포함해 센다", () => {
+    expect(rentalDays("2026-09-01", "2026-09-03")).toBe(3);
+  });
+
+  it("월을 넘겨도 정확히 센다", () => {
+    expect(rentalDays("2026-08-30", "2026-09-02")).toBe(4);
+  });
+
+  it("서머타임이 있는 지역 설정에서도 하루가 밀리지 않는다 (UTC 기준 계산)", () => {
+    expect(rentalDays("2026-03-01", "2026-03-31")).toBe(31);
+  });
+
+  it("종료일이 시작일보다 이르면 0이다", () => {
+    expect(rentalDays("2026-09-03", "2026-09-01")).toBe(0);
+  });
+
+  it("날짜 형식이 아니면 0이다", () => {
+    expect(rentalDays("어제", "2026-09-01")).toBe(0);
   });
 });

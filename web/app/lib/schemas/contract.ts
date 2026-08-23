@@ -11,8 +11,14 @@ import { z } from "zod";
  * 조항 전문은 **서버가 치환을 끝내서 보낸다** — 웹은 변수를 채우지 않고 그대로 렌더한다.
  */
 
-/** UTC ISO-8601 타임스탬프 (sprint1.md §2.2 표기 규약). 미서명이면 null이다. */
-const signedAt = z.string().datetime().nullable();
+/**
+ * UTC ISO-8601 타임스탬프 (sprint1.md §2.2 표기 규약). 미서명이면 null이다.
+ *
+ * `offset: true`로 둔 건 방어적 선택이다 — 규약은 `Z` 표기지만, 오프셋 표기(`+09:00`)가
+ * 한 번 섞여 오면 **계약 화면 전체가 파싱 실패로 잠긴다.** 이 스키마가 막아야 할 것은
+ * 조항 훼손이지 같은 시각의 다른 표기가 아니다.
+ */
+const signedAt = z.string().datetime({ offset: true }).nullable();
 
 export const CONTRACT_STATUSES = ["PENDING", "SIGNED"] as const;
 export type ContractStatus = (typeof CONTRACT_STATUSES)[number];

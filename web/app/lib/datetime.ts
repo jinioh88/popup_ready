@@ -29,3 +29,22 @@ export function formatSignedAt(iso: string | null | undefined): string | undefin
     `${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())} (KST)`
   );
 }
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * 시작일·종료일을 **모두 포함한** 일수. 종료일이 시작일보다 이르거나 날짜가 아니면 0.
+ *
+ * 견적(`app/lib/builder/estimate`)과 기간 상한(`app/lib/schemas/reservation`)이 함께 쓴다 —
+ * 둘이 각자 세면 "30일까지 허용"과 "30일치 요금"이 어긋날 수 있어 한 곳에 둔다.
+ */
+export function rentalDays(startDate: string, endDate: string): number {
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+
+  if (Number.isNaN(start) || Number.isNaN(end) || end < start) {
+    return 0;
+  }
+
+  return Math.round((end - start) / MS_PER_DAY) + 1;
+}

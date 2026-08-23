@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { rentalDays } from "../builder/estimate";
+import { rentalDays } from "../datetime";
 
 /**
  * 예약 기간 입력 스키마.
