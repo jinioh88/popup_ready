@@ -55,7 +55,10 @@ const APP_DIR = "./src/app";
  * 넣으면 `new URL(...)`이 `reservations`를 host로 떼어내 `/42`가 되고, 테스트는 "경로 없음"으로
  * **가드와 무관하게 통과한다**(실제로 한 번 그렇게 통과했다). 스킴 해석은 OS와 expo-router
  * linking prefix의 몫이라 단위 테스트가 닿지 않는다. 실기기 확인이 별도로 필요하다:
- *   npx uri-scheme open popupready://reservations/42 --ios
+ *   npx uri-scheme open "exp://<LAN IP>:8081/--/reservations/531" --ios
+ *
+ * ⚠️ `popupready://`가 아니다 — 커스텀 스킴은 Expo Go에 등록되지 않아 앱이 아예 열리지
+ * 않고, 그것이 "가드가 막았다"로 오독된다. 절차는 docs §11.1.
  *
  * 단위 테스트가 증명할 수 있는 것은 그 다음 구간 — **로그인 화면을 거치지 않고 보호 경로에서
  * 앱이 시작되는 상황**이며, 딥링크가 가드를 뚫는다면 정확히 이 방식으로 뚫는다.
