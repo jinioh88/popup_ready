@@ -103,7 +103,8 @@ export default function BuilderRoute() {
         <div className="overflow-auto">
           <BuilderCanvas grid={grid} fixtures={catalog} onRejected={onRejected} />
         </div>
-        <div className="w-80 shrink-0">
+        {/* 날짜 두 칸이 나란히 들어가야 한다 — w-80이면 date 입력 고유 폭에 눌려 좁아진다. */}
+        <div className="w-96 shrink-0">
           <ReservationForm
             space={space}
             fixtures={catalog}
