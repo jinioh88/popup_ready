@@ -88,6 +88,31 @@ public class ReservationRequestService {
                 estimate.totalAmount());
     }
 
+    /**
+     * 예약 요청 단건 조회(§2.2-A). 재진입·결제 화면·모바일 예약 목록이 공유하는 단일 조회 경로다.
+     *
+     * <p>금액은 저장된 스냅샷을 그대로 옮긴다 — 여기서 재계산하면 배치 단계에서 본 견적과 결제
+     * 화면의 금액이 갈라진다(§2.2-E).
+     *
+     * <p>인가는 <b>역할이 아니라 당사자</b>로 판정한다. 브랜드도 건물주도 같은 예약을 보므로
+     * Security 설정으로는 가를 수 없고, 서비스가 막아야 한다(Sprint 1 Phase 5의 교훈).
+     */
+    @Transactional(readOnly = true)
+    public ReservationRequestResponse detail(long userId, Long reservationRequestId) {
+        ReservationRequest request = require(reservationRequestId);
+        requireParty(request, userId);
+        return toResponse(request);
+    }
+
+    /** 예약의 브랜드 본인이거나 그 공간의 건물주여야 한다. */
+    private void requireParty(ReservationRequest request, long userId) {
+        boolean brand = request.getBrandUserId() == userId;
+        boolean landlord = !brand && spaceService.ownerIdOf(request.getSpaceId()) == userId;
+        if (!brand && !landlord) {
+            throw new ApiException(ErrorCode.FORBIDDEN, "이 예약 요청의 당사자가 아닙니다");
+        }
+    }
+
     /** 계약서가 만들어졌다(US-202). 잘못된 전이는 엔티티가 막는다. */
     public void markContractPending(Long reservationRequestId) {
         require(reservationRequestId).markContractPending();

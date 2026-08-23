@@ -35,7 +35,11 @@ public final class RestrictedEndpoints {
      * 가를 수 없기 때문이다.
      */
     private static final List<String> PARTY_ONLY_TEMPLATES = List.of(
-            "/api/v1/contracts/{id}", "/api/v1/contracts/{id}/sign", "/api/v1/reservation-requests/{id}/contract");
+            "/api/v1/contracts/{id}",
+            "/api/v1/contracts/{id}/sign",
+            "/api/v1/reservation-requests/{id}/contract",
+            // Sprint 2 — 예약 단건 조회도 브랜드와 건물주 양쪽이 보므로 역할로 가를 수 없다.
+            "/api/v1/reservation-requests/{id}");
 
     /** 이 오퍼레이션이 403을 낼 수 있는가. OpenAPI 문서가 이 판정으로 403을 붙인다. */
     public static boolean canReturnForbidden(String pathTemplate, String httpMethod) {

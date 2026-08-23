@@ -11,6 +11,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,6 +29,15 @@ public class ReservationRequestController {
 
     public ReservationRequestController(ReservationRequestService reservationRequestService) {
         this.reservationRequestService = reservationRequestService;
+    }
+
+    @Operation(summary = "예약 요청 단건 조회", description = "견적 스냅샷을 포함한 예약 요청을 돌려준다. 예약의 브랜드 본인이거나 그 공간의 건물주만 볼 수 있다.")
+    @ResponseStatus(HttpStatus.OK)
+    @GetMapping("/{id}")
+    public ApiResponse<ReservationRequestResponse> detail(
+            @Parameter(hidden = true) @AuthenticationPrincipal JwtPrincipal principal,
+            @Parameter(description = "예약 요청 ID", example = "1") @PathVariable Long id) {
+        return ApiResponse.ok(reservationRequestService.detail(principal.userId(), id));
     }
 
     @Operation(

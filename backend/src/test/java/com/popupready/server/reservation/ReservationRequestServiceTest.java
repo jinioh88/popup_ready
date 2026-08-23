@@ -207,4 +207,66 @@ class ReservationRequestServiceTest {
         assertThat(captor.getValue().getTotalEstimate())
                 .isEqualTo(response.estimate().totalAmount());
     }
+
+    // ── 단건 조회 인가 (Sprint 2 T0-3) ────────────────────────────────────────
+    // 역할로는 가를 수 없는 인가다 — 브랜드도 건물주도 같은 예약을 본다.
+    // Security 설정이 막을 수 없으므로 서비스가 판정하고, 그 판정을 여기서 잠근다.
+
+    private static final long LANDLORD_USER_ID = 9L;
+
+    private ReservationRequest storedReservation() {
+        ReservationRequest stored = ReservationRequest.create(
+                1L,
+                BRAND_USER_ID,
+                START,
+                END,
+                layout(),
+                new EstimateResponse(14, 6_300_000L, 0L, 630_000L, 6_930_000L));
+        given(reservationRequestRepository.findById(1L)).willReturn(java.util.Optional.of(stored));
+        return stored;
+    }
+
+    @Test
+    @DisplayName("예약을 만든 브랜드 본인이 조회 → 견적 스냅샷과 함께 반환")
+    void detail_byBrandOwner_returnsSnapshot() {
+        storedReservation();
+
+        ReservationRequestResponse response = reservationRequestService.detail(BRAND_USER_ID, 1L);
+
+        assertThat(response.estimate().totalAmount()).isEqualTo(6_930_000L);
+    }
+
+    @Test
+    @DisplayName("그 공간의 건물주가 조회 → 허용")
+    void detail_byLandlord_isAllowed() {
+        storedReservation();
+        given(spaceService.ownerIdOf(1L)).willReturn(LANDLORD_USER_ID);
+
+        // id는 저장 전 엔티티라 null이다 — 여기서 볼 것은 "거절되지 않았다"는 사실이다.
+        assertThat(reservationRequestService.detail(LANDLORD_USER_ID, 1L).brandUserId())
+                .isEqualTo(BRAND_USER_ID);
+    }
+
+    @Test
+    @DisplayName("당사자가 아닌 사용자가 조회 → FORBIDDEN")
+    void detail_byStranger_isRejected() {
+        storedReservation();
+        given(spaceService.ownerIdOf(1L)).willReturn(LANDLORD_USER_ID);
+
+        assertThatThrownBy(() -> reservationRequestService.detail(999L, 1L))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("없는 예약 조회 → 당사자 판정 전에 404")
+    void detail_missingReservation_returnsNotFound() {
+        given(reservationRequestRepository.findById(404L)).willReturn(java.util.Optional.empty());
+
+        assertThatThrownBy(() -> reservationRequestService.detail(BRAND_USER_ID, 404L))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.RESERVATION_REQUEST_NOT_FOUND);
+    }
 }

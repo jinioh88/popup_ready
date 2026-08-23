@@ -228,6 +228,28 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → 예약 단건 조회·집기 가용성이 계약에 담긴다")
+    void apiDocs_containsReadOperations() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}'].get")
+                        .exists())
+                .andExpect(jsonPath("$.paths['/api/v1/spaces/{spaceId}/fixture-availability'].get")
+                        .exists())
+                // 예약 단건 조회는 당사자만 볼 수 있다 — 역할로는 가를 수 없다(브랜드도 건물주도 본다).
+                .andExpect(jsonPath("$.paths['/api/v1/reservation-requests/{id}'].get.responses.403")
+                        .exists());
+    }
+
+    @Test
+    @DisplayName("집기 가용성 응답 → 총재고·예약수량·가용수량이 모두 required로 담긴다")
+    void apiDocs_fixtureAvailabilityFieldsAreRequired() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.FixtureAvailabilityResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "fixtureId", "totalStock", "reservedQty", "availableQty")));
+    }
+
+    @Test
     @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
     void apiDocs_carriesSprint2ErrorCodes() throws Exception {
         // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로
