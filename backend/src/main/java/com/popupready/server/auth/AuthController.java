@@ -60,4 +60,20 @@ public class AuthController {
     public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.ok(authService.login(request));
     }
+
+    @Operation(
+            summary = "토큰 재발급",
+            description = "Refresh 토큰으로 Access·Refresh 토큰을 다시 받는다. 회전 방식이라 이전 Refresh 토큰은 무효가 된다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "만료·위조·재사용된 토큰 (REFRESH_TOKEN_INVALID)",
+            content = @Content(schema = @Schema(ref = ERROR_ENVELOPE_REF)))
+    // ⚠️ @ResponseStatus가 없으면 springdoc이 성공 응답을 아예 만들지 않는다(@ApiResponse를 하나라도
+    //    선언한 메서드에 한해). 그러면 ApiResponseTokenPairResponse 스키마가 등록되지 않아 웹·모바일
+    //    생성 타입에서 재발급 응답이 통째로 사라진다 — 실제로 그렇게 되어 발견했다.
+    @ResponseStatus(HttpStatus.OK)
+    @PostMapping("/refresh")
+    public ApiResponse<TokenPairResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.ok(authService.refresh(request));
+    }
 }

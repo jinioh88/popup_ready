@@ -206,6 +206,51 @@ class OpenApiContractTest {
     }
 
     @Test
+    @DisplayName("Sprint 2 신규 오퍼레이션 → refresh 경로가 계약에 담긴다")
+    void apiDocs_containsRefreshOperation() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.paths['/api/v1/auth/refresh'].post").exists())
+                // 토큰을 얻는 경로라 인증을 요구할 수 없다 — signup·login과 같은 이유다.
+                .andExpect(jsonPath("$.paths['/api/v1/auth/refresh'].post.security")
+                        .doesNotExist());
+    }
+
+    @Test
+    @DisplayName("인증 응답 → refreshToken이 required 필드로 담긴다")
+    void apiDocs_authResponseCarriesRefreshToken() throws Exception {
+        // refresh 회전을 도입하면 로그인 시점에 refresh 토큰을 함께 내려야 한다.
+        // 기존 오퍼레이션 2종(signup·login)의 스키마 변경이며 §2.2-B에 반영돼 있다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.AuthResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken", "user")))
+                .andExpect(jsonPath("$.components.schemas.TokenPairResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken")));
+    }
+
+    @Test
+    @DisplayName("Sprint 2 에러 코드 → 신규 8종이 모두 enum에 담긴다")
+    void apiDocs_carriesSprint2ErrorCodes() throws Exception {
+        // 클라이언트는 이 이름으로 분기한다. 코드가 빠지면 웹·모바일의 실패 분기가 통째로
+        // 죽으므로(생성 타입에 값이 없어 비교 자체가 컴파일 오류다) 목록을 여기서 잠근다.
+        //
+        // ⚠️ AREA_LIMIT_EXCEEDED는 없다 — 지시서 §2.2-F가 철회했다. 그리드 전체 면적이
+        //    floorAreaM2보다 작아 그리드 경계 판정을 통과한 배치는 면적 한도를 넘을 수 없다.
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .value(org.hamcrest.Matchers.hasItems(
+                                "POWER_LIMIT_EXCEEDED",
+                                "FIXTURE_UNAVAILABLE",
+                                "CONTRACT_INTEGRITY_VIOLATION",
+                                "PAYMENT_ALREADY_COMPLETED",
+                                "PAYMENT_AMOUNT_MISMATCH",
+                                "LOCK_ACQUISITION_FAILED",
+                                "DOOR_NOT_YET_OPENABLE",
+                                "REFRESH_TOKEN_INVALID")))
+                .andExpect(jsonPath("$.components.schemas.ApiError.properties.code.enum")
+                        .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("AREA_LIMIT_EXCEEDED"))));
+    }
+
+    @Test
     @DisplayName("응답 봉투 → data·error가 항상 존재하는 키로 표기된다")
     void apiDocs_envelopeFieldsAreAlwaysPresent() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
@@ -241,7 +286,7 @@ class OpenApiContractTest {
         // 서버가 항상 채워 보내는 값에도 클라이언트가 옵셔널 체이닝을 써야 한다.
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(jsonPath("$.components.schemas.AuthResponse.required")
-                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "user")))
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("accessToken", "refreshToken", "user")))
                 .andExpect(jsonPath("$.components.schemas.EstimateResponse.required")
                         .value(org.hamcrest.Matchers.containsInAnyOrder(
                                 "days", "spaceRentTotal", "fixtureRentalTotal", "deposit", "totalAmount")));
