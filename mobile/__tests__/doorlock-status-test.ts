@@ -68,11 +68,22 @@ describe("도어락 상태 문구", () => {
     expect(unrecorded.tone).not.toBe("success");
   });
 
-  it("시간창 밖은 실패가 아니라 별도 상태로 말한다", () => {
+  it("열 수 없는 상태는 실패가 아니라 별도 상태로 말한다", () => {
     const notYet = describeDoorLock("connected", "notYetOpenable");
 
     expect(notYet.tone).toBe("warning");
     // 사용자 잘못이 아니라 아직 때가 아닌 것이므로 문구를 구분한다.
     expect(notYet.headline).not.toContain("실패");
+  });
+
+  it("열 수 없는 사유를 시간 하나로 단정하지 않는다", () => {
+    // 서버는 시간창 밖과 미결제를 같은 코드(DOOR_NOT_YET_OPENABLE)로 준다.
+    // "개방 시간이 아니다"라고만 말하면 미결제 예약에서 사용자가 시작 시각을 기다리는데,
+    // 기다려도 열리지 않는다 — 화면이 거짓을 말하는 셈이다.
+    const view = describeDoorLock("connected", "notYetOpenable");
+    const text = `${view.headline} ${view.detail}`;
+
+    expect(text).toContain("결제");
+    expect(view.headline).not.toContain("시간");
   });
 });

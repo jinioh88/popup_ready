@@ -82,9 +82,12 @@ function terminalView(flow: DoorFlowState, connection: MqttConnectionStatus): Do
         canSlide: connection === "connected",
       };
     case "notYetOpenable":
+      // 서버는 시간창 밖·미결제를 **같은 코드**(DOOR_NOT_YET_OPENABLE)로 준다. 그래서
+      // "아직 개방 시간이 아님"이라고 단정하면 미결제 예약에서 거짓말이 된다 — 사용자는
+      // 시작 시각을 기다리지만 기다려도 열리지 않는다. 둘을 가릴 수 없으므로 둘 다 말한다.
       return {
-        headline: "아직 개방 시간이 아님",
-        detail: "예약 시작 10분 전부터 열 수 있다. 개방 가능 시각은 서버가 판정한다.",
+        headline: "아직 열 수 없음",
+        detail: "결제가 끝난 예약을, 시작 10분 전부터 열 수 있다. 판정은 서버가 한다.",
         tone: "warning",
         canSlide: connection === "connected",
       };

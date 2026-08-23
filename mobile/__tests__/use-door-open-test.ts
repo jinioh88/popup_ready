@@ -157,6 +157,35 @@ describe("useDoorOpen", () => {
     expect(result.current.tone).not.toBe("success");
   });
 
+  // 5초 타임아웃 뒤 늦게 도착한 발행 콜백이나 더블 탭으로 ack가 두 번 나갈 수 있다.
+  // 그때 오류를 보이면 실제로는 열린 문을 안 열렸다고 말하게 된다.
+  it("이미 마감된 이벤트(409)는 실패로 보지 않는다", async () => {
+    const { ApiRequestError } = jest.requireActual("../src/lib/api/client");
+    mockAckDoorEvent.mockRejectedValue(
+      new ApiRequestError("DOOR_EVENT_ALREADY_ACKED", "이미 마감됨", 409),
+    );
+
+    const { result } = await renderHook(() => useDoorOpen(45));
+    await act(async () => result.current.open());
+
+    await waitFor(() => expect(result.current.flow).toBe("opened"));
+    expect(result.current.error).toBeNull();
+  });
+
+  it("발행 실패 후 409를 받으면 개방됨으로 뒤집지 않는다", async () => {
+    const { ApiRequestError } = jest.requireActual("../src/lib/api/client");
+    mockPublish.mockRejectedValue(new Error("연결돼 있지 않다."));
+    mockAckDoorEvent.mockRejectedValue(
+      new ApiRequestError("DOOR_EVENT_ALREADY_ACKED", "이미 마감됨", 409),
+    );
+
+    const { result } = await renderHook(() => useDoorOpen(45));
+    await act(async () => result.current.open());
+
+    // 마감이 이미 됐다는 것과 문이 열렸다는 것은 다른 말이다.
+    await waitFor(() => expect(result.current.flow).toBe("failed"));
+  });
+
   it("연결이 끊긴 동안에는 슬라이드가 잠긴다", async () => {
     mockConnectionStatus = "disconnected";
 

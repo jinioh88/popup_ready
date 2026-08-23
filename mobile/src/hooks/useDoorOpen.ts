@@ -86,6 +86,15 @@ export function useDoorOpen(reservationId: number) {
       setFlow(published ? "opened" : "failed");
       setError(publishFailure);
     } catch (ackError) {
+      // 이미 마감된 이벤트는 실패가 아니다. 5초 타임아웃 뒤 늦게 도착한 발행 콜백이나
+      // 더블 탭으로 ack가 두 번 나갈 수 있는데, 그때 사용자에게 오류를 보이면
+      // 실제로는 열린 문을 안 열렸다고 말하게 된다.
+      if (ackError instanceof ApiRequestError && ackError.code === "DOOR_EVENT_ALREADY_ACKED") {
+        setFlow(published ? "opened" : "failed");
+        setError(publishFailure);
+        return;
+      }
+
       // 발행은 됐는데 기록이 없는 상태다. opened로 뭉개면 "전송 기록"이 거짓이 된다.
       setFlow(published ? "unrecorded" : "failed");
       setError(publishFailure ?? messageOf(ackError));
