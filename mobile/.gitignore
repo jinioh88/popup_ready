@@ -39,3 +39,8 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 에이전트 로컬 자산 (git 비공유, 2026-08-23 사용자 결정)
+.claude/
+docs/
+/CLAUDE.md
