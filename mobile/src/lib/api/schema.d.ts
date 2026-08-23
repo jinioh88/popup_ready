@@ -151,7 +151,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 내 예약 목록
+         * @description 로그인한 사용자가 만든 예약 요청을 최근 순으로 돌려준다. status를 주면 그 상태만 거른다. 건물주의 '내 공간 예약 목록'은 조회 축이 다른 별개의 유스케이스이며 이 경로가 아니다.
+         */
+        get: operations["listReservationRequests"];
         put?: never;
         /**
          * 예약 요청 생성
@@ -415,6 +419,13 @@ export interface components {
             error: components["schemas"]["ApiError"] | null;
         };
         /** @description 공통 응답 봉투 */
+        ApiResponseListReservationRequestResponse: {
+            /** @description 성공 시 페이로드. 실패 시 null */
+            data: components["schemas"]["ReservationRequestResponse"][] | null;
+            /** @description 실패 시 에러 상세. 성공 시 null */
+            error: components["schemas"]["ApiError"] | null;
+        };
+        /** @description 공통 응답 봉투 */
         ApiResponseListSettlementResponse: {
             /** @description 성공 시 페이로드. 실패 시 null */
             data: components["schemas"]["SettlementResponse"][] | null;
@@ -624,6 +635,11 @@ export interface components {
              * @enum {string}
              */
             status: "AUTHORIZED" | "DELIVERED" | "FAILED";
+            /**
+             * @description 상태 구독 토픽. 구독 실패는 개방 흐름을 막지 않는다(UI 편의일 뿐 개방의 필요조건이 아니다)
+             * @example popupready/locks/1/status
+             */
+            statusTopic: string;
             /**
              * @description 발행할 MQTT 토픽
              * @example popupready/locks/1/command
@@ -1563,6 +1579,56 @@ export interface operations {
             };
             /** @description 요청 값 검증 실패 */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    listReservationRequests: {
+        parameters: {
+            query?: {
+                /** @description 거를 상태. 생략하면 전체 */
+                status?: "DRAFT" | "CONTRACT_PENDING" | "CONTRACT_SIGNED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseListReservationRequestResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
