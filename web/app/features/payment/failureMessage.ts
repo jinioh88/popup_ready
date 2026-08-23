@@ -76,6 +76,15 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     recovery: "checkReservation",
     causedByUser: false,
   },
+  ORDER_ID_ALREADY_USED: {
+    title: "이미 처리된 결제 요청입니다",
+    // 이 코드가 왔다는 건 직전 시도의 결과를 화면이 모르고 있다는 뜻이다.
+    // 다시 결제하게 하면 그 모르는 결과 위에 한 번 더 청구할 수 있다.
+    description:
+      "이 결제 요청은 이미 처리됐습니다. 예약 상세에서 결제 상태를 확인한 뒤 진행해 주세요.",
+    recovery: "checkReservation",
+    causedByUser: false,
+  },
   PAYMENT_DECLINED: {
     title: "결제가 거절됐습니다",
     description: "카드사에서 결제를 승인하지 않았습니다. 다른 결제 수단으로 시도해 주세요.",

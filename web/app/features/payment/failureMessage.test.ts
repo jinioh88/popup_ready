@@ -114,6 +114,15 @@ describe("paymentFailure — 모르는 실패", () => {
     expect(failure.recovery).toBe("checkReservation");
   });
 
+  it("소진된 orderId 재사용은 재시도가 아니라 상태 확인으로 보낸다", () => {
+    // 이 코드가 왔다는 건 직전 시도의 결과를 모른다는 뜻이다 — 다시 결제하면
+    // 그 모르는 결과 위에 한 번 더 청구할 수 있다.
+    const failure = failWith("ORDER_ID_ALREADY_USED", 409);
+
+    expect(failure.recovery).toBe("checkReservation");
+    expect(failure.recovery).not.toBe("retry");
+  });
+
   it("네트워크 오류도 결과를 모르는 상태로 다룬다", () => {
     // 요청이 서버에 닿았는지조차 모른다 — 승인됐을 수 있다.
     const failure = paymentFailure(new TypeError("Failed to fetch"));
