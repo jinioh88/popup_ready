@@ -1,4 +1,5 @@
 import { apiRequest, ApiRequestError } from "./client";
+import type { ErrorCode } from "./error-codes";
 import { contractSchema, type Contract } from "../schemas/contract";
 
 /**
@@ -35,9 +36,6 @@ export function signContract(contractId: number): Promise<Contract> {
  *
  * POST를 멱등으로 만들지 않은 것은 **더블 서브밋 버그를 정상 동작으로 위장시키지 않기 위해서**다.
  * 그래서 "없으면 만든다"는 판단을 서버가 아니라 이 함수가 진다.
- *
- * 409 분기는 상태 코드로 한다 — `CONTRACT_ALREADY_EXISTS` 코드 상수는 T5-3 머지 후
- * 타입 재생성 시점에 `ERROR_CODES`로 들어온다(지금 손으로 넣으면 계약 집합 단언이 깨진다).
  */
 export async function ensureContract(reservationId: number): Promise<Contract> {
   try {
@@ -51,7 +49,7 @@ export async function ensureContract(reservationId: number): Promise<Contract> {
   try {
     return await createContract(reservationId);
   } catch (error) {
-    if (error instanceof ApiRequestError && error.status === 409) {
+    if (hasCode(error, "CONTRACT_ALREADY_EXISTS")) {
       // 다른 탭·중복 클릭이 방금 만들었다. 만들어진 것을 읽어 오면 사용자 입장에서는 성공이다.
       return getContractByReservation(reservationId);
     }
@@ -59,6 +57,15 @@ export async function ensureContract(reservationId: number): Promise<Contract> {
   }
 }
 
+/**
+ * 판정은 상태 코드가 아니라 **에러 코드**로 한다(web/CLAUDE.md 백엔드 연동 규약).
+ * 같은 404·409라도 사유가 여럿이라, 상태 코드로 묶으면 엉뚱한 사유까지 같은 분기로 빨려 들어간다.
+ */
+function hasCode(error: unknown, code: ErrorCode): boolean {
+  return error instanceof ApiRequestError && error.code === code;
+}
+
+/** 계약이 아직 없다 — 생성으로 넘어가도 되는 유일한 사유다. */
 function isNotFound(error: unknown): boolean {
-  return error instanceof ApiRequestError && error.status === 404;
+  return hasCode(error, "CONTRACT_NOT_FOUND");
 }

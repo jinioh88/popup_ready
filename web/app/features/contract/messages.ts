@@ -17,6 +17,9 @@ export function contractLoadMessage(error: unknown): string {
       return "예약 요청을 찾을 수 없습니다. 목록에서 다시 선택해 주세요.";
     case "CONTRACT_NOT_FOUND":
       return "계약서를 찾을 수 없습니다.";
+    case "NOT_CONTRACT_PARTY":
+      // 서버가 당사자 검증에서 막은 경우다(403). 열람 경로에서도 나온다 — 서명 전용이 아니다.
+      return "이 계약의 당사자가 아니라 열람할 수 없습니다.";
     case "FORBIDDEN":
       return "이 예약 요청의 당사자가 아닙니다.";
     default:

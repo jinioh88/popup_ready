@@ -105,6 +105,24 @@ describe("ensureContract", () => {
     expect(calls.map((c) => c.method)).toEqual(["GET", "POST"]);
   });
 
+  it("같은 404라도 사유가 다르면 생성하지 않는다", async () => {
+    // 상태 코드로 묶으면 "예약 요청 자체가 없다"까지 '계약이 없으니 만들자'로 빨려 들어간다.
+    const calls = stubFetch(fail(404, "RESERVATION_REQUEST_NOT_FOUND"));
+
+    await expect(ensureContract(7)).rejects.toBeInstanceOf(ApiRequestError);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("같은 409라도 사유가 다르면 폴백하지 않는다", async () => {
+    const calls = stubFetch(
+      fail(404, "CONTRACT_NOT_FOUND"),
+      fail(409, "CONTRACT_ALREADY_SIGNED"),
+    );
+
+    await expect(ensureContract(7)).rejects.toBeInstanceOf(ApiRequestError);
+    expect(calls.map((c) => c.method)).toEqual(["GET", "POST"]);
+  });
+
   it("조항이 빈 계약은 파싱 단계에서 거부한다", async () => {
     stubFetch(ok({ ...CONTRACT, clauses: [] }));
 

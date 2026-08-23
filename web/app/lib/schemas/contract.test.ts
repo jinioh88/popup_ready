@@ -48,6 +48,16 @@ describe("contractSchema", () => {
     expect(parsed.success).toBe(true);
   });
 
+  it("마이크로초 정밀도 타임스탬프를 받는다", () => {
+    // 백엔드가 실제로 보내는 형태다(Phase 5 실측) — 여기서 막히면 서명 완료 계약을 못 연다.
+    const parsed = contractSchema.safeParse({
+      ...VALID,
+      brandSignedAt: "2026-08-23T00:57:27.075412Z",
+      status: "SIGNED",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
   it("조항이 비면 거부한다", () => {
     expect(contractSchema.safeParse({ ...VALID, clauses: [] }).success).toBe(false);
   });

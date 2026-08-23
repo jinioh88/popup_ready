@@ -53,7 +53,7 @@ export interface paths {
         };
         /**
          * 계약 열람
-         * @description 조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다.
+         * @description 조항 전문·서명 시각·무결성 해시를 돌려준다. 분쟁 시 소명 자료 경로다. 당사자에게만 열린다.
          */
         get: operations["detail_1"];
         put?: never;
@@ -75,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * 전자 서명
-         * @description 로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다.
+         * @description 로그인 사용자가 해당 계약의 당사자인지 확인한 뒤 서명 시각을 기록한다. 양측이 모두 서명하면 계약은 SIGNED, 예약 요청은 CONTRACT_SIGNED가 된다. 당사자가 아니면 403, 이미 서명했으면 409다.
          */
         post: operations["sign"];
         delete?: never;
@@ -131,11 +131,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * 예약 요청의 계약 조회
+         * @description 예약 요청에 딸린 계약을 가져온다. 아직 없으면 404다. 빌더에서 계약 단계로 재진입할 때(새로고침·서명 링크 재방문) 계약 ID를 모르는 채로 기존 계약을 되찾기 위한 경로다. 당사자에게만 열린다.
+         */
+        get: operations["findByReservation"];
         put?: never;
         /**
          * 계약서 생성
-         * @description 예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다.
+         * @description 예약 요청 데이터를 표준 템플릿에 바인딩해 조항 전문을 스냅샷으로 저장한다. 예약 요청 상태는 CONTRACT_PENDING으로 전이된다. 예약 하나에 계약은 하나이며, 이미 있으면 409다 — 그때는 조회 API로 기존 계약을 가져간다. 브랜드·건물주 당사자만 부를 수 있으며 그 외에는 403이다.
          */
         post: operations["create_1"];
         delete?: never;
@@ -195,7 +199,7 @@ export interface components {
              * @example VALIDATION_FAILED
              * @enum {string}
              */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_SIGNED";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "METHOD_NOT_ALLOWED" | "UNSUPPORTED_MEDIA_TYPE" | "INTERNAL_ERROR" | "EMAIL_ALREADY_EXISTS" | "INVALID_CREDENTIALS" | "SPACE_NOT_FOUND" | "FIXTURE_NOT_FOUND" | "RESERVATION_REQUEST_NOT_FOUND" | "LAYOUT_OUT_OF_BOUNDS" | "LAYOUT_OVERLAP" | "FIXTURE_STOCK_EXCEEDED" | "CONTRACT_NOT_FOUND" | "NOT_CONTRACT_PARTY" | "CONTRACT_ALREADY_EXISTS" | "CONTRACT_ALREADY_SIGNED";
             /**
              * @description 사람이 읽는 설명. 분기 조건으로 쓰지 말 것
              * @example email은 필수입니다
@@ -869,6 +873,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 리소스를 찾을 수 없음 */
             404: {
                 headers: {
@@ -924,6 +937,15 @@ export interface operations {
             };
             /** @description 인증이 필요함 */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1032,6 +1054,15 @@ export interface operations {
                     "application/json": components["schemas"]["ApiErrorResponse"];
                 };
             };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
             /** @description 본문이 지목한 공간·집기를 찾을 수 없음 */
             404: {
                 headers: {
@@ -1043,6 +1074,77 @@ export interface operations {
             };
             /** @description 지원하지 않는 Content-Type */
             415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 서버 오류 */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+        };
+    };
+    findByReservation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description 예약 요청 ID
+                 * @example 1
+                 */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponseContractResponse"];
+                };
+            };
+            /** @description 요청 값 검증 실패 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 인증이 필요함 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 리소스를 찾을 수 없음 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1096,6 +1198,15 @@ export interface operations {
             };
             /** @description 인증이 필요함 */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiErrorResponse"];
+                };
+            };
+            /** @description 역할 또는 당사자 자격이 없음 */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

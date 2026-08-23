@@ -11,6 +11,11 @@ describe("formatSignedAt", () => {
     expect(formatSignedAt("2026-08-22T16:40:02Z")).toBe("2026-08-23 01:40 (KST)");
   });
 
+  it("마이크로초가 붙어 와도 분 단위로 표기한다", () => {
+    // 백엔드가 2026-08-23T00:57:27.075412Z 형태로 보낸다(Phase 5 실측).
+    expect(formatSignedAt("2026-08-23T00:57:27.075412Z")).toBe("2026-08-23 09:57 (KST)");
+  });
+
   it("미서명(null)은 표기하지 않는다", () => {
     expect(formatSignedAt(null)).toBeUndefined();
     expect(formatSignedAt(undefined)).toBeUndefined();

@@ -29,6 +29,7 @@ export const ERROR_CODES = [
   // contract
   "CONTRACT_NOT_FOUND",
   "NOT_CONTRACT_PARTY",
+  "CONTRACT_ALREADY_EXISTS",
   "CONTRACT_ALREADY_SIGNED",
 ] as const;
 
