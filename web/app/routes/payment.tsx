@@ -53,6 +53,23 @@ export default function PaymentRoute() {
    */
   const canPayHere = !payment.isSuccess && (failure === null || allowsAnotherAttempt(failure));
 
+  /**
+   * 직전 시도의 결과를 이 화면이 모르는가 (§8.5).
+   *
+   * **`canPayHere`가 세션 안에서만 유효했던 것이 이 판정이 생긴 이유다.** `TIMEOUT-` 직후에는
+   * `failure`가 결제 수단을 치우지만, 새로고침하면 뮤테이션 상태가 초기화돼 `failure`가 `null`이
+   * 되고 경고 없는 깨끗한 결제 폼이 남는다 — 이중 청구가 가장 쉬운 자리다.
+   *
+   * **차단이 아니라 경고인 이유**: `PAYMENT_PENDING`은 *위젯을 닫고 돌아온* 정상 경로이기도 하고
+   * (백엔드 `PaymentService`가 이 상태의 `prepare`를 일부러 허용한다), 클라이언트에는 그 둘을
+   * 가를 정보가 없다. 막으면 정상 사용자가 결제를 못 한다.
+   *
+   * `hasSessionOutcome`이 필요한 이유: 거절(402) 뒤 재시도할 때도 상태는 `PAYMENT_PENDING`이다.
+   * 그때는 **결과를 안다**(거절됐다) — 거기에 "결과를 모른다"고 쓰면 화면이 거짓을 말한다.
+   */
+  const hasSessionOutcome = failure !== null || payment.isSuccess;
+  const priorAttemptUnknown = reservation.status === "PAYMENT_PENDING" && !hasSessionOutcome;
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-6">
       <header>
@@ -89,6 +106,7 @@ export default function PaymentRoute() {
         <PaymentMethodPanel
           status={reservation.status}
           isPending={payment.isPending}
+          priorAttemptUnknown={priorAttemptUnknown}
           onPay={(paymentKey) => payment.mutate({ paymentKey })}
         />
       ) : null}

@@ -20,10 +20,23 @@ import type { ReservationRequest } from "../../lib/schemas/api";
 type PaymentMethodPanelProps = {
   status: ReservationRequest["status"];
   isPending: boolean;
+  /**
+   * 직전 시도의 결과를 이 화면이 모르는가 (§8.5).
+   *
+   * **판정은 라우트가 한다** — 이 패널은 예약 상태만 알고, "이번 세션에서 무슨 일이
+   * 있었는지"는 모른다. `PAYMENT_PENDING`은 *위젯을 닫고 돌아온* 경우와 *직전 결과가
+   * 불명인* 경우 둘 다이며 둘을 가르는 정보가 여기 없다.
+   */
+  priorAttemptUnknown?: boolean;
   onPay: (paymentKey: string) => void;
 };
 
-export function PaymentMethodPanel({ status, isPending, onPay }: PaymentMethodPanelProps) {
+export function PaymentMethodPanel({
+  status,
+  isPending,
+  priorAttemptUnknown = false,
+  onPay,
+}: PaymentMethodPanelProps) {
   const [paymentKey, setPaymentKey] = useState("");
 
   // 결제로 갈 수 없는 상태를 먼저 거른다 — 서버 문구가 상태를 정확히 설명하지 않는 경우가 있다.
@@ -47,6 +60,22 @@ export function PaymentMethodPanel({ status, isPending, onPay }: PaymentMethodPa
           확인합니다.
         </p>
       </div>
+
+      {/*
+        직전 결과를 모르는 채 결제 화면에 다시 들어온 경우다(§8.5). **폼을 치우지 않는다** —
+        `PAYMENT_PENDING`은 위젯을 닫고 돌아온 정상 경로이기도 해서(백엔드 `PaymentService`가
+        이 상태의 `prepare`를 일부러 허용한다) 막으면 정상 사용자가 결제를 못 한다.
+        치우는 대신 **무엇을 모르는지 말한다.**
+
+        **"실패"라고 쓰지 않는다** — 실패했는지 아닌지를 모르는 것이 이 상태의 정의다
+        (지시서 §3 · `PAYMENT_RESULT_UNKNOWN` 문구와 같은 결).
+      */}
+      {priorAttemptUnknown ? (
+        <p role="alert" className="rounded-lg bg-warning/15 p-3 text-caption text-text">
+          <span className="text-body-strong">직전 결제 결과가 확인되지 않았습니다.</span> 예약
+          상세에서 상태를 확인해 주세요. 확인 전에 다시 결제하면 이중으로 청구될 수 있습니다.
+        </p>
+      ) : null}
 
       <Field
         label="결제 키 (개발용)"
