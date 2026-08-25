@@ -1,6 +1,6 @@
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 
-import { clearAccessToken, getAccessToken } from "../lib/api/token";
+import { clearSession, getAccessToken } from "../lib/api/token";
 
 /**
  * 인증 보호 구간 레이아웃 (C-5).
@@ -26,7 +26,7 @@ export default function ProtectedLayout() {
         <button
           type="button"
           onClick={() => {
-            clearAccessToken();
+            clearSession();
             // 클라이언트 라우팅이 아니라 전체 리로드다. 가드를 다시 평가시키는 것도 있지만,
             // 메모리에 남은 빌더 배치(Zustand)까지 함께 버리기 위해서다 — 공용 PC에서
             // 이전 사용자의 도면 초안이 다음 사용자에게 남으면 안 된다.

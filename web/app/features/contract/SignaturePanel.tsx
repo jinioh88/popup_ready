@@ -19,6 +19,13 @@ type SignaturePanelProps = {
   contract: Contract;
   /** 결제 화면으로 넘어갈 때 쓰는 예약 id. 계약 id와 다르다. */
   reservationId: number;
+  /**
+   * 이 사람이 **결제할 당사자(브랜드)인가.** `undefined`는 "아직 모른다"이며
+   * **"아니다"와 다르게 다뤄야 한다** — 모르는 동안 단정적인 안내를 띄우면 그게 거짓말이 된다.
+   *
+   * 판정은 라우트가 한다(§8.5와 같은 이유). 이 패널은 계약만 알고 예약의 당사자를 모른다.
+   */
+  isBrandParty?: boolean;
   onSign: () => void;
   isPending?: boolean;
   errorMessage?: string;
@@ -27,6 +34,7 @@ type SignaturePanelProps = {
 export function SignaturePanel({
   contract,
   reservationId,
+  isBrandParty,
   onSign,
   isPending,
   errorMessage,
@@ -51,10 +59,26 @@ export function SignaturePanel({
             **서명이 끝나면 다음 걸음은 결제다.** 이 링크가 없으면 사용자는 결제 화면으로 갈
             방법이 없다 — 라우트는 있었지만 어디서도 가리키지 않아 URL을 직접 쳐야 했다.
             서버도 이 시점(CONTRACT_SIGNED)부터 결제를 받는다.
+
+            **다만 서명이 끝난 시점인가와 이 사람이 결제할 사람인가는 다른 질문이다.**
+            처음엔 앞엣것만 물어서 건물주에게도 버튼이 보였고, 사용자는 이상하다고 느끼면서도
+            눌렀다 — 화면이 권했기 때문이다(§8.9). 없던 문을 만들 때 자물쇠를 같이 달지 않았다.
           */}
-          <Button as={Link} to={`/reservations/${reservationId}/payment`}>
-            결제하기
-          </Button>
+          {isBrandParty === true ? (
+            <Button as={Link} to={`/reservations/${reservationId}/payment`}>
+              결제하기
+            </Button>
+          ) : null}
+
+          {/*
+            **비활성 버튼을 두지 않는다.** 누를 수 없는 버튼은 "왜 안 되지"를 사용자에게 떠넘긴다.
+            건물주에게 필요한 것은 막힌 버튼이 아니라 **다음에 무슨 일이 일어나는지**다.
+          */}
+          {isBrandParty === false ? (
+            <p className="text-caption text-text-muted">
+              결제는 예약을 만든 브랜드가 진행합니다. 결제가 끝나면 예약이 확정됩니다.
+            </p>
+          ) : null}
         </>
       ) : (
         <>

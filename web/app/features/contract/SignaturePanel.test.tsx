@@ -20,13 +20,18 @@ const BASE: Contract = {
 
 afterEach(cleanup);
 
-function renderPanel(contract: Contract) {
+function renderPanel(contract: Contract, opts: { isBrandParty?: boolean } = { isBrandParty: true }) {
   const router = createMemoryRouter(
     [
       {
         path: "/",
         element: (
-          <SignaturePanel contract={contract} reservationId={1146} onSign={vi.fn()} />
+          <SignaturePanel
+            contract={contract}
+            reservationId={1146}
+            isBrandParty={opts.isBrandParty}
+            onSign={vi.fn()}
+          />
         ),
       },
     ],
@@ -73,5 +78,44 @@ describe("SignaturePanel — 서명 후 다음 걸음", () => {
 
     expect(href).toContain("1146");
     expect(href).not.toContain("668");
+  });
+});
+
+describe("SignaturePanel — 결제 링크는 당사자에게만 (2026-08-25 인수 발견)", () => {
+  const signed: Contract = {
+    ...BASE,
+    status: "SIGNED",
+    brandSignedAt: "2026-08-25T10:00:00+09:00",
+    landlordSignedAt: "2026-08-25T11:00:00+09:00",
+  };
+
+  it("건물주에게는 결제 링크가 없다", () => {
+    // 인수 테스트에서 사용자가 건물주로 이 버튼을 봤고, 이상하다고 느끼면서도 눌렀다.
+    // 화면이 권했기 때문이다 — 서버는 403으로 막지만 그건 누른 뒤의 일이다.
+    renderPanel(signed, { isBrandParty: false });
+
+    expect(screen.queryByRole("link", { name: "결제하기" })).toBeNull();
+  });
+
+  it("건물주에게는 막힌 버튼 대신 다음에 무슨 일이 일어나는지를 말한다", () => {
+    renderPanel(signed, { isBrandParty: false });
+
+    expect(screen.getByText(/결제는 예약을 만든 브랜드가 진행합니다/)).toBeTruthy();
+  });
+
+  it("아직 모를 때는 링크도 안내도 띄우지 않는다", () => {
+    // undefined는 "아니다"가 아니라 "모른다"다. 모르는 채 "브랜드가 진행합니다"를 띄우면
+    // 정작 그 브랜드에게 거짓말이 된다.
+    renderPanel(signed, {});
+
+    expect(screen.queryByRole("link", { name: "결제하기" })).toBeNull();
+    expect(screen.queryByText(/브랜드가 진행합니다/)).toBeNull();
+  });
+
+  it("서명 전에는 당사자라도 결제 링크가 없다", () => {
+    // 두 판정은 AND다 — 당사자인 것과 결제할 시점인 것 둘 다여야 한다.
+    renderPanel(BASE, { isBrandParty: true });
+
+    expect(screen.queryByRole("link", { name: "결제하기" })).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router";
 import { ApiRequestError } from "../../lib/api/client";
 import { login, signup, type AuthResult } from "../../lib/api/auth";
 import { safeRedirectPath } from "../../lib/api/redirect";
-import { setAccessToken } from "../../lib/api/token";
+import { setSession } from "../../lib/api/token";
 import type { LoginInput, SignupInput } from "../../lib/schemas/auth";
 
 /**
@@ -28,7 +28,7 @@ function useAuthSuccess() {
   const queryClient = useQueryClient();
 
   return (result: AuthResult) => {
-    setAccessToken(result.accessToken);
+    setSession(result.accessToken, result.user);
 
     // 같은 탭에서 계정이 바뀔 수 있다. 이전 사용자의 응답이 캐시에 남아 있으면 새 사용자에게
     // 그대로 보이므로 비운다.
