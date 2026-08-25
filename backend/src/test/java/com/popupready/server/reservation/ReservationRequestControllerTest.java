@@ -170,6 +170,23 @@ class ReservationRequestControllerTest {
     }
 
     @Test
+    @DisplayName("이미 결제된 기간과 겹침 → 409와 SPACE_ALREADY_BOOKED 에러 봉투")
+    void create_overlappingPaidPeriod_returnsConflict() throws Exception {
+        // 웹은 이 코드로 "이미 예약된 기간입니다 / 다른 날짜를 선택해 주세요"를 띄운다.
+        // 결제 승인이 내는 것과 같은 코드다 — 두 시점이 같은 문구를 쓰게 하려는 것이다.
+        willThrow(new ApiException(ErrorCode.SPACE_ALREADY_BOOKED, "이미 예약된 기간입니다"))
+                .given(reservationRequestService)
+                .create(eq(TOKEN_USER_ID), any());
+
+        mockMvc.perform(post("/api/v1/reservation-requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(VALID_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.data").doesNotExist())
+                .andExpect(jsonPath("$.error.code").value("SPACE_ALREADY_BOOKED"));
+    }
+
+    @Test
     @DisplayName("layout 누락 → 400과 VALIDATION_FAILED 에러 봉투")
     void create_missingLayout_returnsBadRequestWithErrorEnvelope() throws Exception {
         String body =

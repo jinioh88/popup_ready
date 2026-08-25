@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -49,6 +50,9 @@ class ReservationRequestServiceTest {
 
     @Mock
     private ReservationRequestRepository reservationRequestRepository;
+
+    @Mock
+    private SpaceOverlapChecker spaceOverlapChecker;
 
     @InjectMocks
     private ReservationRequestService reservationRequestService;
@@ -206,6 +210,52 @@ class ReservationRequestServiceTest {
         verify(reservationRequestRepository).save(captor.capture());
         assertThat(captor.getValue().getTotalEstimate())
                 .isEqualTo(response.estimate().totalAmount());
+    }
+
+    // ── 기간 겹침 조기 거절 (2026-08-25, C-4 인수 피드백) ─────────────────────
+    // 결제 화면에서야 "이미 예약된 기간입니다"를 보면 서명·로그인 왕복을 전부 되돌려야 한다.
+    // 같은 판정을 생성 시점에도 한 번 더 부른다 — 대체가 아니라 조기 안내다.
+
+    @Test
+    @DisplayName("생성 시 → 공간·기간으로 겹침을 확인한다 (아직 저장 전이라 제외할 예약은 없다)")
+    void create_checksPeriodOverlapForSpace() {
+        givenActiveSpaceWithHanger();
+        givenSavedRequestGetsId();
+
+        reservationRequestService.create(BRAND_USER_ID, request(layout(new LayoutItemDto(3L, 0, 0, 0))));
+
+        verify(spaceOverlapChecker).requireNoOverlap(1L, START, END, null);
+    }
+
+    @Test
+    @DisplayName("겹치는 결제 완료 예약이 있음 → 저장하지 않고 거절한다")
+    void create_overlappingPaidReservation_savesNothing() {
+        given(spaceService.detail(1L)).willReturn(space(SpaceStatus.ACTIVE));
+        willThrow(new ApiException(ErrorCode.SPACE_ALREADY_BOOKED, "이미 예약된 기간입니다"))
+                .given(spaceOverlapChecker)
+                .requireNoOverlap(1L, START, END, null);
+
+        assertThatThrownBy(() -> reservationRequestService.create(
+                        BRAND_USER_ID, request(layout(new LayoutItemDto(3L, 0, 0, 0)))))
+                .isInstanceOf(ApiException.class)
+                .extracting(e -> ((ApiException) e).getErrorCode())
+                .isEqualTo(ErrorCode.SPACE_ALREADY_BOOKED);
+        verify(reservationRequestRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("겹치는 기간 → 도면·집기를 들여다보기 전에 끊는다")
+    void create_overlappingPeriod_isRejectedBeforeLayoutWork() {
+        // 기간을 옮겨야 해소되는 거절이다. 집기를 조회해봐야 결론이 같으므로 먼저 끊는다.
+        given(spaceService.detail(1L)).willReturn(space(SpaceStatus.ACTIVE));
+        willThrow(new ApiException(ErrorCode.SPACE_ALREADY_BOOKED, "이미 예약된 기간입니다"))
+                .given(spaceOverlapChecker)
+                .requireNoOverlap(1L, START, END, null);
+
+        assertThatThrownBy(() -> reservationRequestService.create(
+                        BRAND_USER_ID, request(layout(new LayoutItemDto(3L, 0, 0, 0)))))
+                .isInstanceOf(ApiException.class);
+        verify(fixtureService, never()).findAllByIds(anyCollection());
     }
 
     // ── 단건 조회 인가 (Sprint 2 T0-3) ────────────────────────────────────────

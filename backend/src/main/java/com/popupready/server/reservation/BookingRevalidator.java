@@ -38,17 +38,17 @@ public class BookingRevalidator {
 
     private final FixtureAvailabilityService fixtureAvailabilityService;
 
-    private final ReservationRequestRepository reservationRequestRepository;
+    private final SpaceOverlapChecker spaceOverlapChecker;
 
     public BookingRevalidator(
             SpaceService spaceService,
             FixtureService fixtureService,
             FixtureAvailabilityService fixtureAvailabilityService,
-            ReservationRequestRepository reservationRequestRepository) {
+            SpaceOverlapChecker spaceOverlapChecker) {
         this.spaceService = spaceService;
         this.fixtureService = fixtureService;
         this.fixtureAvailabilityService = fixtureAvailabilityService;
-        this.reservationRequestRepository = reservationRequestRepository;
+        this.spaceOverlapChecker = spaceOverlapChecker;
     }
 
     /** 순서는 §2.2-C 그대로다. 먼저 거절되는 것이 사용자가 먼저 고쳐야 할 것이다. */
@@ -58,15 +58,16 @@ public class BookingRevalidator {
         requireLayoutStillValid(reservation);
     }
 
-    /** 2-2 — 같은 공간·겹치는 기간에 이미 결제된 예약이 있으면 자리를 내줄 수 없다. */
+    /**
+     * 2-2 — 같은 공간·겹치는 기간에 이미 결제된 예약이 있으면 자리를 내줄 수 없다.
+     *
+     * <p><b>이것이 최종 판정이다.</b> 예약 생성 시점에도 같은 검사({@link SpaceOverlapChecker})가
+     * 돌지만 그쪽은 락 밖의 조기 안내이며, 생성과 결제 사이에 남이 결제를 끝낼 수 있다. 앞에서
+     * 막으니 여기는 필요 없다는 논리로 이 호출을 걷어내면 이중 예약이 실제로 난다.
+     */
     private void requireNoOverlap(ReservationRequestResponse reservation) {
-        boolean taken = reservationRequestRepository.existsPaidOverlapping(
+        spaceOverlapChecker.requireNoOverlap(
                 reservation.spaceId(), reservation.startDate(), reservation.endDate(), reservation.id());
-        if (taken) {
-            // 집기 부족과 코드를 나눈다 — 사용자가 할 일이 다르다. 이쪽은 기간을 옮겨야 하고,
-            // 집기 부족은 배치를 줄여도 된다. 뭉개면 "집기를 빼보세요"가 나가는데 해소되지 않는다.
-            throw new ApiException(ErrorCode.SPACE_ALREADY_BOOKED, "이미 예약된 기간입니다");
-        }
     }
 
     /**
