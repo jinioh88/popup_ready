@@ -33,12 +33,6 @@ export type PaymentFailure = {
   title: string;
   description: string;
   recovery: PaymentRecovery;
-  /**
-   * 사용자 입력·선택 때문에 생긴 실패인가.
-   *
-   * `false`면 문구에서 사용자를 탓하지 않는다 — 락 경합·PG 장애는 사용자가 한 일이 아니다.
-   */
-  causedByUser: boolean;
 };
 
 const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
@@ -47,19 +41,16 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     // 집기 문제로 안내하면 아무리 집기를 빼도 해소되지 않는다.
     description: "선택한 기간에 다른 예약이 확정됐습니다. 다른 날짜를 선택해 주세요.",
     recovery: "editPeriod",
-    causedByUser: false,
   },
   FIXTURE_UNAVAILABLE: {
     title: "집기 수량이 부족합니다",
     description: "선택한 기간에 일부 집기가 품절됐습니다. 집기를 교체하거나 기간을 바꿔 주세요.",
     recovery: "editLayout",
-    causedByUser: false,
   },
   POWER_LIMIT_EXCEEDED: {
     title: "허용 전력을 초과했습니다",
     description: "배치한 집기의 소비 전력이 상가 한도를 넘습니다. 집기를 줄여 주세요.",
     recovery: "editLayout",
-    causedByUser: true,
   },
   PAYMENT_AMOUNT_MISMATCH: {
     title: "결제 금액이 견적과 다릅니다",
@@ -67,14 +58,12 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     description:
       "예약 정보가 변경돼 금액이 달라졌습니다. 예약 내용을 다시 확인한 뒤 결제해 주세요.",
     recovery: "checkReservation",
-    causedByUser: false,
   },
   PAYMENT_ALREADY_COMPLETED: {
     title: "이미 결제가 완료됐습니다",
     // 중복 결제가 아니라는 것을 먼저 말한다 — 사용자의 첫 걱정이 그것이다.
     description: "이 예약은 결제가 끝났습니다. 중복으로 청구되지 않았습니다.",
     recovery: "checkReservation",
-    causedByUser: false,
   },
   ORDER_ID_ALREADY_USED: {
     title: "이미 처리된 결제 요청입니다",
@@ -83,13 +72,11 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     description:
       "이 결제 요청은 이미 처리됐습니다. 예약 상세에서 결제 상태를 확인한 뒤 진행해 주세요.",
     recovery: "checkReservation",
-    causedByUser: false,
   },
   PAYMENT_DECLINED: {
     title: "결제가 거절됐습니다",
     description: "카드사에서 결제를 승인하지 않았습니다. 다른 결제 수단으로 시도해 주세요.",
     recovery: "retry",
-    causedByUser: true,
   },
   LOCK_ACQUISITION_FAILED: {
     title: "잠시 후 다시 시도해 주세요",
@@ -97,7 +84,6 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     description:
       "같은 공간을 동시에 예약하는 요청이 있어 처리하지 못했습니다. 잠시 후 다시 시도하면 진행됩니다.",
     recovery: "retry",
-    causedByUser: false,
   },
   PAYMENT_RESULT_UNKNOWN: {
     // **"실패"라고 쓰지 않는다** — 실패했는지 아닌지를 모르는 것이 이 상태의 정의다.
@@ -106,13 +92,11 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
       "결제사 응답이 지연돼 승인 여부를 아직 확인하지 못했습니다. 예약 상세에서 상태를 확인해 주세요. 확인 전에 다시 결제하면 이중으로 청구될 수 있습니다.",
     // 재시도 버튼을 주지 않는다. 버튼이 있으면 문구로 아무리 경고해도 눌린다.
     recovery: "checkReservation",
-    causedByUser: false,
   },
   UNAUTHORIZED: {
     title: "로그인이 필요합니다",
     description: "세션이 만료됐습니다. 다시 로그인한 뒤 결제해 주세요.",
     recovery: "none",
-    causedByUser: false,
   },
   /**
    * **`prepare`가 당사자 아닌 사용자에게 실제로 내는 코드다**(403, 2026-08-25 인수 테스트).
@@ -129,13 +113,11 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     description:
       "결제는 예약을 만든 브랜드 계정으로만 할 수 있습니다. 로그인한 계정을 확인해 주세요.",
     recovery: "none",
-    causedByUser: false,
   },
   NOT_CONTRACT_PARTY: {
     title: "이 예약의 당사자가 아닙니다",
     description: "본인의 예약만 결제할 수 있습니다.",
     recovery: "none",
-    causedByUser: false,
   },
 };
 
@@ -149,7 +131,6 @@ const UNKNOWN_FAILURE: PaymentFailure = {
   title: "결제를 완료하지 못했습니다",
   description: "예약 상세에서 결제 상태를 확인해 주세요. 문제가 계속되면 고객센터로 문의해 주세요.",
   recovery: "checkReservation",
-  causedByUser: false,
 };
 
 export function paymentFailure(error: unknown): PaymentFailure {
@@ -160,7 +141,6 @@ export function paymentFailure(error: unknown): PaymentFailure {
       description:
         "연결이 끊겨 결제 결과를 확인하지 못했습니다. 예약 상세에서 상태를 확인해 주세요.",
       recovery: "checkReservation",
-      causedByUser: false,
     };
   }
 
@@ -206,4 +186,34 @@ function warnUnmapped(code: string): void {
  */
 export function allowsAnotherAttempt(failure: PaymentFailure): boolean {
   return failure.recovery === "retry";
+}
+
+/**
+ * 실패 뱃지 — **`recovery`에서 파생시킨다.**
+ *
+ * 예전에는 `causedByUser`라는 별도 필드가 뱃지를 정했다. 그 필드가 묻는 것은 **"누구 잘못인가"**
+ * 였고, 뱃지가 실제로 답해야 하는 것은 **"당신이 할 수 있는 게 있는가"**다. 두 질문이 다르니
+ * 값이 계속 틀리게 채워졌다 — 전수 감사에서 **세 건이 뒤집혀** 있었다(§8.12):
+ *
+ *   `LOCK_ACQUISITION_FAILED`  제목이 "잠시 후 다시 시도해 주세요"인데 뱃지는 "처리 중단"
+ *   `FIXTURE_UNAVAILABLE`      "배치 수정" 버튼이 있는데 "처리 중단"
+ *   `SPACE_ALREADY_BOOKED`     "기간 다시 선택" 버튼이 있는데 "처리 중단"
+ *
+ * **값이 세 번 틀렸다면 실수가 아니라 구조가 틀리게 채우도록 만든 것이다.** 값을 고치면
+ * 다음에 또 갈린다 — 뱃지와 버튼이 **다른 필드**에서 나오는 한.
+ *
+ * 이제 둘 다 `recovery`에서 나오므로 **구조적으로 어긋날 수 없다.**
+ *
+ * 사용자 인수 테스트(2026-08-25)가 확인해 준 것: *"'처리 중단'은 결제가 안 된 것으로 읽힌다."*
+ * 그래서 `PAYMENT_RESULT_UNKNOWN`처럼 **결과를 모르는** 상태에는 쓸 수 없다 — 안 됐다고
+ * 단정하는 말이기 때문이다. 그 상태는 이제 "확인 필요"가 되고, 그것이 정의(*확인하러 가야 한다*)와 맞다.
+ *
+ * **문구를 쓸 때의 지침**(예전 `causedByUser`가 들고 있던 것): 락 경합·PG 장애·권한처럼
+ * 사용자가 한 일이 아닌 실패에서는 **문구가 사용자를 탓하지 않는다.** 이것은 런타임 값이 아니라
+ * 글쓰기 규칙이다 — 값으로 들고 있었더니 지침은 지침대로 안 지켜지고 뱃지만 틀렸다.
+ */
+export function failureBadge(failure: PaymentFailure): { tone: "warning" | "info"; label: string } {
+  return failure.recovery === "none"
+    ? { tone: "info", label: "처리 중단" }
+    : { tone: "warning", label: "확인 필요" };
 }

@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { StatusBadge } from "../../components/ui/StatusBadge";
-import type { PaymentFailure } from "./failureMessage";
+import { failureBadge, type PaymentFailure } from "./failureMessage";
 
 /**
  * 결제 실패 안내 (J-2).
@@ -27,12 +27,16 @@ export function PaymentFailureCard({
   reservationId,
   spaceId,
 }: PaymentFailureCardProps) {
+  const badge = failureBadge(failure);
+
   return (
     <Card padding="lg" className="flex flex-col gap-4" role="alert">
       <div className="flex flex-wrap items-center gap-2">
-        <StatusBadge tone={failure.causedByUser ? "warning" : "info"}>
-          {failure.causedByUser ? "확인 필요" : "처리 중단"}
-        </StatusBadge>
+        {/*
+          뱃지와 아래 버튼이 **같은 `recovery`에서 나온다.** 예전에는 뱃지가 별도 필드에서
+          나와서, 버튼은 "기간 다시 선택"인데 뱃지는 "처리 중단"인 카드가 만들어졌다(§8.12).
+        */}
+        <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>
         <h2 className="text-title">{failure.title}</h2>
       </div>
 

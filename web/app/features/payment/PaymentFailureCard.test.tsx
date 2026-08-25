@@ -78,9 +78,30 @@ describe("PaymentFailureCard — 해소 경로", () => {
   });
 });
 
-describe("PaymentFailureCard — 책임 소재", () => {
-  it("사용자 잘못이 아닌 실패는 '확인 필요'로 몰지 않는다", () => {
+describe("PaymentFailureCard — 뱃지는 조치 가능성을 말한다", () => {
+  it("재시도로 풀리는 실패에 '처리 중단'을 달지 않는다", () => {
+    /*
+     * 이 테스트는 예전에 정반대를 검증했다 — 뱃지를 `causedByUser`(누구 잘못인가)에서
+     * 뽑았기 때문에 "사용자 잘못이 아니면 처리 중단"이 규칙이었다. 그래서 제목이
+     * "잠시 후 다시 시도해 주세요"인 카드에 "처리 중단" 뱃지가 붙어 있었고,
+     * **한 카드가 정면으로 반대되는 두 말을 했다**(§8.12).
+     */
     renderFailure("LOCK_ACQUISITION_FAILED", 503);
+
+    expect(screen.queryByText("처리 중단")).toBeNull();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+  });
+
+  it("뱃지가 버튼과 어긋나지 않는다", () => {
+    // 기간을 다시 고르라는 버튼이 있는데 뱃지가 멈췄다고 말하면, 둘 중 하나는 거짓말이다.
+    renderFailure("SPACE_ALREADY_BOOKED", 409);
+
+    expect(screen.getByRole("link", { name: "기간 다시 선택" })).toBeTruthy();
+    expect(screen.getByText("확인 필요")).toBeTruthy();
+  });
+
+  it("할 수 있는 일이 없을 때만 '처리 중단'이다", () => {
+    renderFailure("FORBIDDEN", 403);
 
     expect(screen.getByText("처리 중단")).toBeTruthy();
   });
