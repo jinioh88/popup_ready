@@ -61,13 +61,24 @@ public class ReservationRequestController {
     @Operation(
             operationId = "createReservationRequest",
             summary = "예약 요청 생성",
-            description = "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. " + "그리드 범위를 벗어나거나 집기가 겹치면 400이다.")
+            description = "빌더가 만든 도면을 서버에서 재검증하고 견적과 함께 예약 요청을 만든다. "
+                    + "그리드 범위를 벗어나거나 집기가 겹치면 400이고, 같은 공간에 기간이 겹치는 결제 완료 예약이 있으면 409다. "
+                    + "409는 조기 안내이며 자리를 확정하지 않는다 — 최종 판정은 결제 승인이 분산 락 안에서 한다.")
     // 경로에 변수가 없어 공통 커스터마이저(OpenApiConfig)는 404를 붙이지 않는다. 하지만 이 오퍼레이션은
     // 본문으로 다른 리소스(spaceId·fixtureId)를 지목하므로 실제로 404를 낸다 — 문서가 거짓말하지 않게
     // 여기서만 명시한다.
     @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "404",
             description = "본문이 지목한 공간·집기를 찾을 수 없음",
+            content =
+                    @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(ref = "#/components/schemas/ApiErrorResponse")))
+    // 결제 승인이 내는 것과 같은 코드다(SPACE_ALREADY_BOOKED). 같은 판정을 생성 시점에도
+    // 부르므로 웹은 두 화면에서 같은 문구를 쓸 수 있다.
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "같은 공간에 기간이 겹치는 결제 완료 예약이 있음 (SPACE_ALREADY_BOOKED)",
             content =
                     @Content(
                             mediaType = MediaType.APPLICATION_JSON_VALUE,
