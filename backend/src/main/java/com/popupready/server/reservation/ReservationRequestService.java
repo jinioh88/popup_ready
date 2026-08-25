@@ -35,13 +35,17 @@ public class ReservationRequestService {
 
     private final ReservationRequestRepository reservationRequestRepository;
 
+    private final SpaceOverlapChecker spaceOverlapChecker;
+
     public ReservationRequestService(
             SpaceService spaceService,
             FixtureService fixtureService,
-            ReservationRequestRepository reservationRequestRepository) {
+            ReservationRequestRepository reservationRequestRepository,
+            SpaceOverlapChecker spaceOverlapChecker) {
         this.spaceService = spaceService;
         this.fixtureService = fixtureService;
         this.reservationRequestRepository = reservationRequestRepository;
+        this.spaceOverlapChecker = spaceOverlapChecker;
     }
 
     /**
@@ -53,6 +57,17 @@ public class ReservationRequestService {
 
         SpaceDetailResponse space = spaceService.detail(request.spaceId());
         requireBookable(space);
+
+        // 기간 겹침을 여기서 한 번 본다(2026-08-25, C-4 인수 피드백). 결제 화면에서야 알게 되면
+        // 서명·로그아웃·재로그인 왕복을 전부 되돌려야 한다 — 집기 품절을 웹이 팔레트에서 미리
+        // 막는 것과 같은 대접이다. 도면·집기보다 먼저 끊는다: 기간을 옮겨야 해소되는 거절이라
+        // 나머지를 검사해봐야 결론이 같다.
+        //
+        // ⚠️ 여기에 락이 없는 것은 실수가 아니다. 이 검사는 게이트가 아니라 안내이며, 생성과
+        // 결제 사이에 남이 결제를 끝내는 경합에서 새는 것이 설계상 허용된다. 최종 판정은 분산 락
+        // 안에서 도는 BookingRevalidator의 2-2다 — 그쪽을 걷어내고 이것으로 갈음하면 이중 예약이
+        // 실제로 난다. 락을 이쪽으로 옮기는 것도 같은 이유로 답이 아니다(결제까지 자리를 잡게 된다).
+        spaceOverlapChecker.requireNoOverlap(space.id(), period.startDate(), period.endDate(), null);
 
         LayoutDto layout = request.layout();
         Map<Long, FixtureSpec> catalog = catalogFor(layout);
