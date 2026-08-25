@@ -72,7 +72,7 @@ describe("useKeyboardPlacement — 초안이 없을 때", () => {
 describe("useKeyboardPlacement — 조작", () => {
   it("방향키로 옮기고 페이지 스크롤은 막는다", () => {
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     expect(press("ArrowRight").defaultPrevented).toBe(true);
     press("ArrowDown");
@@ -82,7 +82,7 @@ describe("useKeyboardPlacement — 조작", () => {
 
   it("R로 회전한다", () => {
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     press("r");
 
@@ -91,7 +91,7 @@ describe("useKeyboardPlacement — 조작", () => {
 
   it("Enter로 확정한다", () => {
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
     store().moveDraft(2, 2);
 
     press("Enter");
@@ -104,14 +104,14 @@ describe("useKeyboardPlacement — 조작", () => {
     // 키보드로 배치하면 포커스는 팔레트 버튼에 남아 있다. Enter는 그 버튼의 click을
     // 기본 동작으로 발생시키므로, preventDefault를 놓치면 **확정 직후 초안이 다시 뜬다.**
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     expect(press("Enter").defaultPrevented).toBe(true);
   });
 
   it("Esc로 취소한다", () => {
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     press("Escape");
 
@@ -122,7 +122,12 @@ describe("useKeyboardPlacement — 조작", () => {
   it("확정이 거부되면 사유를 올리고 초안은 남는다", () => {
     store().placeItem({ fixtureId: 1, col: 0, row: 0, rotation: 0 }, CATALOG);
     const onRejected = mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
+
+    // **겹침을 일부러 만든다.** 예전에는 초안이 무조건 (0,0)에서 시작해 저절로 겹쳤고 이
+    // 테스트는 그 우연에 기대고 있었다. 이제는 빈 칸에서 시작하므로(§8.17) 만들어야 한다.
+    const draft = store().draft!;
+    store().moveDraft(-draft.col, -draft.row);
 
     press("Enter");
 
@@ -135,7 +140,7 @@ describe("useKeyboardPlacement — 다른 입력과의 경합", () => {
   it("폼 입력 중에는 방향키를 가로채지 않는다", () => {
     // 예약 기간 입력이 같은 화면에 있다 — 방향키는 커서 이동이어야 한다.
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     const input = document.createElement("input");
     document.body.appendChild(input);
@@ -148,7 +153,7 @@ describe("useKeyboardPlacement — 다른 입력과의 경합", () => {
 
   it("수정자 키 조합은 브라우저·OS 단축키다", () => {
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     const event = new KeyboardEvent("keydown", {
       key: "ArrowLeft",
@@ -168,7 +173,7 @@ describe("useKeyboardPlacement — 한글 입력 상태 (2026-08-25 인수 발�
     // 사용자 보고: "한글 'ㄱ'인 상태에서 회전을 시도해서 안 된 것 같다. 영문으로 바꾸니 된다."
     // 방향키·Enter·Esc는 이름으로 오는 키라 멀쩡했고, 글자키인 R만 죽었다.
     mount();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     const before = store().draft?.rotation ?? 0;
     expect(press("ㄱ").defaultPrevented).toBe(true);

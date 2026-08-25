@@ -50,7 +50,7 @@ describe("CanvasController — 맥락에 맞는 안내", () => {
 
   it("배치 중에는 초안 조작을 안내한다", () => {
     // 배치 중 R·Enter·Esc는 초안의 것이다 — 선택된 집기 조작 안내를 그대로 두면 헷갈린다.
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
     renderController();
 
     expect(screen.getByText(/방향키로 옮기고 Enter로 놓습니다/)).toBeTruthy();
@@ -68,7 +68,7 @@ describe("CanvasController — 맥락에 맞는 안내", () => {
   it("배치 중이면 선택이 있어도 초안 안내가 이긴다", () => {
     // placeItem이 배치 직후 선택을 남기므로 '선택 있음 + 배치 중'은 기본 경로다.
     store().placeItem({ fixtureId: 1, col: 0, row: 0, rotation: 0 }, CATALOG);
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
     renderController();
 
     expect(screen.getByText(/방향키로 옮기고 Enter로 놓습니다/)).toBeTruthy();

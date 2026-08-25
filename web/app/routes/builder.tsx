@@ -134,6 +134,7 @@ export default function BuilderRoute() {
           fixtures={fixturesQuery.data ?? []}
           isLoading={fixturesQuery.isPending}
           availability={availability}
+          catalog={catalog}
         />
         <div className="overflow-auto">
           <BuilderCanvas grid={grid} fixtures={catalog} onRejected={onRejected} />

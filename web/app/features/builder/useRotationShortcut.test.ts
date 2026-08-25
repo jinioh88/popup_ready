@@ -91,7 +91,7 @@ describe("useRotationShortcut — 물러나야 하는 자리", () => {
      */
     mount();
     placeOne();
-    store().startDraft(1);
+    store().startDraft(1, CATALOG);
 
     pressR("r");
 
