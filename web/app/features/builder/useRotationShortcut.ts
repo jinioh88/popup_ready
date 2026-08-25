@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 
 import { useBuilderStore } from "../../stores/builder";
+import { isRotateKey } from "./rotateKey";
 import { rotationRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 
@@ -12,7 +13,7 @@ import type { FixtureCatalog } from "./queries";
 export function useRotationShortcut(fixtures: FixtureCatalog, onRejected: (m: string) => void) {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "r" && event.key !== "R") {
+      if (!isRotateKey(event)) {
         return;
       }
 

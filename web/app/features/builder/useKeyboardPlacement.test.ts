@@ -35,11 +35,29 @@ function mount() {
 }
 
 /** 창에 키를 보내고 기본 동작이 막혔는지 함께 돌려준다. */
-function press(key: string, target: EventTarget = window) {
-  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+/**
+ * **`code`를 함께 싣는다.** 실제 브라우저는 `key`와 `code`를 같이 보내는데 예전 헬퍼는
+ * `key`만 담았고, 그래서 한글 입력 결함을 통과시켰다 — 고쳐도 안 고쳐도 초록이었다.
+ * 합성 이벤트는 **우리가 고른 필드만** 담는다(§8.13).
+ */
+function press(key: string, target: EventTarget = window, code = KEY_CODES[key] ?? "") {
+  const event = new KeyboardEvent("keydown", { key, code, bubbles: true, cancelable: true });
   target.dispatchEvent(event);
   return event;
 }
+
+/** 실제 브라우저가 각 `key`와 함께 보내는 `code`. */
+const KEY_CODES: Record<string, string> = {
+  r: "KeyR",
+  R: "KeyR",
+  "\u3131": "KeyR", // 'ㄱ' — 한글 입력 상태에서 R 키
+  ArrowLeft: "ArrowLeft",
+  ArrowRight: "ArrowRight",
+  ArrowUp: "ArrowUp",
+  ArrowDown: "ArrowDown",
+  Enter: "Enter",
+  Escape: "Escape",
+};
 
 describe("useKeyboardPlacement — 초안이 없을 때", () => {
   it("아무 키도 가로채지 않는다", () => {
@@ -142,5 +160,19 @@ describe("useKeyboardPlacement — 다른 입력과의 경합", () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(store().draft).toMatchObject({ col: 0 });
+  });
+});
+
+describe("useKeyboardPlacement — 한글 입력 상태 (2026-08-25 인수 발견)", () => {
+  it("한글 상태에서도 R로 초안을 회전한다", () => {
+    // 사용자 보고: "한글 'ㄱ'인 상태에서 회전을 시도해서 안 된 것 같다. 영문으로 바꾸니 된다."
+    // 방향키·Enter·Esc는 이름으로 오는 키라 멀쩡했고, 글자키인 R만 죽었다.
+    mount();
+    store().startDraft(1);
+
+    const before = store().draft?.rotation ?? 0;
+    expect(press("ㄱ").defaultPrevented).toBe(true);
+
+    expect(store().draft?.rotation).not.toBe(before);
   });
 });
