@@ -1,6 +1,7 @@
 import { Link, Navigate, Outlet, useLocation } from "react-router";
 
-import { clearSession, getAccessToken } from "../lib/api/token";
+import { useAccessToken } from "../features/auth/useSession";
+import { clearSession } from "../lib/api/token";
 
 /**
  * 인증 보호 구간 레이아웃 (C-5).
@@ -11,8 +12,10 @@ import { clearSession, getAccessToken } from "../lib/api/token";
  */
 export default function ProtectedLayout() {
   const location = useLocation();
+  // **구독해서 본다** — 뮤테이션 도중 401로 토큰이 비워지면 그 순간 여기가 다시 판정한다(§8.6).
+  const accessToken = useAccessToken();
 
-  if (!getAccessToken()) {
+  if (!accessToken) {
     // 로그인 후 원래 가려던 곳으로 되돌리기 위해 위치를 실어 보낸다.
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
