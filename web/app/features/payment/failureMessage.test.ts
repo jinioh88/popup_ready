@@ -172,3 +172,27 @@ describe("allowsAnotherAttempt — 결제 수단을 계속 보여줘도 되는�
     expect(allowsAnotherAttempt(failWith("FIXTURE_UNAVAILABLE", 409))).toBe(false);
   });
 });
+
+describe("paymentFailure — 당사자가 아닌 사용자 (2026-08-25 인수 발견)", () => {
+  it("prepare의 403 FORBIDDEN이 사유를 말한다", () => {
+    // 인수 테스트에서 이 코드가 매핑에 없어 "결제를 완료하지 못했습니다"만 나왔고,
+    // 사용자는 결제 키를 네 번 바꿔 넣었다 — 키는 서버에 닿지도 않았다.
+    const failure = failWith("FORBIDDEN", 403);
+
+    expect(failure.title).toContain("당사자가 아닙니다");
+    expect(failure.description).toContain("브랜드 계정");
+  });
+
+  it("당사자가 아니면 이 화면에서 할 수 있는 일이 없다", () => {
+    // 재시도도 배치 수정도 답이 아니다. 계정을 바꾸는 것은 이 화면 밖의 일이다.
+    expect(failWith("FORBIDDEN", 403).recovery).toBe("none");
+    expect(allowsAnotherAttempt(failWith("FORBIDDEN", 403))).toBe(false);
+  });
+
+  it("기본 문구로 떨어지지 않는다 — 그것이 이 결함의 얼굴이었다", () => {
+    const forbidden = failWith("FORBIDDEN", 403);
+    const unknown = failWith("SOME_CODE_THAT_IS_NOT_MAPPED", 500);
+
+    expect(forbidden.title).not.toBe(unknown.title);
+  });
+});

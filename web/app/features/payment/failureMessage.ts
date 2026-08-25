@@ -114,6 +114,23 @@ const FAILURES: Partial<Record<ErrorCode, PaymentFailure>> = {
     recovery: "none",
     causedByUser: false,
   },
+  /**
+   * **`prepare`가 당사자 아닌 사용자에게 실제로 내는 코드다**(403, 2026-08-25 인수 테스트).
+   *
+   * 아래 `NOT_CONTRACT_PARTY`가 매핑돼 있어서 이 자리가 덮여 있는 줄 알았다. 계약 enum에는
+   * 둘 다 있으므로 **타입은 이 구멍을 보지 못한다** — 어느 오퍼레이션이 어느 코드를 내는지는
+   * 계약에 없는 정보다. 빠져 있는 동안 화면은 `UNKNOWN_FAILURE`로 떨어져 사유를 삼켰고,
+   * 사용자는 결제 키를 네 번 바꿔 넣었다(키는 서버에 닿지도 않았다).
+   */
+  FORBIDDEN: {
+    title: "이 예약의 당사자가 아닙니다",
+    // **무엇을 하면 되는지까지 말한다.** 이 화면에 온 경로가 대개 계약 서명 직후라,
+    // 사용자는 자기가 어느 계정으로 보고 있는지를 의식하지 못한다.
+    description:
+      "결제는 예약을 만든 브랜드 계정으로만 할 수 있습니다. 로그인한 계정을 확인해 주세요.",
+    recovery: "none",
+    causedByUser: false,
+  },
   NOT_CONTRACT_PARTY: {
     title: "이 예약의 당사자가 아닙니다",
     description: "본인의 예약만 결제할 수 있습니다.",
@@ -147,7 +164,34 @@ export function paymentFailure(error: unknown): PaymentFailure {
     };
   }
 
-  return (error.code !== "UNKNOWN" && FAILURES[error.code]) || UNKNOWN_FAILURE;
+  const mapped = error.code !== "UNKNOWN" ? FAILURES[error.code] : undefined;
+
+  if (!mapped) {
+    warnUnmapped(error.code);
+    return UNKNOWN_FAILURE;
+  }
+
+  return mapped;
+}
+
+/**
+ * 매핑되지 않은 코드를 **개발 중에 드러낸다.**
+ *
+ * 이 결함의 본질은 사유를 못 말한 것이 아니라 **조용히 기본 문구로 흘러간 것**이었다.
+ * 화면은 안전한 기본 문구를 유지해야 하므로(모르는 실패에 재시도를 권하면 안 된다) 사용자에게는
+ * 티가 나지 않는다 — 그래서 개발·인수 테스트 중에는 소리가 나야 한다.
+ *
+ * **전 코드 매핑을 테스트로 강제하지 않는다.** 결제 화면에 오지 않는 코드까지 매핑을 요구하게 되고,
+ * "어느 코드가 이 오퍼레이션에 오는가"라는 목록을 **또 손으로 유지**하게 된다 — 지금 깨진 것과
+ * 같은 종류의 목록을 하나 더 만드는 셈이다.
+ */
+function warnUnmapped(code: string): void {
+  if (import.meta.env.DEV) {
+    console.warn(
+      `[payment] 매핑되지 않은 에러 코드로 기본 문구가 나갔습니다: ${code}. ` +
+        `failureMessage.ts의 FAILURES에 추가하세요.`,
+    );
+  }
 }
 
 /**
