@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { allowsAnotherAttempt, paymentFailure } from "./failureMessage";
+import { allowsAnotherAttempt, failureBadge, paymentFailure } from "./failureMessage";
 import { ApiRequestError } from "../../lib/api/client";
 import { ERROR_CODES } from "../../lib/api/error-codes";
 
@@ -13,7 +13,6 @@ describe("paymentFailure — 두 종류의 503", () => {
     const failure = failWith("LOCK_ACQUISITION_FAILED", 503);
 
     expect(failure.recovery).toBe("retry");
-    expect(failure.causedByUser).toBe(false);
   });
 
   it("승인 여부 불명은 재시도 버튼을 주지 않는다", () => {
@@ -82,19 +81,46 @@ describe("paymentFailure — 해소 방법이 실제로 해소하는가", () => 
     const failure = failWith("PAYMENT_DECLINED", 402);
 
     expect(failure.recovery).toBe("retry");
-    expect(failure.causedByUser).toBe(true);
   });
 });
 
-describe("paymentFailure — 사용자를 탓하지 않아야 하는 실패", () => {
-  it("락 경합·PG 장애·기간 선점은 사용자 잘못이 아니다", () => {
+describe("failureBadge — 뱃지는 조치 가능성을 말한다", () => {
+  it("할 수 있는 일이 있으면 '확인 필요'다", () => {
+    // 예전에는 이 넷이 전부 "처리 중단"이었다 — 버튼은 "기간 다시 선택"인데 뱃지는
+    // 시스템이 확정적으로 멈췄다고 말하는 카드였다(§8.12 전수 감사에서 3건 뒤집힘).
     for (const code of [
       "LOCK_ACQUISITION_FAILED",
       "PAYMENT_RESULT_UNKNOWN",
       "SPACE_ALREADY_BOOKED",
       "FIXTURE_UNAVAILABLE",
     ]) {
-      expect(failWith(code, 503).causedByUser).toBe(false);
+      expect(failureBadge(failWith(code, 503)).label).toBe("확인 필요");
+    }
+  });
+
+  it("정말 할 수 있는 일이 없을 때만 '처리 중단'이다", () => {
+    // 사용자 확인(2026-08-25): "'처리 중단'은 결제가 안 된 것으로 읽힌다."
+    // 그러니 결과를 모르는 상태에는 쓸 수 없다 — 안 됐다고 단정하는 말이기 때문이다.
+    for (const code of ["UNAUTHORIZED", "FORBIDDEN", "NOT_CONTRACT_PARTY"]) {
+      expect(failureBadge(failWith(code, 403)).label).toBe("처리 중단");
+    }
+  });
+
+  it("제목이 재시도를 권하는데 뱃지가 멈췄다고 말하지 않는다", () => {
+    // 이 카드가 한 카드 안에서 정면으로 반대되는 말을 하고 있었다.
+    const lock = failWith("LOCK_ACQUISITION_FAILED", 503);
+
+    expect(lock.title).toContain("다시 시도");
+    expect(failureBadge(lock).label).not.toBe("처리 중단");
+  });
+
+  it("뱃지와 버튼이 같은 값에서 나온다 — 구조적으로 어긋날 수 없다", () => {
+    // 값을 고치는 것으로는 다음에 또 갈린다. 갈라질 수 없게 만드는 것이 요점이다.
+    for (const code of ERROR_CODES) {
+      const failure = failWith(code, 400);
+      const hasAction = failure.recovery !== "none";
+
+      expect(failureBadge(failure).label).toBe(hasAction ? "확인 필요" : "처리 중단");
     }
   });
 });
@@ -128,7 +154,6 @@ describe("paymentFailure — 모르는 실패", () => {
     const failure = paymentFailure(new TypeError("Failed to fetch"));
 
     expect(failure.recovery).toBe("checkReservation");
-    expect(failure.causedByUser).toBe(false);
   });
 
   it("모든 에러 코드가 안내를 갖는다 — 빈 화면이 나오지 않는다", () => {
@@ -170,5 +195,29 @@ describe("allowsAnotherAttempt — 결제 수단을 계속 보여줘도 되는�
     // 같은 조건으로 다시 눌러봐야 같은 실패다.
     expect(allowsAnotherAttempt(failWith("SPACE_ALREADY_BOOKED", 409))).toBe(false);
     expect(allowsAnotherAttempt(failWith("FIXTURE_UNAVAILABLE", 409))).toBe(false);
+  });
+});
+
+describe("paymentFailure — 당사자가 아닌 사용자 (2026-08-25 인수 발견)", () => {
+  it("prepare의 403 FORBIDDEN이 사유를 말한다", () => {
+    // 인수 테스트에서 이 코드가 매핑에 없어 "결제를 완료하지 못했습니다"만 나왔고,
+    // 사용자는 결제 키를 네 번 바꿔 넣었다 — 키는 서버에 닿지도 않았다.
+    const failure = failWith("FORBIDDEN", 403);
+
+    expect(failure.title).toContain("당사자가 아닙니다");
+    expect(failure.description).toContain("브랜드 계정");
+  });
+
+  it("당사자가 아니면 이 화면에서 할 수 있는 일이 없다", () => {
+    // 재시도도 배치 수정도 답이 아니다. 계정을 바꾸는 것은 이 화면 밖의 일이다.
+    expect(failWith("FORBIDDEN", 403).recovery).toBe("none");
+    expect(allowsAnotherAttempt(failWith("FORBIDDEN", 403))).toBe(false);
+  });
+
+  it("기본 문구로 떨어지지 않는다 — 그것이 이 결함의 얼굴이었다", () => {
+    const forbidden = failWith("FORBIDDEN", 403);
+    const unknown = failWith("SOME_CODE_THAT_IS_NOT_MAPPED", 500);
+
+    expect(forbidden.title).not.toBe(unknown.title);
   });
 });

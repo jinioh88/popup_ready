@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { AvailabilityMap } from "../../lib/builder/availability";
+import type { FixtureCatalog } from "./queries";
 import type { Fixture, FixtureCategory } from "../../lib/schemas/api";
 import { useBuilderStore } from "../../stores/builder";
 import { CATEGORY_LABELS, CATEGORY_ORDER } from "./constants";
@@ -18,9 +19,15 @@ type FixturePanelProps = {
   isLoading: boolean;
   /** 선택 기간의 집기별 가용 판정. 기간 전에는 빈 맵이고 아무것도 잠기지 않는다. */
   availability: AvailabilityMap;
+  /**
+   * 집기 조회표. **초안 시작 칸을 고르는 데 쓴다**(§8.17) — 어디에 놓을 수 있는지 알려면
+   * 규격이 필요하다. 목록(`fixtures`)에서 여기서 다시 만들지 않는다: 라우트가 이미
+   * `toFixtureCatalog`로 memo해 두고 캔버스와 공유하는 값이다.
+   */
+  catalog: FixtureCatalog;
 };
 
-export function FixturePanel({ fixtures, isLoading, availability }: FixturePanelProps) {
+export function FixturePanel({ fixtures, isLoading, availability, catalog }: FixturePanelProps) {
   const [category, setCategory] = useState<FixtureCategory | "ALL">("ALL");
   const draft = useBuilderStore((state) => state.draft);
   const startDraft = useBuilderStore((state) => state.startDraft);
@@ -61,7 +68,7 @@ export function FixturePanel({ fixtures, isLoading, availability }: FixturePanel
                 fixture={fixture}
                 isDrafting={draft?.fixtureId === fixture.id}
                 availability={availability[fixture.id]}
-                onActivate={startDraft}
+                onActivate={(fixtureId) => startDraft(fixtureId, catalog)}
               />
             </li>
           ))}

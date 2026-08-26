@@ -148,3 +148,48 @@ describe("LimitGauge — 미상 집기", () => {
     expect(screen.getByRole("alert").textContent).toContain("실제보다 작을 수");
   });
 });
+
+describe("LimitGauge — 색을 갖는 축은 게이트뿐이다 (스타일가이드 §8)", () => {
+  it("면적 축은 혼잡해도 채도를 갖지 않는다", () => {
+    /*
+     * 전에는 혼잡일 때 `bg-warning`이었는데 **전력의 "한도 임박"도 같은 `bg-warning`**이라,
+     * 혼동이 가장 위험한 경고 상태에서 두 축이 같아 보였다. 사용자:
+     * "굵기가 달라 성격이 달라보이지만, 색상을 다르게 하면 더 다르게 느껴질듯."
+     *
+     * 고칠 것은 "면적의 색"이 아니라 "면적이 색을 갖는다는 것" 자체다 — 다른 채도색을 주면
+     * 사용자가 *면적에도 상태가 있다*고 학습하고, 그것이 §2.2-F가 없애려던 인식이다.
+     */
+    render(<LimitGauge load={CROWDED} />);
+    const fill = meter("도면 점유").firstElementChild as HTMLElement;
+
+    expect(fill.className).toContain("bg-text-muted");
+    expect(fill.className).not.toContain("bg-warning");
+    expect(fill.className).not.toContain("bg-error");
+  });
+
+  it("면적 축 막대는 상태가 바뀌어도 같은 색이다 — 한 갈래뿐이다", () => {
+    render(<LimitGauge load={CROWDED} />);
+    const crowded = (meter("도면 점유").firstElementChild as HTMLElement).className;
+    cleanup();
+
+    render(<LimitGauge load={load({ area: { m2: 5, gridM2: 25, ratio: 0.2, level: "safe" } })} />);
+    const safe = (meter("도면 점유").firstElementChild as HTMLElement).className;
+
+    expect(crowded).toBe(safe);
+  });
+
+  it("전력 축은 상태색을 쓴다 — 게이트이기 때문이다", () => {
+    render(<LimitGauge load={OVER} />);
+    const fill = meter("소비 전력").firstElementChild as HTMLElement;
+
+    expect(fill.className).toContain("bg-error");
+  });
+
+  it("채도를 빼도 혼잡은 여전히 전달된다 — 뱃지와 문구가 말한다", () => {
+    // 색 단독 전달 금지 규칙상 텍스트가 어차피 필수였으므로 정보 손실이 없다.
+    render(<LimitGauge load={CROWDED} />);
+
+    expect(screen.getByText("혼잡")).toBeTruthy();
+    expect(screen.getByText(/통로 확보를 확인하세요/)).toBeTruthy();
+  });
+});

@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { GridSpec, Layout, LayoutItem, Rotation } from "../lib/schemas/layout";
 import { canPlace, type PlacementCheck } from "../lib/builder/collision";
 import { toPlacement } from "../lib/builder/occupancy";
+import { findDraftStartCell } from "../lib/builder/draftStart";
 import type { FixtureLookup, Placement } from "../lib/builder/types";
 
 /**
@@ -61,7 +62,7 @@ export type BuilderState = {
   reset: () => void;
 
   /** 팔레트에서 Enter/Space — 배치 모드로 들어간다. 시작 자리는 좌상단(0,0)이다. */
-  startDraft: (fixtureId: number) => void;
+  startDraft: (fixtureId: number, fixtures: FixtureLookup) => void;
   /** 방향키 — 셀 단위로 옮긴다. 범위 밖으로는 나가지 않는다(거부가 아니라 멈춤). */
   moveDraft: (colDelta: number, rowDelta: number) => void;
   /** R — 확정 전에 돌린다. 회전은 겹침과 무관하게 항상 허용된다(확정 시 판정). */
@@ -220,7 +221,33 @@ export const useBuilderStore = create<BuilderState>((set, get) => ({
   reset: () =>
     set({ spaceId: null, grid: DEFAULT_GRID, items: [], selectedIndex: null, draft: null }),
 
-  startDraft: (fixtureId) => set({ draft: { fixtureId, col: 0, row: 0, rotation: 0 } }),
+  /**
+   * 키보드 배치 초안을 띄운다.
+   *
+   * **시작 칸을 고르는 것이 이 액션의 실질이다**(§8.17). 예전엔 무조건 `(0, 0)`이었고,
+   * 캔버스가 차 있으면 화면 구석에 **빨간 무효 블록**으로 떠서 고장으로 읽혔다.
+   * 자리 탐색은 `findDraftStartCell`이 하고 판정은 `resolveDropAtCell`을 공유한다.
+   *
+   * `fixtures`를 받는 이유가 이것이다 — 어디에 놓을 수 있는지 알려면 집기 규격이 필요하다.
+   */
+  startDraft: (fixtureId, fixtures) => {
+    const { grid, items, selectedIndex } = get();
+    const existing = toPlacements(items, grid.cellSizeMm, fixtures);
+    const selected = selectedIndex === null ? undefined : items[selectedIndex];
+
+    const cell = existing
+      ? findDraftStartCell({
+          fixtureId,
+          fixtures,
+          grid,
+          existing,
+          // 방금 놓은 집기 옆이 다음 자리일 확률이 높고, 사용자 시선도 거기 있다.
+          from: selected ? { col: selected.col, row: selected.row } : undefined,
+        })
+      : { col: 0, row: 0 };
+
+    set({ draft: { fixtureId, col: cell.col, row: cell.row, rotation: 0 } });
+  },
 
   moveDraft: (colDelta, rowDelta) =>
     set((state) => {

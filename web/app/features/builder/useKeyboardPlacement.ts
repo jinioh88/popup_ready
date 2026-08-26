@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { placementRejectionMessage } from "./messages";
 import type { FixtureCatalog } from "./queries";
 import { useBuilderStore } from "../../stores/builder";
+import { isRotateKey } from "./rotateKey";
 
 /**
  * 키보드 배치 조작 (I-1, Sprint 1 §5.1-2 이월 · PM 우선순위 상향).
@@ -54,7 +55,7 @@ export function useKeyboardPlacement(
         return;
       }
 
-      if (event.key === "r" || event.key === "R") {
+      if (isRotateKey(event)) {
         event.preventDefault();
         store.rotateDraft();
         return;

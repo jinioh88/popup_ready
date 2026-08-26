@@ -39,3 +39,28 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "계약 취소" })).toBeTruthy();
   });
 });
+
+describe("Button — disabled는 눈으로도 잠겨 보여야 한다 (2026-08-25 인수 발견)", () => {
+  it("주 버튼의 채도를 죽인다 — 투명도만 낮추지 않는다", () => {
+    /*
+     * 사용자가 전력 한도 초과로 **실제로 잠긴** 제출 버튼을 보고 "보라색임. 안잠기는듯"이라고
+     * 적었다. `opacity-60`은 채도 높은 보라를 옅은 보라로 만들 뿐이고, 사람은 색으로 판정한다.
+     * 로직은 맞는데 사용자에게는 잠기지 않은 것으로 보이던 자리다.
+     */
+    render(<Button disabled>예약 요청하기</Button>);
+
+    const className = screen.getByRole("button").className;
+
+    expect(className).toContain("disabled:bg-border");
+    expect(className).toContain("disabled:text-text-muted");
+    expect(className).not.toContain("opacity-60");
+  });
+
+  it("hover가 disabled의 약속을 되돌리지 않는다", () => {
+    // CSS :hover는 disabled 버튼에도 매칭된다. enabled:로 잠그지 않으면 마우스를 올릴 때
+    // 진해져서 눌리는 것처럼 보인다.
+    render(<Button disabled>예약 요청하기</Button>);
+
+    expect(screen.getByRole("button").className).toContain("enabled:hover:");
+  });
+});

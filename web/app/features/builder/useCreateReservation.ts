@@ -24,7 +24,13 @@ import { spaceDetailQueryKey } from "./queries";
  * 공간 상세 쿼리를 무효화해 다음 렌더에서 그리드가 다시 맞춰지게 한다.
  */
 
-function messageOf(error: unknown): string {
+/**
+ * 예약 생성 실패 → 사용자 안내.
+ *
+ * **내보내는 이유는 테스트다.** 이 매핑이 빠진 코드는 `default`로 떨어져 서버 문구가 그대로
+ * 나가고, 그러면 화면이 사유는 말해도 **무엇을 하면 되는지는 말하지 않는다**(§8.11).
+ */
+export function messageOf(error: unknown): string {
   if (!(error instanceof ApiRequestError)) {
     return "네트워크 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
   }
@@ -38,6 +44,17 @@ function messageOf(error: unknown): string {
       return "선택한 집기의 재고가 부족합니다. 수량을 줄여 주세요.";
     case "FIXTURE_UNAVAILABLE":
       return "선택한 기간에 품절인 집기가 있습니다. 기간을 바꾸거나 다른 집기로 교체해 주세요.";
+    /*
+     * 겹치는 기간은 **여기서 걸러야 한다**(백엔드 `054878b`, §8.11).
+     *
+     * 이 코드가 지금까지 결제 화면에서만 왔다. 그래서 사용자는 겹치는 기간으로 예약을 만들고
+     * **서명을 두 번 한 뒤 결제 화면에서야** 409를 봤다 — 인수 테스트에서 두 번 겪었다.
+     *
+     * `default`가 서버 문구를 그대로 내보내는데, 여기서 필요한 것은 사유가 아니라
+     * **무엇을 하면 되는지**다. 결제 화면의 같은 코드 안내(`failureMessage.ts`)와 결을 맞춘다.
+     */
+    case "SPACE_ALREADY_BOOKED":
+      return "선택한 기간에 이미 확정된 예약이 있습니다. 다른 날짜를 선택해 주세요.";
     case "POWER_LIMIT_EXCEEDED":
       // 화면의 LimitGauge가 이미 막고 있어야 하는 상태다. 그런데도 이 코드가 왔다는 것은
       // 프론트 계산과 서버 계산이 어긋났다는 뜻이므로 **재시도를 권하지 않는다** —

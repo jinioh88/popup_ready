@@ -26,14 +26,28 @@ type ButtonOwnProps<T extends ElementType> = {
 type ButtonProps<T extends ElementType> = ButtonOwnProps<T> &
   Omit<ComponentPropsWithRef<T>, keyof ButtonOwnProps<T>>;
 
-/** 스타일가이드 §4 — 높이 40, radius 8. 주 버튼은 화면당 1개. */
+/**
+ * 스타일가이드 §4 — 높이 40, radius 8. 주 버튼은 화면당 1개.
+ *
+ * **disabled는 투명도가 아니라 색을 죽인다**(2026-08-25 인수 발견, §8.7). `opacity-60`만
+ * 걸었을 때 사용자가 전력 한도 초과로 **실제로 잠긴** 제출 버튼을 보고 *"보라색임. 안잠기는듯"*
+ * 이라고 적었다. 채도 높은 보라를 60%로 낮춰도 여전히 보라이고, **사람은 색으로 판정한다.**
+ *
+ * 바로 위에 빨간 사유 문구("허용 전력을 초과해…")가 있었는데도 그렇게 읽혔다 —
+ * **문구가 버튼의 상태를 대신 말해주지 못한다.**
+ *
+ * `bg-border`(#E2E8F0) 위 `text-text-muted`(#475569)는 대비 6.08:1이라 글자는 읽히면서
+ * 색은 확실히 죽는다. **새 토큰을 만들지 않는다** — 기존 토큰 조합으로 되므로 스타일가이드
+ * §1·§5.1·§5.2 3곳 동시 수정 대상이 아니다.
+ */
 const BASE =
-  "inline-flex h-10 items-center justify-center rounded-lg px-4 text-body-strong transition-colors disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-10 items-center justify-center rounded-lg px-4 text-body-strong transition-colors " +
+  "disabled:cursor-not-allowed disabled:border-transparent disabled:bg-border disabled:text-text-muted";
 
 /**
  * hover는 **`enabled:`로 잠근다.** CSS `:hover`는 disabled 버튼에도 매칭되므로 그냥 두면
  * 한도 초과로 잠긴 결제 버튼이 마우스를 올릴 때 진하게 변해 눌리는 것처럼 보인다.
- * disabled의 시각적 약속(opacity-60 + not-allowed 커서)을 hover가 되돌리는 셈이다.
+ * disabled의 시각적 약속(무채색 + not-allowed 커서)을 hover가 되돌리는 셈이다.
  * Sprint 1의 흩어진 버튼들이 전부 이 상태였고, 여기로 모으는 지금이 고칠 자리다.
  */
 const VARIANTS: Record<ButtonVariant, string> = {

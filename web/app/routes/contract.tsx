@@ -5,6 +5,8 @@ import { ContractDocument } from "../features/contract/ContractDocument";
 import { SignaturePanel } from "../features/contract/SignaturePanel";
 import { contractLoadMessage, signMessage } from "../features/contract/messages";
 import { useContract, useSignContract } from "../features/contract/queries";
+import { useReservation } from "../features/payment/queries";
+import { getCurrentUser } from "../lib/api/token";
 
 export function meta() {
   return [{ title: "계약 · PopupReady" }];
@@ -22,6 +24,24 @@ export default function ContractRoute() {
 
   const contractQuery = useContract(numericId);
   const sign = useSignContract(numericId);
+
+  /**
+   * 결제 링크를 누구에게 보여줄지 (§8.9).
+   *
+   * **계약만으로는 판단할 수 없다** — 계약은 "서명이 끝났는가"를 알지 "이 사람이 결제할
+   * 사람인가"를 모른다. 그 답은 예약의 `brandUserId`에 있다.
+   *
+   * 화면 표시 판단일 뿐이고 **접근 통제가 아니다** — 서버가 `prepare`에서 403으로 막는다(§8.10).
+   * 예약 조회는 결제 화면과 같은 쿼리 키를 쓰므로, 여기서 받아 두면 결제 화면이 따뜻하게 열린다.
+   */
+  const reservationQuery = useReservation(numericId);
+  const currentUser = getCurrentUser();
+  const brandUserId = reservationQuery.data?.brandUserId;
+
+  // **`undefined`(모른다)와 `false`(아니다)를 구분한다.** 아직 못 받았거나 로그인 정보가 없는
+  // 동안 "결제는 브랜드가 진행합니다"를 띄우면, 정작 그 브랜드에게 거짓말을 하게 된다.
+  const isBrandParty =
+    currentUser && brandUserId !== undefined ? currentUser.id === brandUserId : undefined;
 
   if (contractQuery.isPending) {
     return <StatusMessage>계약서를 불러오는 중…</StatusMessage>;
@@ -55,6 +75,7 @@ export default function ContractRoute() {
         <SignaturePanel
           contract={contract}
           reservationId={numericId}
+          isBrandParty={isBrandParty}
           onSign={() => sign.mutate(contract.id)}
           isPending={sign.isPending}
           errorMessage={sign.isError ? signMessage(sign.error) : undefined}
